@@ -30,7 +30,7 @@
  */
 
 import java.text.SimpleDateFormat
-static String version() { return '0.1.17' }
+static String version() { return '0.1.18' }
 
 metadata {
     definition(
