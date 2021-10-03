@@ -4,13 +4,18 @@
   "version": "0.1.18",
   "minimumHEVersion": "2.2.8",
   "dateReleased": "2021-10-03",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/README.md",
+  "communityLink": "https://community.hubitat.com/t/meteorological-seasons-driver/80450",
+  "licenseFile": "",
   "drivers": [
     {
       "id": "66926837-739f-40d0-a9d2-20e8dda14489",
       "name": "Meteorological Season of the Northern Hemisphere",
       "namespace": "jshimota",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons-NH.groovy",
-      "required": false
+      "required": false,
+	  "oauth": false,
+	  "version": "0.1.18",
     }
   ]
 }
