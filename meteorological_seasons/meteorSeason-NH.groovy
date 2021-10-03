@@ -36,7 +36,7 @@ metadata {
             name: "Meteorological Season of the Northern Hemisphere",
             namespace: "jshimota",
             author: "James Shimota",
-            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/meteorological_seasons/meteorSeason-NH.groovy"
+            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/meteorological_seasons/meteorSeasons-NH.groovy"
     ) {
         capability "Actuator"
         capability "Refresh"
