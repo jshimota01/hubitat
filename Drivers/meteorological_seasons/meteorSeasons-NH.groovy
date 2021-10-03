@@ -34,10 +34,10 @@ static String version() { return '0.1.18' }
 
 metadata {
     definition(
-            name: "Meteorological Season of the Northern Hemisphere",
+            name: "Meteorological Seasons of the Northern Hemisphere",
             namespace: "jshimota",
             author: "James Shimota",
-            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/meteorological_seasons/meteorSeasons-NH.groovy"
+            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons-NH.groovy"
     ) {
         capability "Actuator"
         capability "Refresh"
@@ -181,7 +181,7 @@ def currentSeason() {
     } else if (device.currentValue("todaysFormattedMonth") == ("August")) {
         summer()
     } else {
-        String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/meteorological_seasons/season_icons/"
+        String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
         if (iconPathOvr > " ") iconPath = iconPathOvr
         if (txtEnable) log.info "${descriptionText}"
         sendEvent(name: "seasonName", value: "Not Initialized", descriptionText: descriptionText)
@@ -202,7 +202,7 @@ def currentSeason() {
 
 def fall() {
     def descriptionText = "Current season is now Fall" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/meteorological_seasons/season_icons/"
+    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
     if (txtEnable) log.info "${descriptionText}"
     sendEvent(name: "seasonName", value: "Fall", descriptionText: descriptionText)
@@ -215,7 +215,7 @@ def fall() {
 
 def winter() {
     def descriptionText = "Current season is now Winter" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/meteorological_seasons/season_icons/"
+    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
     if (txtEnable) log.info "${descriptionText}"
     sendEvent(name: "seasonName", value: "Winter", descriptionText: descriptionText)
@@ -228,7 +228,7 @@ def winter() {
 
 def spring() {
     def descriptionText = "Current season is now Spring" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/meteorological_seasons/season_icons/"
+    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
     if (txtEnable) log.info "${descriptionText}"
     sendEvent(name: "seasonName", value: "Spring", descriptionText: descriptionText)
@@ -241,7 +241,7 @@ def spring() {
 
 def summer() {
     def descriptionText = "Current season is now Summer" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/meteorological_seasons/season_icons/"
+    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
     if (txtEnable) log.info "${descriptionText}"
     sendEvent(name: "seasonName", value: "Summer", descriptionText: descriptionText)
