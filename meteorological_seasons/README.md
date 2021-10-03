@@ -1,11 +1,12 @@
 Meteorological Seasons of the Northern Hemisphere
+
 Why?
 
 A need developed for me to be able to set Rules and automations within my Hubitat environment that would allow me to gain control seasonally.  Originally, with community help I was able to build a Rule that would keep a Global Variable up to date.  However this wasn't as smooth of a method.  So I wrote this.
 
 Description
 
-Meteorological Seasons of the Northern Hemisphere is a driver that creates when installed on a Hubitat platform, can then be used as a device driver.
+Meteorological Seasons of the Northern Hemisphere is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver.
 This creates a virtual device, and from it, dashboard tiles, variables for Rules and other nice features are produced.
 
 Requirements
