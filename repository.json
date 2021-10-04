@@ -1,0 +1,14 @@
+{
+	"author": "James Shimota (Shumo) (jshimota01)",
+	"gitHubUrl": "https://github.com/jshimota01",
+	"packages": [
+		  {
+			"name": "Meteorological Season of the Northern Hemisphere",
+			"category": "Convenience",
+			"tags": [ "Dashboards","Monitoring", "Timers", "Weather" ],
+			"location": ""https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/packageManifest.json",
+			"description": "A need developed for me to be able to set Rules and automations within my Hubitat environment that would allow me to gain control seasonally. Originally, with community help I was able to build a Rule that would keep a Global Variable up to date. However this wasn't as smooth of a method. So I wrote this.  \nMeteorological Seasons of the Northern Hemisphere is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver. This driver, when used during creation of a virtual device, creates a clean way to bridge seasons to dashboard tiles, variables for Rules and other nice features  as well."
+		  }
+	]
+	
+}
