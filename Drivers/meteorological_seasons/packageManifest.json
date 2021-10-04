@@ -14,8 +14,8 @@
       "namespace": "jshimota",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons-NH.groovy",
       "required": false,
-	  "oauth": false,
-	  "version": "0.1.18",
+      "oauth": false,
+      "version": "0.1.18",
     }
   ]
 }
