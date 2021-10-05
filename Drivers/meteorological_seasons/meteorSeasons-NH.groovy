@@ -177,93 +177,105 @@ def currentSeason() {
         runCmd()
     } else if (device.currentValue("todaysFormattedMonth") == ("Not Initialized")) {
         seasonPreviouslySet = false
-        existingSeasonName = "${seasonName}"
+        existingSeasonName = "not set"
+        hemiispherePreviouslySet = false
+        existingHemisphereName = "not set"
     } else {
         seasonPreviouslySet = true
         existingSeasonName = "${seasonName}"
+        hemiispherePreviouslySet = true
+        existingHemisphereName = "${hemisphereName}"
+        }
+        if (device.currentValue("todaysFormattedMonth") == ("September") || device.currentValue("todaysFormattedMonth") == ("October") || device.currentValue("todaysFormattedMonth") == ("November")) {
+            fall()
+        } else if (device.currentValue("todaysFormattedMonth") == ("December") || device.currentValue("todaysFormattedMonth") == ("January") || device.currentValue("todaysFormattedMonth") == ("February")) {
+            winter()
+        } else if (device.currentValue("todaysFormattedMonth") == ("March") || device.currentValue("todaysFormattedMonth") == ("April") || device.currentValue("todaysFormattedMonth") == ("May")) {
+            spring()
+        } else if (device.currentValue("todaysFormattedMonth") == ("June") || device.currentValue("todaysFormattedMonth") == ("July") || device.currentValue("todaysFormattedMonth") == ("August")) {
+            summer()
+        } else {
+            String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
+            if (iconPathOvr > " ") iconPath = iconPathOvr
+            sendEvent(name: "seasonName", value: "Not Initialized", descriptionText: descriptionText)
+            sendEvent(name: "seasonNum", value: 0, descriptionText: descriptionText)
+            sendEvent(name: "seasonBegin", value: "N/A", descriptionText: descriptionText)
+            sendEvent(name: "seasonEnd", value: "N/A", descriptionText: descriptionText)
+            sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;'><p class='small' style='text-align:center'>(Not Initialized)</p></img></div>", descriptionText: descriptionText)
+            sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;' />", descriptionText: descriptionText)
+            sendEvent(name: "hemisphereName", value: "not set", descriptionText: descriptionText)
+        }
+        if (seasonPreviouslySet) {
+            descriptionText = "Current season refreshed or changed"
+            if (txtEnable) log.info "${descriptionText}"
+        } else {
+            descriptionText = "Current season initialized to ${seasonName}"
+            if (txtEnable) log.info "${descriptionText}"
+        }
+        if (hemispherePreviouslySet) {
+            descriptionText = "Current hemisphere refreshed or changed"
+            if (txtEnable) log.info "${descriptionText}"
+        } else {
+            descriptionText = "Current hemisphere initialized to ${hemisphereName}"
+            if (txtEnable) log.info "${descriptionText}"
+        }
     }
-    if (device.currentValue("todaysFormattedMonth") == ("September") || device.currentValue("todaysFormattedMonth") == ("October") || device.currentValue("todaysFormattedMonth") == ("November")) {
-        fall()
-    } else if (device.currentValue("todaysFormattedMonth") == ("December") || device.currentValue("todaysFormattedMonth") == ("January") || device.currentValue("todaysFormattedMonth") == ("February")) {
-        winter()
-    } else if (device.currentValue("todaysFormattedMonth") == ("March") || device.currentValue("todaysFormattedMonth") == ("April") || device.currentValue("todaysFormattedMonth") == ("May")) {
-        spring()
-    } else if (device.currentValue("todaysFormattedMonth") == ("June") || device.currentValue("todaysFormattedMonth") == ("July") || device.currentValue("todaysFormattedMonth") == ("August")) {
-        summer()
-    } else {
+
+    def fall() {
+        hemisphereName()
+        def descriptionText = "Current season is now Fall" as Object
         String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
         if (iconPathOvr > " ") iconPath = iconPathOvr
-        sendEvent(name: "seasonName", value: "Not Initialized", descriptionText: descriptionText)
-        sendEvent(name: "seasonNum", value: 0, descriptionText: descriptionText)
-        sendEvent(name: "seasonBegin", value: "N/A", descriptionText: descriptionText)
-        sendEvent(name: "seasonEnd", value: "N/A", descriptionText: descriptionText)
-        sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;'><p class='small' style='text-align:center'>(Not Initialized)</p></img></div>", descriptionText: descriptionText)
-        sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;' />", descriptionText: descriptionText)
-    }
-    if (seasonPreviouslySet) {
-        descriptionText = "Current season refreshed or changed"
         if (txtEnable) log.info "${descriptionText}"
-    } else {
-        descriptionText = "Current season initialized to ${seasonName}"
-        if (txtEnable) log.info "${descriptionText}"
+        sendEvent(name: "seasonName", value: "Fall", descriptionText: descriptionText)
+        sendEvent(name: "seasonNum", value: 1, descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonBegin", value: "September 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "March 1", descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonEnd", value: "November 30", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "May 31", descriptionText: descriptionText)
+        sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}fall.svg' style='height: 100px;'><p class='small' style='text-align:center'>Fall</p></img></div>", descriptionText: descriptionText)
+        sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}fall.svg' style='height: 100px;' />", descriptionText: descriptionText)
     }
-}
 
-def fall() {
-    hemisphereName()
-    def descriptionText = "Current season is now Fall" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
-    if (iconPathOvr > " ") iconPath = iconPathOvr
-    if (txtEnable) log.info "${descriptionText}"
-    sendEvent(name: "seasonName", value: "Fall", descriptionText: descriptionText)
-    sendEvent(name: "seasonNum", value: 1, descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonBegin", value: "September 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "March 1", descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonEnd", value: "November 30", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "May 31", descriptionText: descriptionText)
-    sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}fall.svg' style='height: 100px;'><p class='small' style='text-align:center'>Fall</p></img></div>", descriptionText: descriptionText)
-    sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}fall.svg' style='height: 100px;' />", descriptionText: descriptionText)
-}
+    def winter() {
+        hemisphereName()
+        def descriptionText = "Current season is now Winter" as Object
+        String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
+        if (iconPathOvr > " ") iconPath = iconPathOvr
+        if (txtEnable) log.info "${descriptionText}"
+        sendEvent(name: "seasonName", value: "Winter", descriptionText: descriptionText)
+        sendEvent(name: "seasonNum", value: 2, descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonBegin", value: "December 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "June 1", descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonEnd", value: "February 29", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText)
+        sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}winter.svg' style='height: 100px;'><p class='small' style='text-align:center'>Winter</p></img></div>", descriptionText: descriptionText)
+        sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}winter.svg' style='height: 100px;' />", descriptionText: descriptionText)
+    }
 
-def winter() {
-    hemisphereName()
-    def descriptionText = "Current season is now Winter" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
-    if (iconPathOvr > " ") iconPath = iconPathOvr
-    if (txtEnable) log.info "${descriptionText}"
-    sendEvent(name: "seasonName", value: "Winter", descriptionText: descriptionText)
-    sendEvent(name: "seasonNum", value: 2, descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonBegin", value: "December 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "June 1", descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonEnd", value: "February 29", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText)
-    sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}winter.svg' style='height: 100px;'><p class='small' style='text-align:center'>Winter</p></img></div>", descriptionText: descriptionText)
-    sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}winter.svg' style='height: 100px;' />", descriptionText: descriptionText)
-}
+    def spring() {
+        hemisphereName()
+        def descriptionText = "Current season is now Spring" as Object
+        String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
+        if (iconPathOvr > " ") iconPath = iconPathOvr
+        if (txtEnable) log.info "${descriptionText}"
+        sendEvent(name: "seasonName", value: "Spring", descriptionText: descriptionText)
+        sendEvent(name: "seasonNum", value: 3, descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonBegin", value: "March 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "September 1", descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonEnd", value: "May 31", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "November 30", descriptionText: descriptionText)
+        sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}spring.svg' style='height: 100px;'><p class='small' style='text-align:center'>Spring</p></img></div>", descriptionText: descriptionText)
+        sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}spring.svg' style='height: 100px;' />", descriptionText: descriptionText)
+    }
 
-def spring() {
-    hemisphereName()
-    def descriptionText = "Current season is now Spring" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
-    if (iconPathOvr > " ") iconPath = iconPathOvr
-    if (txtEnable) log.info "${descriptionText}"
-    sendEvent(name: "seasonName", value: "Spring", descriptionText: descriptionText)
-    sendEvent(name: "seasonNum", value: 3, descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonBegin", value: "March 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "September 1", descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonEnd", value: "May 31", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "November 30", descriptionText: descriptionText)
-    sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}spring.svg' style='height: 100px;'><p class='small' style='text-align:center'>Spring</p></img></div>", descriptionText: descriptionText)
-    sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}spring.svg' style='height: 100px;' />", descriptionText: descriptionText)
-}
-
-def summer() {
-    hemisphereName()
-    def descriptionText = "Current season is now Summer" as Object
-    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
-    if (iconPathOvr > " ") iconPath = iconPathOvr
-    if (txtEnable) log.info "${descriptionText}"
-    sendEvent(name: "seasonName", value: "Summer", descriptionText: descriptionText)
-    sendEvent(name: "seasonNum", value: 4, descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonBegin", value: "June 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "December 1", descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "February 29", descriptionText: descriptionText)
-    sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}summer.svg' style='height: 100px;'><p class='small' style='text-align:center'>Summer</p></img></div>", descriptionText: descriptionText)
-    sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}summer.svg' style='height: 100px;' />", descriptionText: descriptionText)
-}
+    def summer() {
+        hemisphereName()
+        def descriptionText = "Current season is now Summer" as Object
+        String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
+        if (iconPathOvr > " ") iconPath = iconPathOvr
+        if (txtEnable) log.info "${descriptionText}"
+        sendEvent(name: "seasonName", value: "Summer", descriptionText: descriptionText)
+        sendEvent(name: "seasonNum", value: 4, descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonBegin", value: "June 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "December 1", descriptionText: descriptionText)
+        if (hemisphere) sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "February 29", descriptionText: descriptionText)
+        sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}summer.svg' style='height: 100px;'><p class='small' style='text-align:center'>Summer</p></img></div>", descriptionText: descriptionText)
+        sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}summer.svg' style='height: 100px;' />", descriptionText: descriptionText)
+    }
 
 /* def calcSeason() {
 *    // selectedTimeZone = TimeZone.getTimeZone(timeZone)
