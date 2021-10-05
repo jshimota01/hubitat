@@ -10,7 +10,7 @@
   "drivers": [
     {
       "id": "66926837-739f-40d0-a9d2-20e8dda14489",
-      "name": "Meteorological Season",
+      "name": "Meteorological Seasons",
       "namespace": "jshimota",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons-NH.groovy",
       "required": false,
