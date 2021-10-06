@@ -29,10 +29,11 @@
  *      2021-10-03    jshimota      0.1.18      Moved once again as I got folder structure corrected on github
  *		2021-10-03	  jshimota		0.2.0		Integrated beta version with support of both hemispheres
  *		2021-10-03	  jshimota	 	0.2.01		Name Change of Driver
+ *      2021-10-06    jshimota      0.2.02      Further Name change (dropped -NH as it was no longer appropriate)
  */
 
 import java.text.SimpleDateFormat
-static String version() { return '0.2.01' }
+static String version() { return '0.2.02' }
 
 metadata {
     definition(

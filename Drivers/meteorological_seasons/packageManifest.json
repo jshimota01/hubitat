@@ -1,7 +1,7 @@
 {
   "packageName": "Meteorological Seasons",
   "author": "James Shimota",
-  "version": "0.2.01",
+  "version": "0.2.02",
   "minimumHEVersion": "2.2.8",
   "dateReleased": "2021-10-04",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/README.md",
@@ -12,10 +12,10 @@
       "id": "66926837-739f-40d0-a9d2-20e8dda14489",
       "name": "Meteorological Seasons",
       "namespace": "jshimota",
-      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons-NH.groovy",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.2.01"
+      "version": "0.2.02"
     }
   ]
 }
