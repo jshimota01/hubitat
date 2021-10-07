@@ -40,7 +40,7 @@ metadata {
             name: "Meteorological Seasons",
             namespace: "jshimota",
             author: "James Shimota",
-            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons-NH.groovy"
+            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons.groovy"
     ) {
         capability "Actuator"
         capability "Refresh"
