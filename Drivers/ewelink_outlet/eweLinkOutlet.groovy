@@ -1,8 +1,7 @@
 /**
  *  Copyright 2020 Markus Liljergren (https://oh-lalabs.com)
  *
- *  Version: v1.0.1.1123
- * CUSTOMIZED BY JAS 8-3-2021
+ *  Version: v1.0.1.1123b
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,9 +29,9 @@ import java.security.MessageDigest
 import hubitat.helper.HexUtils
 
 metadata {
-    definition (name: "Zigbee - Custom Generic Outlet (w/o Presence)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/release/drivers/expanded/zigbee-generic-outlet-expanded.groovy") {
+    definition (name: "Zigbee - Generic Outlet (with Presence)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy") {
         // BEGIN:getDefaultMetadataCapabilitiesForZigbeeDevices()
-        // capability "Sensor"
+        capability "Sensor"
         // capability "PresenceSensor"
         capability "Initialize"
         capability "Refresh"
@@ -52,7 +51,7 @@ metadata {
         attribute "notPresentCounter", "number"
         attribute "restoredCounter", "number"
         // END:  getMetadataAttributesForLastCheckin()
-
+        command: "flash"
         command "toggle"
         // BEGIN:getCommandsForPresence()
         command "resetRestoredCounter"
@@ -84,8 +83,6 @@ metadata {
 
         fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000"
 
-        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"
-
     }
 
     preferences {
@@ -105,11 +102,34 @@ metadata {
         input(name: "enablePing", type: "bool", title: styling_addTitleDiv("Enable Automatic Ping"), description: styling_addDescriptionDiv("Sends an, infrequent, ping to the device if needed for knowing if Present (default: enabled)"), defaultValue: true)
     }
 }
+void toggle() {
+    if(device.currentValue('switch') == 'on') {
+        msg = "Turning Off ${device}"
+        if (debugLogging) log.debug(msg)
+        off()
+    } else {
+        msg = "Turning On ${device}"
+        if (debugLogging) log.debug(msg)
+        on()
+    }
+}
+
+def flashcnt = 1
+void flash() {
+    if (flashcnt < 30) {
+    on([delay: 2000])
+    off([delay: 2000])
+    flashcnt++
+    flash()
+    } else {
+    flashcnt = 1
+    }
+}
 
 // BEGIN:getDeviceInfoFunction()
 String getDeviceInfoByName(infoName) {
 
-    Map deviceInfo = ['name': 'Zigbee - Custom Generic Outlet (w/o Presence)', 'namespace': 'oh-lalabs.com', 'author': 'Markus Liljergren', 'filename': 'zigbee-generic-outlet', 'importUrl': 'https://raw.githubusercontent.com/markus-li/Hubitat/release/drivers/expanded/zigbee-generic-outlet-expanded.groovy']
+    Map deviceInfo = ['name': 'Zigbee - Generic Outlet (with Presence)', 'namespace': 'oh-lalabs.com', 'author': 'Markus Liljergren', 'filename': 'zigbee-generic-outlet', 'importUrl': 'https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy']
 
     return(deviceInfo[infoName])
 }
@@ -121,13 +141,13 @@ ArrayList<String> refresh() {
     logging("refresh() model='${getDeviceDataByName('model')}'", 10)
 
     getDriverVersion()
-    // configurePresence()
+    configurePresence()
     startCheckEventInterval()
     setLogsOffTask(noLogWarning=true)
 
     setCleanModelName(newModelToSet=null, acceptedModels=null)
 
-    if(enablePing == true) {
+    if(enablePing == null || enablePing == true) {
         Random rnd = new Random()
         schedule("${rnd.nextInt(59)} ${rnd.nextInt(29)}/29 * * * ? *", 'ping')
         ping()
@@ -343,7 +363,7 @@ ArrayList<String> off() {
 private String getDriverVersion() {
     comment = "Works with Generic Outlets (please report your fingerprints)"
     if(comment != "") state.comment = comment
-    String version = "v1.0.1.1123"
+    String version = "v1.0.1.1123b"
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
     updateDataValue('driver', version)
@@ -1207,14 +1227,6 @@ void setLogsOffTask(boolean noLogWarning=false) {
     }
 }
 
-void toggle() {
-    if(device.currentValue('switch') == 'on') {
-        off()
-    } else {
-        on()
-    }
-}
-
 void logsOff() {
     if(runReset != "DEBUG") {
         log.warn "Debug logging disabled... "
@@ -1417,8 +1429,11 @@ void configureDelayed() {
 void configurePresence() {
     prepareCounters()
     if(presenceEnable == null || presenceEnable == true) {
-        unschedule('checkPresence')
+        Random rnd = new Random()
+        schedule("${rnd.nextInt(59)} ${rnd.nextInt(59)} 1/3 * * ? *", 'checkPresence')
+        checkPresence(false)
     } else {
+        sendEvent(name: "presence", value: "not present", descriptionText: "Presence Checking Disabled" )
         unschedule('checkPresence')
     }
 }
@@ -1426,6 +1441,12 @@ void configurePresence() {
 void stopSchedules() {
     unschedule()
     log.info("Stopped ALL Device Schedules!")
+}
+
+void prepareCounters() {
+    if(device.currentValue('restoredCounter') == null) sendEvent(name: "restoredCounter", value: 0, descriptionText: "Initialized to 0" )
+    if(device.currentValue('notPresentCounter') == null) sendEvent(name: "notPresentCounter", value: 0, descriptionText: "Initialized to 0" )
+    if(device.currentValue('presence') == null) sendEvent(name: "presence", value: "Don't care!", descriptionText: "Initialized as Unknown" )
 }
 
 boolean isValidDate(String dateFormat, String dateString) {
@@ -1517,6 +1538,7 @@ boolean checkPresence(boolean displayWarnings=true) {
         setAsPresent()
         isPresent = true
     } else {
+        sendEvent(name: "presence", value: "not present")
         if(displayWarnings == true) {
             Integer numNotPresent = device.currentValue('notPresentCounter')
             numNotPresent = numNotPresent == null ? 1 : numNotPresent + 1
@@ -1529,4 +1551,23 @@ boolean checkPresence(boolean displayWarnings=true) {
     return isPresent
 }
 
+void setAsPresent() {
+    if(device.currentValue('presence') == "not present") {
+        Integer numRestored = device.currentValue('restoredCounter')
+        numRestored = numRestored == null ? 1 : numRestored + 1
+        sendEvent(name: "restoredCounter", value: numRestored )
+        sendEvent(name: "notPresentCounter", value: 0 )
+    }
+    sendEvent(name: "presence", value: "present")
+}
+
+void resetNotPresentCounter() {
+    logging("resetNotPresentCounter()", 100)
+    sendEvent(name: "notPresentCounter", value: 0, descriptionText: "Reset notPresentCounter to 0" )
+}
+
+void resetRestoredCounter() {
+    logging("resetRestoredCounter()", 100)
+    sendEvent(name: "restoredCounter", value: 0, descriptionText: "Reset restoredCounter to 0" )
+}
 // END:  getHelperFunctions('driver-default')
