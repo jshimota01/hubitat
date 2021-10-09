@@ -20,6 +20,9 @@
  *
  */
 
+// Modified by JAS 10-7,8,9-2021 to disable Presence showing on device and in rules, and added Toggle and Flash
+
+
 // BEGIN:getDefaultImports()
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
@@ -29,10 +32,10 @@ import java.security.MessageDigest
 import hubitat.helper.HexUtils
 
 metadata {
-    definition (name: "Zigbee - Generic Outlet (with Presence)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy") {
+    definition (name: "Zigbee - Generic Outlet (OLLLABS-custom)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy") {
         // BEGIN:getDefaultMetadataCapabilitiesForZigbeeDevices()
         capability "Sensor"
-        // capability "PresenceSensor"
+        // capability "PresenceSensor"  Removed by JAS 10/6/21 so didn't show up on Presence sensors list.
         capability "Initialize"
         capability "Refresh"
         // END:  getDefaultMetadataCapabilitiesForZigbeeDevices()
@@ -51,7 +54,7 @@ metadata {
         attribute "notPresentCounter", "number"
         attribute "restoredCounter", "number"
         // END:  getMetadataAttributesForLastCheckin()
-        command: "flash"
+        command "flash"
         command "toggle"
         // BEGIN:getCommandsForPresence()
         command "resetRestoredCounter"
@@ -83,6 +86,8 @@ metadata {
 
         fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000"
 
+        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"
+
     }
 
     preferences {
@@ -100,29 +105,7 @@ metadata {
         input(name: "recoveryMode", type: "enum", title: styling_addTitleDiv("Recovery Mode"), description: styling_addDescriptionDiv("Select Recovery mode type (default: Slow)<br/>NOTE: The \"Insane\" and \"Suicidal\" modes may destabilize your mesh if run on more than a few devices at once!"), options: ["Disabled", "Slow", "Normal", "Insane", "Suicidal"], defaultValue: "Slow")
         // END:  getMetadataPreferencesForRecoveryMode(defaultMode="Slow")
         input(name: "enablePing", type: "bool", title: styling_addTitleDiv("Enable Automatic Ping"), description: styling_addDescriptionDiv("Sends an, infrequent, ping to the device if needed for knowing if Present (default: enabled)"), defaultValue: true)
-    }
-}
-void toggle() {
-    if(device.currentValue('switch') == 'on') {
-        msg = "Turning Off ${device}"
-        if (debugLogging) log.debug(msg)
-        off()
-    } else {
-        msg = "Turning On ${device}"
-        if (debugLogging) log.debug(msg)
-        on()
-    }
-}
-
-def flashcnt = 1
-void flash() {
-    if (flashcnt < 30) {
-    on([delay: 2000])
-    off([delay: 2000])
-    flashcnt++
-    flash()
-    } else {
-    flashcnt = 1
+        input name: "flashRate", type: "enum", title: "Flash rate", options: [[500: "500 ms"], [750: "750 ms"], [1000: "1 second"], [2000: "2 seconds"], [5000: "5 seconds"]], defaultValue: 750
     }
 }
 
@@ -339,13 +322,58 @@ void sendOnOffEvent(boolean onOff) {
  */
 ArrayList<String> on() {
     logging("on()", 1)
+    state.flashing = false
+    sendEvent(name: "flashing", value: state.flashing)
     return zigbeeCommand(0x006, 0x01)
 }
 
 ArrayList<String> off() {
     logging("off()", 1)
+    state.flashing = false
+    sendEvent(name: "flashing", value: state.flashing)
     return zigbeeCommand(0x006, 0x00)
 }
+
+/**
+ *  --------- Added TOGGLE and FLASH ---------
+ */
+
+def toggle() {
+    if (device.currentValue("switch") == "off") {
+        on()
+    } else {
+        off()
+    }
+}
+
+ArrayList<String> flash() {
+    if (state.flashing) {
+        state.flashing = false
+        sendEvent(name: "flashing", value: state.flashing)
+        if (infoLogging) log.info "Flash disabled"
+        return
+    } else {
+        if (enableDesc) log.info "${device.getDisplayName()} was set to flash with a rate of ${flashRate ?: 750} milliseconds"
+        state.flashing = true
+        sendEvent(name: "flashing", value: state.flashing)
+        if (infoLogging) log.info "Flash enabled"
+        return flashOn()
+    }
+}
+
+ArrayList<String> flashOn() {
+    if (!state.flashing) return
+    runInMillis((flashRate ?: 750).toInteger(), flashOff)
+    return zigbeeCommand(0x006, 0x01)
+
+}
+
+ArrayList<String> flashOff() {
+    if (!state.flashing) return
+    runInMillis((flashRate ?: 750).toInteger(), flashOn)
+    return zigbeeCommand(0x006, 0x00)
+}
+
 
 /**
  *   --------- READ ATTRIBUTE METHODS ---------
@@ -1570,4 +1598,5 @@ void resetRestoredCounter() {
     logging("resetRestoredCounter()", 100)
     sendEvent(name: "restoredCounter", value: 0, descriptionText: "Reset restoredCounter to 0" )
 }
+// END:  getHelperFunctions('driver-default')
 // END:  getHelperFunctions('driver-default')
