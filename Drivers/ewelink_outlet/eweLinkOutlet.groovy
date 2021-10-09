@@ -389,8 +389,10 @@ ArrayList<String> flashOff() {
 
 // BEGIN:getDefaultFunctions()
 private String getDriverVersion() {
-    comment = "Works with Generic Outlets (please report your fingerprints)"
+    comment = "Works with Generic Outlets"
     if(comment != "") state.comment = comment
+    additionalComment = """Original driver by Markus Liljergren customized to support eWeLink SA-003.<br>Also, Flash and Toggle capabilities added"""
+    if(additionalComment != "") state.additionalComment = additionalComment
     String version = "v1.0.1.1123b"
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
