@@ -25,6 +25,8 @@ metadata {
     ) {
         capability "Actuator"
         capability "Switch"
+        capability "Initialize"
+        capability "Refresh"
     }
 
     preferences {
@@ -32,24 +34,32 @@ metadata {
         input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
         input name: "reversed", type: "bool", title: "Reverse Action", defaultValue: false, required: true
     }
+}
 
 def parse(description) {
 }
 
+def logsOff() {
+    log.warn "debug logging disabled..."
+    device.updateSetting("logEnable", [value: "false", type: "bool"])
+}
+
 def on() {
     if (reversed) sendEvent(name: "switch", value: "off")
-    if(reversed) sendEvent(name: "switch", value: "on")
+    if (reversed) state.device = false
+    if (!reversed) sendEvent(name: "switch", value: "on")
+    if (!reversed) state.device = true
 }
 
 def off() {
     if (reversed) sendEvent(name: "switch", value: "on")
-    if(reversed) sendEvent(name: "switch", value: "off")
+    if (reversed) state.device = true
+    if (!reversed) sendEvent(name: "switch", value: "off")
+    if (!reversed) state.device = false
 }
 
 def updated(){
-    runIn(1, 'updatedDelayed')  //avoids requiring user to refresh device details page to see the change
 }
-
 
 def installed() {
     initialize()
