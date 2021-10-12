@@ -1,0 +1,21 @@
+{
+  "packageName": "Virtual Inverse-able Switch",
+  "author": "James Shimota",
+  "version": "0.1.1",
+  "minimumHEVersion": "2.2.9",
+  "dateReleased": "2021-10-11",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/README.md",
+  "communityLink": "https://community.hubitat.com/t/meteorological-seasons-driver/80450",
+  "licenseFile": "",
+  "drivers": [
+    {
+      "id": "66926837-739f-40d0-a9d2-20e8dda14489",
+      "name": "Virtual Inverse-able Switch",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtualInverse-ableSwitch.groovy",
+      "required": false,
+      "oauth": false,
+      "version": "0.1.1"
+    }
+  ]
+}

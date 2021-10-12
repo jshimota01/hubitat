@@ -1,0 +1,21 @@
+{
+  "packageName": "Virtual Inverse-able Switch",
+  "author": "James Shimota",
+  "version": "0.1.1",
+  "minimumHEVersion": "2.2.9",
+  "dateReleased": "2021-10-11",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/README.md",
+  "communityLink": "https://community.hubitat.com/t/release-virtual-inverse-able-switch/81028",
+  "licenseFile": "",
+  "drivers": [
+    {
+      "id": "66d964c5-724b-46a4-bf17-b17a5db2411d",
+      "name": "Virtual Inverse-able Switch",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtualInverse-ableSwitch.groovy",
+      "required": false,
+      "oauth": false,
+      "version": "0.1.1"
+    }
+  ]
+}

@@ -15,7 +15,8 @@
  *      Date          Source        Version     What                                              URL
  *      ----          ------        -------     ----                                              ---
  *      2021-10-10    jshimota      0.1.0       Starting version
- */
+ *      2021-10-11    jshimota      0.1.1       Added redundant set using parent and added initialize to follow preference so always starts in off position
+ * */
 metadata {
     definition(
             name: "Virtual Inverse-able Switch",
@@ -47,15 +48,19 @@ def logsOff() {
 def on() {
     if (reversed) sendEvent(name: "switch", value: "off")
     if (reversed) state.device = false
+    parent?.componentOff(this.device)
     if (!reversed) sendEvent(name: "switch", value: "on")
     if (!reversed) state.device = true
+    parent?.componentOn(this.device)
 }
 
 def off() {
     if (reversed) sendEvent(name: "switch", value: "on")
     if (reversed) state.device = true
+    parent?.componentOn(this.device)
     if (!reversed) sendEvent(name: "switch", value: "off")
     if (!reversed) state.device = false
+    parent?.componentOff(this.device)
 }
 
 def updated(){
@@ -66,5 +71,6 @@ def installed() {
 }
 
 def initialize() {
-    off()
+    if (!reversed) off()
+    if (reversed) on()
 }
