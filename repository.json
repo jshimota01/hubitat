@@ -13,7 +13,7 @@
 			"name": "Virtual Inverse-able Switch",
 			"category": "Convenience",
 			"tags": [ "Dashboards", "Monitoring", "Switches", "Virtual" ],
-			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtualInverse-ableSwitch.groovy",
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/packageManifest.json",
 			"description": "This switch will show ON but will have a device state of Off if the preference is set to Reverse Actions. Useful for apps that allow a switch to control on-off state but you want to reflect the app not the switch"
 		}
 	]
