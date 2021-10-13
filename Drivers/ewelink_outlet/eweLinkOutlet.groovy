@@ -1,7 +1,7 @@
 /**
  *  Copyright 2020 Markus Liljergren (https://oh-lalabs.com)
  *
- *  Version: v1.0.1.1123b
+ *  Version: v1.0.1.1123c
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,10 +32,12 @@ import java.security.MessageDigest
 import hubitat.helper.HexUtils
 
 metadata {
-    definition (name: "Zigbee - Generic Outlet (OLLLABS-custom)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy") {
+    // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
+    // jshimota - 10-13-2021
+    definition (name: "Zigbee - Generic Outlet (OLLLABS-custom)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet-custom", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-custom-expanded.groovy") {
         // BEGIN:getDefaultMetadataCapabilitiesForZigbeeDevices()
         capability "Sensor"
-        // capability "PresenceSensor"  Removed by JAS 10/6/21 so didn't show up on Presence sensors list.
+        // capability "PresenceSensor"  Removed by JAS 10-6-21 so didn't show up on Presence sensors list.
         capability "Initialize"
         capability "Refresh"
         // END:  getDefaultMetadataCapabilitiesForZigbeeDevices()
@@ -54,8 +56,8 @@ metadata {
         attribute "notPresentCounter", "number"
         attribute "restoredCounter", "number"
         // END:  getMetadataAttributesForLastCheckin()
-        command "flash"
-        command "toggle"
+        command "flash"  //added by jshimota 10-9-2021
+        command "toggle" //added by jshimota 10-9-2021
         // BEGIN:getCommandsForPresence()
         command "resetRestoredCounter"
         // END:  getCommandsForPresence()
@@ -86,7 +88,7 @@ metadata {
 
         fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000"
 
-        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"
+        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota 10-8-2021
 
     }
 
@@ -105,7 +107,7 @@ metadata {
         input(name: "recoveryMode", type: "enum", title: styling_addTitleDiv("Recovery Mode"), description: styling_addDescriptionDiv("Select Recovery mode type (default: Slow)<br/>NOTE: The \"Insane\" and \"Suicidal\" modes may destabilize your mesh if run on more than a few devices at once!"), options: ["Disabled", "Slow", "Normal", "Insane", "Suicidal"], defaultValue: "Slow")
         // END:  getMetadataPreferencesForRecoveryMode(defaultMode="Slow")
         input(name: "enablePing", type: "bool", title: styling_addTitleDiv("Enable Automatic Ping"), description: styling_addDescriptionDiv("Sends an, infrequent, ping to the device if needed for knowing if Present (default: enabled)"), defaultValue: true)
-        input name: "flashRate", type: "enum", title: "Flash rate", options: [[500: "500 ms"], [750: "750 ms"], [1000: "1 second"], [2000: "2 seconds"], [5000: "5 seconds"]], defaultValue: 750
+        input name: "flashRate", type: "enum", title: "Flash rate", options: [[500: "500 ms"], [750: "750 ms"], [1000: "1 second"], [2000: "2 seconds"], [5000: "5 seconds"]], defaultValue: 750  //added by jshimota 10-9-2021
     }
 }
 
@@ -336,6 +338,8 @@ ArrayList<String> off() {
 
 /**
  *  --------- Added TOGGLE and FLASH ---------
+ *  jshimota 10-7 through 10-9-2021 to enhance
+ *  although the eWelink can use x06 x02 for toggle, I left that command off as I have no idea how it would affect other brands and dont understand device detection!
  */
 
 def toggle() {
@@ -374,6 +378,10 @@ ArrayList<String> flashOff() {
     return zigbeeCommand(0x006, 0x00)
 }
 
+/**
+ *  --------- End of TOGGLE and FLASH ---------
+ *  end of changes by jshimota
+ */
 
 /**
  *   --------- READ ATTRIBUTE METHODS ---------
@@ -391,9 +399,10 @@ ArrayList<String> flashOff() {
 private String getDriverVersion() {
     comment = "Works with Generic Outlets"
     if(comment != "") state.comment = comment
+    // added line below to enhance attribution - jshimota 10-13-2021
     additionalComment = """Original driver by Markus Liljergren customized to support eWeLink SA-003.<br>Also, Flash and Toggle capabilities added"""
     if(additionalComment != "") state.additionalComment = additionalComment
-    String version = "v1.0.1.1123b"
+    String version = "v1.0.1.1123c"  // jshimota 10-9-2021 changed to 1.0.1.123b to 1.0.1.1123c to reflect modification
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
     updateDataValue('driver', version)
