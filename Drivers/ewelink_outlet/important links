@@ -1,0 +1,18 @@
+My ask for guidance on how to appropriately 'fork'.
+
+https://community.oh-lalabs.com/t/another-bother-about-my-modifications-to-your-amazing-zigbee-driver/1158?u=jshimota01
+
+His answer
+https://community.oh-lalabs.com/t/another-bother-about-my-modifications-to-your-amazing-zigbee-driver/1158/3?u=jshimota01
+
+The original source discussion I began with
+https://community.oh-lalabs.com/t/release-generic-zigbee-drivers-with-presence-and-recovery/74
+
+The original github link
+https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy
+
+My version of the driver
+https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy
+
+My readme.md
+https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/README.md

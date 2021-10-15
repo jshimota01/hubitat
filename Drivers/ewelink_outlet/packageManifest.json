@@ -1,0 +1,21 @@
+{
+  "packageName": "Zigbee eWeLink-CMARS-Seedan Outlet",
+  "author": "James Shimota",
+  "version": "0.1.1.0",
+  "minimumHEVersion": "2.2.9",
+  "licenseFile": "https://opensource.org/licenses/LGPL-2.0",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/README.md",
+  "communityLink": "https://community.hubitat.com/t/release-zigbee-ewelink-cmars-seedan-outlet-driver/81319",
+  "dateReleased": "2021-10-15",
+  "drivers": [
+    {
+      "id": "0d0a7ad7-9c9b-4c06-bf03-fb2d3cb3a242",
+      "name": "Zigbee eWeLink-CMARS-Seedan Outlet",
+      "namespace": "jshimota (Shumo)",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy",
+      "required": false,
+      "oauth": false,
+      "version": "0.1.1.0"
+    }
+  ]
+}
