@@ -21,6 +21,20 @@
  *  NOTE: This is an auto-generated file and most comments have been removed!
  *
  */
+
+/*
+*  Zigbee eWeLink/CMARS/Seedan Outlet
+*
+*  Licensed Virtual the Apache License, Version 2.0 (the "License"); you may not use this file except
+*  in compliance with the License. You may obtain a copy of the License at:
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+*  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+*  for the specific language governing permissions and limitations under the License.
+*/
+
 /*
 *  Change History:
 *
@@ -35,15 +49,11 @@
 *      2021-10-08    jshimota      0.1.0.4          Removed Presence capability so it doesn't show as a presence device in HE (left presence code intact for polling)
 *      2021-10-09    jshimota      0.1.0.5          Added Flash command to flash light for locating device
 *      2021-10-09    jshimota      0.1.0.6          Added Toggle command to flip state programmatically
-*      2021-10-10    jshimota      0.1.0.7          Changed toggle from using x06 02 to x06 01/x06 00 so as to work with other devices that dont have toggle command in device code
+*      2021-10-10    jshimota      0.1.0.7          Changed toggle from using x06 02 to x06 01/x06 00 so as to work with other devices that do not have toggle command in device code
 *      2021-10-15    jshimota      0.1.0.8          Modified Text about send to developer so Markus doesn't get Fingerprint calls
 *      2021-10-15    jshimota      0.1.1.0          Released version
 *
 */
-
-
-// Modified by JAS 10-7,8,9-2021 to disable Presence showing on device and in rules, and added Toggle and Flash
-
 
 // BEGIN:getDefaultImports()
 import groovy.json.JsonSlurper
@@ -56,7 +66,7 @@ import hubitat.helper.HexUtils
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
     // jshimota - 10-15-2021
-    definition (name: "Zigbee-eWeLink etc Generic Outlet", namespace: "jshimotaoh-lalabs.com", author: "James Shimota", filename: "zigbee-ewelink-outlet-custom", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/eWeLink-CMARS-Seedan.groovy") {
+    definition (name: "Zigbee-eWeLink etc Generic Outlet", namespace: "jshimota", author: "James Shimota", filename: "eWeLink-CMARS-Seedan.groovy", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy") {
         // BEGIN:getDefaultMetadataCapabilitiesForZigbeeDevices()
         capability "Sensor"
         // capability "PresenceSensor"  Removed by JAS 10-6-21 so didn't show up on Presence sensors list.
@@ -1632,5 +1642,4 @@ void resetRestoredCounter() {
     logging("resetRestoredCounter()", 100)
     sendEvent(name: "restoredCounter", value: 0, descriptionText: "Reset restoredCounter to 0" )
 }
-// END:  getHelperFunctions('driver-default')
 // END:  getHelperFunctions('driver-default')
