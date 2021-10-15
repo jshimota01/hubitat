@@ -2,17 +2,69 @@ eWeLink Outlet
 
 Why?
 
-I began using these lowcost Zigbee outlets because they were Zigbee, cheap and seemed to work really well after trying a couple other brands.  Then they all began to show up in the watchdog as they have some problem with the refresh.
-Switching to OhLaLaLabs driver seemed to solve it but that driver has a 'Presence' which I dont need, want or use.
+I began using these lowcost Zigbee outlets because they were Zigbee, cheap and seemed to work really well after trying a couple other brands.  I also
+selected them because they act as a repeater making my Zigbee mesh more solid.  After my first purchase of 4, I liked them so much I went back and bought
+them again, but Amazon no longer sold them - they sold 'CMARS'.  And later, I bought them again but all I could find was 'Seedan' named units.
+Oddly, when identified during installation using Generic Zigbee driver from Hubitat - all the units described themselves as 'Manufacturer - eWeLink'.
+
+Over a short period of time, I began to see them show up in the watchdog.  If I didn't use them, they didn't seem to call home.  Discussing this in 
+the Hubitat forums, @bravnel said they were lacking a refresh.  I searched for more information and stumbled on a driver from Markus Liljergren (of
+'OhLa Labs' fame (see https://oh-lalabs.com/) that had a really nice feature for 'Presence' detection and gave it a try. 
+The devices responded really nicely and I was pleased.
+
+Sometime later I was working on Presence for my HSM and away modes and realized when I wanted to select a Presence device in a Rule, every one of my outlets 
+showed up in the list.  In and of itself, this isn't a big deal but it was unwieldy and I didn't like devices that I knew were always present, showing up.
+So I took it upon myself and edited the driver, removing the 'Presence' capability.  I left all the rest of the driver alone so as not to tinker with any
+of the functionality of the refresh (presence is related to the device polling and refreshing).  And I was pleased.
+
+During the editing, I saw the 'fingerprint' functionality that Markus had built in.  This allowed a device to identify itself so the driver would automagically
+detect and be offered. It also defines the features and options of the device so the driver can control what is used and offered - it was after all a
+generic driver to support many manufacturers.  Using a seperate tool (ALSO provided by Markus on his website) I generated my own fingerprint for my outlets
+and added it to the driver.  Now, any time I added another eWeLink, CMARS or Seedan unit, automation kicked in very nicely.  And I was pleased.
+
+Much later - I had 4 outlets on a power strip doing various controls in the garage.  The problem was I couldn't tell which device was which.  I needed a 
+'Flash' feature (the ability to toggle back and forth the on off so I could ID the device I wanted to work on).  And speaking of toggle, that too was not 
+available in the driver Markus had built.  So carefully, and with a huge learning curve due to Markus skill being lightyears ahead I toyed and struggled
+until I was able to get the addition commands to function.  I tested as much as I could and finally I felt the project was completed.
+
+And I was pleased.
+
+While reading some online posts on Amazon, it became clear that the driver I had made was needed by others.  Because the eWeLink (and subsequent devices) 
+were popular due to price and function - there was a current demand for them, but only the Generic Driver was being offered.  I felt it was important
+to see that what modifications I had made were important to Markus.  I reached out to him and asked.  He described that he no longer was actively 
+supporting the drivers for this but thanked me for asking.
+I posted on the Hubitat forums about my customized driver asking for clarity on how to make the driver available without taking credit or risking blowback
+for building work on top of Markus'.  I got a sort of tepid response, that wasn't ultra clear.  The gist of what I learned was:
+
+Send a PR (pull request for Github)
+Be Nice
+Ask permission
+and follow common courtesy. 
+
+I reached out again to Markus, this time explaining in no uncertain terms what I wanted to do. His response was:
+
+(Markus - Developer)
+Hi Jim!
+
+When it comes to keeping credits and original code referenced it’s not easy to “do it right”. You could do as gadget suggests and base it off a fork of my repo, but if you’re only going to change this one driver that is probably not ideal considering my repo has a lot of other drivers as well.
+
+With that said, it’s perfectly fine to just take the one driver file and add to the list of contributors in the header with a clear note about what you added/changed. Adding a link to the original repo in the header could also be a good thing to do.
+
+I’m happy my drivers can still help people even though I’ve had to discontinue support for them. Always glad to hear my work comes to good use!
+
 
 Description
 
-Meteorological Seasons is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver.
-This creates a virtual device, and from it, dashboard tiles, variables for Rules and other nice features are produced.
+eWeLink Outlet is a driver that is modified from the great code of Markus Liljergren of 'OhLa Labs' fame (see https://oh-lalabs.com/)
+This driver, when installed correctly on a Hubitat platform, provides selectable device driver that is designed for Generic Zigbee Outlets but has the additional
+capability to refresh and be polled as well as has a Toggle and Flash command for added functionality.
+
+This driver can be used for more than just eWeLink zigbee outlets (CMARS and Seedan are two known repackages of the eWeLink device).  Besides the targeted device
+other manufacturers of Zigbee outlets are also supported.  
 
 Requirements
 
-I have not tested this on any platforms besides my Hubitat c5 currently running 2.2.8 Firmware.  That said, it is relatively benign and should work on any HE hub and with fingers crossed will continue to work as the HE world develops.
+I have not tested this on any platforms besides my Hubitat c5 currently running 2.2.9.130 Firmware.  That said, it is relatively benign and should work on any HE hub and with fingers crossed will continue to work as the HE world develops.
 
 New Features
 1.x		Initial release
@@ -34,55 +86,10 @@ Installation and Configuration
 		You may also override the current season value calculated by choosing one of the seasons and clicking.  However, by default - the driver WILL reset at 6am the next day to the current season.
 			*Unless you have disabled Autoupdate - in which case it will never change.
 
-Additional Features
-
-    The basic default settings are designed to cover most cases.  Normally, DescriptionText logging is enabled, but Debug logging is disabled.  Both are configurable.
-    
-    The default update is enabled and scheduled at 6am each day.  The system clears all schedules, then adds another upon each morning refresh.  This guarantees no inadvertent multiple schedules will occur.
-    If you disable updates you can keep an override value in place (as described above by choosing and click any season)  This is useful for testing but is recommended to be left enabled.
-    
-    The value of the image is managed separately from the value of the textual response.  In this way, when creating dashboard icons, you can choose as needed.  However in some cases a tile is needed that contains both, and in HTML layout.
-    Enabling the HTML attribute will provide a default layout HTML tile for use with SuperTiles and other dashboard apps.  It is NOT fully fleshed and tested but works in a basic form.
-    
-    The driver calls to the internet for the icons, stored in the GitHub repository:
-    " https://raw.githubusercontent.com/jshimota01/hubitat/main/meteorological_seasons/season_icons/ "
-    A user could easily download the five icons (fall.svg, winter.svg, spring.svg, summer.svg and unknown.svg) and put them on their Hubitat or in a local web folder.
-    By updating the Alternate path for season icons, you can override the reference to your images location in this manner.  (**NOTE – end your reference path with a “/” (forward slash!))
-	Also, it is possible that you may wish to use your own images and replace the default SVG files. Simply make sure you name your replacement files correctly and identically as they are hardcoded.
-	
-    As of version 2.x the ability to set for the southern hemisphere was added.  The default is “Northern” hemisphere, but turning OFF the switch and saving preferences will flip the world and align the correct seasons, their dates, names and images.
-   
-    *** Important - If changes occur to any preference, click Save Preferences below the preferences section
-
-Use the driver in RM rules
-
-    To access Rules values - the example here is for a Predicate (RM 5!) - but it can be used wherever.  Below is simply an Example!
-    Create a Rule, then name it.
-    Enabled Use Predicate Conditions
-    Click Define Predicate Conditions
-    Select New Condition in the drop down
-    Select Custom Attribute from the Select Capability drop down
-    Click Select Device
-    Select your Virtual Device you created at installation
-    Select Attribute from the drop down
-    Choose SeasonName
-    Choose the Equals sign
-    Enter a season text value – It MUST be one ofthe following: “Fall”, “Summer”, “Winter” or “Spring” [IE; Uppercase first letter!]
-    Press enter to complete the text line entry
-    Click Done with this Condition.
 
 Future updates
 
-      When I wrote this driver, I was reminded of some basics about this topic.  
-
-      First, there are two main forms of seasons - Meteorological and Astronomical.  Astronomical seasons are calculated using the equinoxes (which are not static dates each year!), and therefore varies.
-      
-      Example for Fall
-      Meteorological = September 1 through November 30
-      Astronomical = September 22 through December 21
-      
-      The ability for a user to choose between these 2 forms of Seasons was intended, but my programming skills couldn't yet deal with the implementation.
-      
-      The ability for users to be able to create a start/stop for each season was also intended, but never implemented.
-      
-      The ability for a user to enter any date to get the correct value was intended and implement but then removed as the date field entry was complicated and I didn't want the support hassle.
+	It is not my intention to 'take over' Markus' driver.  Rather, I am simply providing my effort in the hopes it will help others.  However, it is possible
+	that anyone using this driver for another manufacturer may indeed be prompted for a 'fingerprint' (that is left over from Markus code).  I did not remove
+	the 'fingerprint' code but I did redirect it to me.  If I can implement anyones fingerprint for them, I'll be happy to do so.  Other than that, I have no
+	intention of changing this driver further (with the exception of any fixes needed for work I've done).
