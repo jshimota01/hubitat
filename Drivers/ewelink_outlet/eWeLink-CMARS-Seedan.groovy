@@ -22,8 +22,8 @@
  *
  */
 
-/*
-*  Zigbee eWeLink/CMARS/Seedan Outlet
+/**
+*  Zigbee eWeLink-CMARS-Seedan Outlet
 *
 *  Licensed Virtual the Apache License, Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License. You may obtain a copy of the License at:
@@ -35,7 +35,7 @@
 *  for the specific language governing permissions and limitations under the License.
 */
 
-/*
+/**
 *  Change History:
 *
 *      ORIGINAL SOURCE
@@ -63,10 +63,13 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
+static String version() { return '0.1.1.0' }
+
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
     // jshimota - 10-15-2021
-    definition (name: "Zigbee-eWeLink etc Generic Outlet", namespace: "jshimota", author: "James Shimota", filename: "eWeLink-CMARS-Seedan.groovy", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy") {
+    // ORIG - definition (name: "Zigbee - Generic Outlet (with Presence)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/release/drivers/expanded/zigbee-generic-outlet-expanded.groovy") {
+    definition (name: "Zigbee eWeLink-CMARS-Seedan Outlet", namespace: "jshimota", author: "James Shimota", filename: "eWeLink-CMARS-Seedan.groovy", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy") {
         // BEGIN:getDefaultMetadataCapabilitiesForZigbeeDevices()
         capability "Sensor"
         // capability "PresenceSensor"  Removed by JAS 10-6-21 so didn't show up on Presence sensors list.
@@ -371,7 +374,7 @@ ArrayList<String> off() {
 /**
  *  --------- Added TOGGLE and FLASH ---------
  *  jshimota 10-7 through 10-9-2021 to enhance
- *  although the eWelink can use x06 x02 for toggle, I left that command off as I have no idea how it would affect other brands and dont understand device detection!
+ *  although the eWelink can use x06 x02 for toggle, I left that command off as I have no idea how it would affect other brands
  */
 
 def toggle() {
@@ -1260,7 +1263,7 @@ void getInfo(boolean ignoreMissing=false, Map<String,String> sdi = [:]) {
         log.info("INCOMPLETE - DO NOT SUBMIT THIS - TRY AGAIN: fingerprint model:\"$model\", manufacturer:\"$manufacturer\", profileId:\"$profileId\", endpointId:\"$endpointId\", inClusters:\"$inClusters\", outClusters:\"$outClusters\"" + extraFingerPrint)
     } else {
         // changed line below so Markus doesn't get messages about fingerprints - jshimota 10-15-2021
-        log.info("COPY AND PASTE THIS ROW TO THE JSHIMOTA IN THE HUBITAT COMMUNITY - DO NOT SEND TO MARKUS!" fingerprint model:\"$model\", manufacturer:\"$manufacturer\", profileId:\"$profileId\", endpointId:\"$endpointId\", inClusters:\"$inClusters\", outClusters:\"$outClusters\"" + extraFingerPrint)
+        log.info("COPY AND PASTE THIS ROW TO THE JSHIMOTA IN THE HUBITAT COMMUNITY - DO NOT SEND TO MARKUS! fingerprint model:\"$model\", manufacturer:\"$manufacturer\", profileId:\"$profileId\", endpointId:\"$endpointId\", inClusters:\"$inClusters\", outClusters:\"$outClusters\"" + extraFingerPrint)
     }
 }
 // END:  getHelperFunctions('zigbee-generic')

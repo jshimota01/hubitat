@@ -1,4 +1,4 @@
-/*
+/**
  * Virtual Inverse-able Switch
  *
  *  Licensed Virtual the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -16,7 +16,8 @@
  *      ----          ------        -------     ----                                              ---
  *      2021-10-10    jshimota      0.1.0       Starting version
  *      2021-10-11    jshimota      0.1.1       Added redundant set using parent and added initialize to follow preference so always starts in off position
- * */
+ *
+ */
 metadata {
     definition(
             name: "Virtual Inverse-able Switch",
