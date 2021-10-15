@@ -9,13 +9,20 @@
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/packageManifest.json",
 			"description": "A need developed for me to be able to set Rules and automations within my Hubitat environment that would allow me to gain control seasonally.  Meteorological Seasons is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver. This driver, when used during creation of a virtual device, creates a clean way to bridge seasons to dashboard tiles, variables for Rules and other nice features  as well.  Now useful for both hemispheres!"
 		  },
-		{
+ 		  {
 			"name": "Virtual Inverse-able Switch",
 			"category": "Convenience",
-			"tags": [ "Dashboards", "Monitoring", "Switches", "Virtual" ],
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/packageManifest.json",
 			"description": "This switch will show ON but will have a device state of Off if the preference is set to Reverse Actions. Useful for apps that allow a switch to control on-off state but you want to reflect the app not the switch"
-		}
+		  },
+		  {
+			"name": "Zigbee eWeLink-CMARS-Seedan Outlet",
+			"category": "Control",
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/packageManifest.json",
+			"description": "Zigbee eWeLink-CMARS-Seedan Outlet is a driver that is modified from the great code of Markus Liljergren of *OhLa Lab* fame -see https://oh-lalabs.com/. Modifications include ewelink fingerprint and more "
+		  }
 	]
 	
 }
