@@ -25,14 +25,18 @@
 /**
 *  Zigbee eWeLink-CMARS-Seedan Outlet
 *
-*  Licensed Virtual the Apache License, Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License. You may obtain a copy of the License at:
+*  This program is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, either version 3 of the License, or
+*  (at your option) any later version.
 *
-*      http://www.apache.org/licenses/LICENSE-2.0
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
 *
-*  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
-*  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
-*  for the specific language governing permissions and limitations under the License.
+*  You should have received a copy of the GNU General Public License
+*  along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 /**
@@ -68,7 +72,6 @@ static String version() { return '0.1.1.0' }
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
     // jshimota - 10-15-2021
-    // ORIG - definition (name: "Zigbee - Generic Outlet (with Presence)", namespace: "oh-lalabs.com", author: "Markus Liljergren", filename: "zigbee-generic-outlet", importUrl: "https://raw.githubusercontent.com/markus-li/Hubitat/release/drivers/expanded/zigbee-generic-outlet-expanded.groovy") {
     definition (name: "Zigbee eWeLink-CMARS-Seedan Outlet", namespace: "jshimota", author: "James Shimota", filename: "eWeLink-CMARS-Seedan.groovy", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy") {
         // BEGIN:getDefaultMetadataCapabilitiesForZigbeeDevices()
         capability "Sensor"
