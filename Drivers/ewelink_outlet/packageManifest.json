@@ -3,7 +3,7 @@
   "author": "James Shimota",
   "version": "0.1.1.0",
   "minimumHEVersion": "2.2.9",
-  "licenseFile": "https://opensource.org/licenses/LGPL-2.0",
+  "licenseFile": "http://www.gnu.org/licenses/lgpl-3.0.txt",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/README.md",
   "communityLink": "https://community.hubitat.com/t/release-zigbee-ewelink-cmars-seedan-outlet-driver/81319",
   "dateReleased": "2021-10-15",
