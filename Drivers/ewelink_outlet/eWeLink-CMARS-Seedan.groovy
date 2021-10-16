@@ -1266,7 +1266,7 @@ void getInfo(boolean ignoreMissing=false, Map<String,String> sdi = [:]) {
         log.info("INCOMPLETE - DO NOT SUBMIT THIS - TRY AGAIN: fingerprint model:\"$model\", manufacturer:\"$manufacturer\", profileId:\"$profileId\", endpointId:\"$endpointId\", inClusters:\"$inClusters\", outClusters:\"$outClusters\"" + extraFingerPrint)
     } else {
         // changed line below so Markus doesn't get messages about fingerprints - jshimota 10-15-2021
-        log.info("COPY AND PASTE THIS ROW TO THE JSHIMOTA IN THE HUBITAT COMMUNITY - DO NOT SEND TO MARKUS! fingerprint model:\"$model\", manufacturer:\"$manufacturer\", profileId:\"$profileId\", endpointId:\"$endpointId\", inClusters:\"$inClusters\", outClusters:\"$outClusters\"" + extraFingerPrint)
+        log.info("COPY AND PASTE THIS ROW TO USER JSHIMOTA IN THE HUBITAT COMMUNITY - DO NOT SEND TO MARKUS! fingerprint model:\"$model\", manufacturer:\"$manufacturer\", profileId:\"$profileId\", endpointId:\"$endpointId\", inClusters:\"$inClusters\", outClusters:\"$outClusters\"" + extraFingerPrint)
     }
 }
 // END:  getHelperFunctions('zigbee-generic')
