@@ -7,7 +7,7 @@ metadata {
             name: "Virtual Inverse-able w-autooff Switch",
             namespace: "jshimota",
             author: "James Shimota",
-            importUrl: ""
+            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtswitch-minimal.groovy"
     ) {
         capability "Actuator"
         capability "Switch"
