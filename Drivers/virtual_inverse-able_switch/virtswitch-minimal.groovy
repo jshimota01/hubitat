@@ -7,7 +7,7 @@ metadata {
             name: "Virtual Inverse-able w-autooff Switch",
             namespace: "jshimota",
             author: "James Shimota",
-            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtswitch-minimal.groovy"
+            importUrl: ""
     ) {
         capability "Actuator"
         capability "Switch"
@@ -29,7 +29,7 @@ def logsOff() {
 def on() {
     if (txtEnable) log.info "ON button pushed."
     sendEvent(name: "switch", value: "on", isStateChange: true)
-    switchvalue = device.currentValue("switch")
+    switchvalue = device.currentValue("switch", true)
     state.device = true
     if (txtEnable) log.info "${device.displayName} turned ON and device state is $state.device."
     if (txtEnable) log.info "Turned On: switchvalue is $switchvalue"
@@ -38,7 +38,7 @@ def on() {
 def off() {
     if (txtEnable) log.info "OFF button pushed."
     sendEvent(name: "switch", value: "off", isStateChange: true)
-    switchvalue = device.currentValue("switch")
+    switchvalue = device.currentValue("switch", true)
     state.device = false
     if (txtEnable) log.info "${device.displayName} turned OFF and device state is $state.device."
     if (txtEnable) log.info "Turned Off: switchvalue is $switchvalue"
@@ -57,7 +57,7 @@ def readCurrent() {
 def initialize() {
     if (txtEnable) log.info "INITIALIZE button pushed."
     sendEvent(name: "switch", value: "off", isStateChange: true)
-    switchvalue = device.currentValue("switch")
+    switchvalue = device.currentValue("switch", true)
     state.device = false
     if (txtEnable) log.info "${device.displayName} is initialized and device state is $state.device."
     if (txtEnable) log.info "Initialized: switchvalue is $switchvalue"
