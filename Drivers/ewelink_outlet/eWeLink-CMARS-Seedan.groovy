@@ -23,41 +23,42 @@
  */
 
 /**
-*  Zigbee eWeLink-CMARS-Seedan Outlet
-*
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  You should have received a copy of the GNU General Public License
-*  along with this program. If not, see <https://www.gnu.org/licenses/>.
-*/
+ *  Zigbee eWeLink-CMARS-Seedan Outlet
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 /**
-*  Change History:
-*
-*      ORIGINAL SOURCE
-*      2020          markus-li     0.1.0.1.1123b    Copyright 2020 Markus Liljergren (https://oh-lalabs.com)               https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy
+ *  Change History:
+ *
+ *      ORIGINAL SOURCE
+ *      2020          markus-li     0.1.0.1.1123b    Copyright 2020 Markus Liljergren (https://oh-lalabs.com)               https://raw.githubusercontent.com/markus-li/Hubitat/development/drivers/expanded/zigbee-generic-outlet-expanded.groovy
 
-*
-*      Date          Source        Version          What                                              URL
-*      ----          ------        -------          ----                                              ---
-*      2021-10-07    jshimota      0.1.0.2          My 'fork' of this driver taken from the above original source
-*      2021-10-07    jshimota      0.1.0.3          Fingerprint for eWeLink added
-*      2021-10-08    jshimota      0.1.0.4          Removed Presence capability so it doesn't show as a presence device in HE (left presence code intact for polling)
-*      2021-10-09    jshimota      0.1.0.5          Added Flash command to flash light for locating device
-*      2021-10-09    jshimota      0.1.0.6          Added Toggle command to flip state programmatically
-*      2021-10-10    jshimota      0.1.0.7          Changed toggle from using x06 02 to x06 01/x06 00 so as to work with other devices that do not have toggle command in device code
-*      2021-10-15    jshimota      0.1.0.8          Modified Text about send to developer so Markus doesn't get Fingerprint calls
-*      2021-10-15    jshimota      0.1.1.0          Released version
-*
-*/
+ *
+ *      Date          Source        Version          What                                              URL
+ *      ----          ------        -------          ----                                              ---
+ *      2021-10-07    jshimota      0.1.0.2          My 'fork' of this driver taken from the above original source
+ *      2021-10-07    jshimota      0.1.0.3          Fingerprint for eWeLink added
+ *      2021-10-08    jshimota      0.1.0.4          Removed Presence capability so it doesn't show as a presence device in HE (left presence code intact for polling)
+ *      2021-10-09    jshimota      0.1.0.5          Added Flash command to flash light for locating device
+ *      2021-10-09    jshimota      0.1.0.6          Added Toggle command to flip state programmatically
+ *      2021-10-10    jshimota      0.1.0.7          Changed toggle from using x06 02 to x06 01/x06 00 so as to work with other devices that do not have toggle command in device code
+ *      2021-10-15    jshimota      0.1.0.8          Modified Text about send to developer so Markus doesn't get Fingerprint calls
+ *      2021-10-15    jshimota      0.1.1.0          Released version
+ *      2021-11-23    jshimota      0.1.1.1          Added AutoOff
+ *
+ */
 
 // BEGIN:getDefaultImports()
 import groovy.json.JsonSlurper
@@ -109,25 +110,15 @@ metadata {
 
         fingerprint deviceJoinName:"IKEA Tradfri Power Outlet", model:"TRADFRI control outlet", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,1000,FC7C", outClusters:"0005,0019,0020,1000", manufacturer:"IKEA of Sweden"
         fingerprint deviceJoinName:"IKEA Tradfri Power Outlet", model:"TRADFRI control outlet", manufacturer:"IKEA of Sweden", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,FC7C", outClusters:"0005,0019,0020", application:"14"
-
         fingerprint deviceJoinName:"Iris 3210-L Plug", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B04,0B05,FC03", outClusters:"0019", model:"3210-L", manufacturer:"CentraLite"
-
         fingerprint model:"3320-L", manufacturer:"CentraLite", profileId:"0104", endpointId:"01", inClusters:"0000,0001,0003,0020,0402,0500,0B05", outClusters:"0019"
-
         fingerprint deviceJoinName:"Sylvania Outlet", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B05,FC01,FC08", outClusters:"0003,0019", model:"PLUG", manufacturer:"LEDVANCE"
-
         fingerprint deviceJoinName:"Sylvania Outlet", profileId:"C05E", endpointId:"03", inClusters:"1000,0000,0003,0004,0005,0006,0B04,FC0F", outClusters:"0019", model:"Plug 01", manufacturer:"OSRAM"
-
         fingerprint model:"SP 222", manufacturer:"innr", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0B05,1000,FC82", outClusters:"000A,0019", application:"10"
-
         fingerprint model:"outlet", manufacturer:"Samjin", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0009,0B04,0B05", outClusters:"0003,0019", application:"11"
-
         fingerprint model:"4257050-RZHAC", manufacturer:"CentraLite", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B04,0B05", outClusters:"0019"
-
         fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000"
-
         fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota 10-8-2021
-
     }
 
     preferences {
@@ -146,6 +137,7 @@ metadata {
         // END:  getMetadataPreferencesForRecoveryMode(defaultMode="Slow")
         input(name: "enablePing", type: "bool", title: styling_addTitleDiv("Enable Automatic Ping"), description: styling_addDescriptionDiv("Sends an, infrequent, ping to the device if needed for knowing if Present (default: enabled)"), defaultValue: true)
         input name: "flashRate", type: "enum", title: "Flash rate", options: [[500: "500 ms"], [750: "750 ms"], [1000: "1 second"], [2000: "2 seconds"], [5000: "5 seconds"]], defaultValue: 750  //added by jshimota 10-9-2021
+        input name: "autoOffOn", type: "enum", description: "Automatically turns off the device after selected time.", title: "Enable Auto-Off-On", options: [[0:"Disabled"],[1:"1 second"],[2:"2 seconds"],[5:"5 seconds"],[10:"10 seconds"],[15:"15 seconds"],[20:"20 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"1 minute"],[120:"2 minutes"],[300:"5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1200:"20 minutes"],[1800:"30 minutes"],[2700:"45 minutes"],[3600:"1 hour"]], defaultValue: 0
     }
 }
 
@@ -354,6 +346,12 @@ void sendOnOffEvent(boolean onOff) {
         sendEvent(name:"switch", value: "off", isStateChange: false, descriptionText: "Switch was turned off")
     } else {
         sendEvent(name:"switch", value: "on", isStateChange: false, descriptionText: "Switch was turned on")
+        // sendEvent(name:"autooffon", value: "Before Check")
+        if (autoOffOn.toInteger() > 0) {
+            sendEvent(name:"autooffon", value: autoOffOn)
+            runIn(autoOffOn.toInteger(), aOff)
+            // runIn(2, aOff)
+        }
     }
 }
 
@@ -416,8 +414,16 @@ ArrayList<String> flashOff() {
     return zigbeeCommand(0x006, 0x00)
 }
 
+ArrayList<String> aOff() {
+    // if (!state.switch) return
+    // sendEvent(name:"autooffon", value: "inAoff")
+    logging("Turned off with AutoOff feature in Driver, user set: ${autoOffOn} seconds", 100)
+    return zigbeeCommand(0x006, 0x00)
+}
+
+
 /**
- *  --------- End of TOGGLE and FLASH ---------
+ *  --------- End of AutoOffOn, TOGGLE and FLASH ---------
  *  end of changes by jshimota
  */
 
@@ -438,9 +444,9 @@ private String getDriverVersion() {
     comment = "Works with Generic Outlets"
     if(comment != "") state.comment = comment
     // added line below to enhance attribution - jshimota 10-13-2021
-    additionalComment = """Original driver by Markus Liljergren customized to support eWeLink SA-003.<br>Also, Flash and Toggle capabilities added"""
+    additionalComment = """Original driver by Markus Liljergren, customized to support eWeLink SA-003.<br>Also, AutoOff, Flash and Toggle capabilities added."""
     if(additionalComment != "") state.additionalComment = additionalComment
-    String version = "v0.1.1.0"  // jshimota 10-9-2021 changed to 1.0.1.123b to v0.1.1.0 to reflect modification
+    String version = "v0.1.1.1"  // jshimota 10-9-2021 changed to 1.0.1.123b to v0.1.1.1 to reflect modification
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
     updateDataValue('driver', version)
