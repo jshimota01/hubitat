@@ -94,6 +94,11 @@ Changelog (as of today, 2021-10-15 - all changes by JAS)
 		<td>0.1.1.0</td>
 		<td>Released version</td>
 	</tr>
+	<tr>
+		<td>11/23/2021</td>
+		<td>0.1.1.1</td>
+		<td>Added AutoOff to Driver</td>
+	</tr>
 </tbody>
 </table>
 
@@ -121,6 +126,8 @@ The Presence capability was removed as noted.  This is simply the advertisement 
 *Toggle* - as the name states, the toggle command was added to the code to provide a button and programmatic functionality to the device in case 'toggle' was needed for Rules etc.  Toggle literally changes the state of the device from off to on, or on to off.
 
 *Flash* - the flash command is more commonly found on bulbs devices.  When the Flash button on the device page is pressed the device begins to cycle or change state back and forth from on to off.  It will continue this behavior ad-infinitum until the button is pushed again, or On or Off are pressed.
+
+*AutoOff* - the autoOff command offers a method to 'toggle Off' the switch/outlet.  I wanted this feature so I could replace Rules I had made that were used in a garage door opener relay.  The values range from 0 (off) to 3600 seconds (1 hour).  Additional logging info commands were also added so user would know that the driver kicked the outlet off.  
 
 **Future updates**
 
