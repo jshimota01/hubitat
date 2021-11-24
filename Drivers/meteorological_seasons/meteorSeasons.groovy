@@ -36,6 +36,13 @@
  */
 
 import java.text.SimpleDateFormat
+
+//import java.io.BufferedReader;
+//import java.io.File;
+import java.io.IOException;
+// import java.io.InputStreamReader;
+ 
+
 static String version() { return '0.2.11' }
 
 metadata {
@@ -85,7 +92,7 @@ preferences {
     input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
     input(name: "existingTileFontSize", type: "num", title: "HTML Tile Font Size (%)*", defaultValue: 100)
     input(name: "existingTileVertWordPos", type: "num", title: "HTML Tile Word Position (%)*", defaultValue: 55)
-    input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFF")
+    input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
     input("autoUpdate", "bool", title: "Enable automatic update at 6am\n(Enabled is Yes)", defaultValue: true, required: true, displayDuringSetup: true)
     input("htmlVtile", "bool", title: "Use HTML attribute instead of seasonTile\n(Enabled is Yes)")
     input("iconPathOvr", "string", title: "Alternate path to season icons \n(must contain file names fall.svg, winter.svg, spring.svg, summer and unknown.svg)")
@@ -96,9 +103,9 @@ preferences {
 }
 
 def tileFontColor() {
-    String tileFontColor = "#FFFFFF"
+    String tileFontColor = "#FFFFFFFF"
     if(existingTileFontColor > " ") tileFontColor = existingTileFontColor
-    sendEvent(name: "Tile Font Color", value: tileFontColor)
+    sendEvent(name: "Tile Font Color", value: "${tileFontColor}")
 }
 
 def tileVertWordPos() {
@@ -145,11 +152,12 @@ def updated() {
 
 def refresh() {
     runCmd()
-    currentSeason()
-    hemisphereName()
     tileFontColor()
     tileFontSize()
     tileVertWordPos()
+    currentSeason()
+    hemisphereName()
+
 
 }
 
@@ -381,4 +389,23 @@ def summer() {
 *    }
 *}
 *
+*/
+
+/*copy = { File src,File dest-> 
+
+	def input = src.newDataInputStream()
+	def output = dest.newDataOutputStream()
+
+	output << input 
+
+	input.close()
+	output.close()
+}
+
+//File srcFile  = new File(args[0])
+//File destFile = new File(args[1])
+
+File srcFile  = new File('https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/unknown.svg')
+File destFile = new File('http://hubitat/hub/fileManager/unknown.svg')
+copy(srcFile,destFile)
 */
