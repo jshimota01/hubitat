@@ -32,6 +32,8 @@
  *      2021-10-06    jshimota      0.2.02      Further Name change (dropped -NH as it was no longer appropriate)
  *      2021-10-26    jshimota      0.2.10      Added Font color and font size options, rebuilt Tile so it fits Hubitat Android Dashboard correctly. HE dashboard is still messed.
  *      2021-10-27    jshimota      0.2.11      Added variable to adjust word in tile overlay vertical position
+ *      2021-12-01    jshimota      0.2.12      Botched the scheduled update - was only running the current season, not the date which is relied upon. should be fixed.
+ *
  *
  */
 
@@ -129,7 +131,8 @@ def installed() {
     logging("installed()", 100)
     unschedule()
     refresh()
-    schedule("0 0 6 * * ?", currentSeason) //  daily at 6am
+//    schedule("0 0 6 * * ?", currentSeason) //  daily at 6am
+    schedule("0 0 6 * * ?", refresh) //  daily at 6am
 }
 
 def updated() {
@@ -157,8 +160,8 @@ def refresh() {
     tileVertWordPos()
     currentSeason()
     hemisphereName()
-
-
+    currentSeason()
+    runCmd()
 }
 
 def schedUpdate() {
@@ -166,7 +169,7 @@ def schedUpdate() {
     if (txtEnable) log.info("schedUpdate: Refresh schedule cleared ...")
     if (autoUpdate) {
         if (txtEnable) log.info("Update: Setting next scheduled refresh...")
-        if (autoUpdate) schedule("0 0 6 * * ?", currentSeason) // daily at 6am
+        if (autoUpdate) schedule("0 0 6 * * ?", refresh) // daily at 6am
         if (autoUpdate) log.info("Update: Next scheduled refresh set")
     }
 }
@@ -338,74 +341,3 @@ def summer() {
     sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}${seasonName}.svg' style='height: 100px;' />", descriptionText: descriptionText)
     if (hemisphere) sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText)
 }
-
-/* def calcSeason() {
-*    // selectedTimeZone = TimeZone.getTimeZone(timeZone)
-*
-*    simpleDateFormatForRawDateMonth = new SimpleDateFormat('dd-MM-yyyy')
-*    // Line Below commented cuz I removed timezone
-*    // simpleDateFormatForRawDateMonth.setTimeZone(selectedTimeZone)
-*
-*    proposedFormattedRawDateMonth = simpleDateFormatForRawDateMonth.format('MMMM')
-*
-*   sendEvent(name: "rawDateFormattedMonth", value: proposedFormattedRawDateMonth, descriptionText: descriptionText)
-*    // sendEvent(name: "rawDate", value: ${rawDate}, descriptionText: descriptionText)
-*
-*   def descriptionText = "Current season is ${device.displayName}" as Object
-*   String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/season_icons/"
-*   if (iconPathOvr > " ") iconPath = iconPathOvr
-*   if (txtEnable) log.info "${descriptionText}"
-*   if (device.currentValue("rawDateFormattedMonth") == ("September")) {
-*       fall()
-*   } else if (device.currentValue("rawDateFormattedMonth") == ("October")) {
-*       fall()
-*   } else if (device.currentValue("rawDateFormattedMonth") == ("November")) {
-*       fall()
-*   } else if (device.currentValue("rawDateFormattedMonth") == ("December")) {
-*        winter()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("January")) {
-*        winter()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("February")) {
-*        winter()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("March")) {
-*        spring()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("April")) {
-*        spring()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("May")) {
-*        spring()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("June")) {
-*        summer()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("July")) {
-*        summer()
-*    } else if (device.currentValue("rawDateFormattedMonth") == ("August")) {
-*       summer()
-*    } else {
-*        sendEvent(name: "seasonName", value: "Not Initialized", descriptionText: descriptionText)
-*        sendEvent(name: "seasonNum", value: 0, descriptionText: descriptionText)
-*        sendEvent(name: "seasonBegin", value: "N/A", descriptionText: descriptionText)
-*        sendEvent(name: "seasonEnd", value: "N/A", descriptionText: descriptionText)
-*        sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;'><p class='small' style='text-align:center'>(Not Initialized)</p></img></div>", descriptionText: descriptionText)
-*        sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;' />", descriptionText: descriptionText)
-*    }
-*}
-*
-*/
-
-/*copy = { File src,File dest-> 
-
-	def input = src.newDataInputStream()
-	def output = dest.newDataOutputStream()
-
-	output << input 
-
-	input.close()
-	output.close()
-}
-
-//File srcFile  = new File(args[0])
-//File destFile = new File(args[1])
-
-File srcFile  = new File('https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/unknown.svg')
-File destFile = new File('http://hubitat/hub/fileManager/unknown.svg')
-copy(srcFile,destFile)
-*/
