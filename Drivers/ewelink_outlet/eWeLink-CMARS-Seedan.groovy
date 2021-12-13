@@ -68,7 +68,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.1.0' }
+static String version() { return '0.1.1.1' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
