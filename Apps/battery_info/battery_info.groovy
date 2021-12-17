@@ -94,16 +94,19 @@ def configPage()
                         }
                 section("")
                         {
-                            paragraph "<b>Battery powered Nodes to be monitored</b>: The nodes to be monitored and sent/monitored in Google Sheets each day. " +
-                                    "Selected nodes all have batteries."
-                            input "nodes", "capability.battery", title: "Battery powered Nodes to be monitored", multiple: true, required: true
+                            paragraph "<b>Battery powered devices to be monitored</b>: Select the devices to be monitored from the device list below." +
+                                      "  It is strongly suggested NOT to select any devices that are virtual as they don't actually have batteries!" +
+                                      "  This app can not yet determine if a device is virtual or not for you.  </br>Devices selected will be sent and monitored in Google Sheets each day." +
+                                      "</br></br><center><b>(Selected nodes below all report as having batteries)</b></center>"
+                            input "nodes", "capability.battery", title: "Battery powered devices to be monitored:", multiple: true, required: true
                         }
                 section("")
                         {
-                            paragraph "<b>Inactivity Idle Hours</b>: The number of hours of inactivity before a node " +
-                                    "is considered idle. A reasonable value for this is 24 (1 day) or greater. The " +
-                                    "minimum value is 1."
-                            input "idleHours", "number", title: "Inactivity Idle Hours", required: true, defaultValue: 25
+                            paragraph "<b>Update Schedule</b>: Normally this application runs every morning.  However this can be adjusted" +
+                                    "by entering the number of days between updates.  It is likely unnecessary to update more often than" +
+                                    "once per day, which is the default."
+
+                            input "updateDays", "number", title: "Number of days between updates", required: true, defaultValue: 1
                         }
                 section("")
                         {
