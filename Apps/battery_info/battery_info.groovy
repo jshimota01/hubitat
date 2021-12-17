@@ -66,12 +66,12 @@ static String version() { return '0.1.0.2' }
 // Definition Name below was modified so as not to step on existing app - this may cause problems with developer repository as a PR may fail with file not found -
 // jshimota - 10-15-2021
 definition(
-            name: "Battery Info",
+            name: "Battery Info Connector Child",
             namespace: "jshimota",
             author: "James Shimota",
-            description: "Child - Battery Info connector to Google Sheets",
+            description: "Child - Battery Info Connector To Google Sheets",
             category: "Convenience",
-            parent: "jshimota:Battery Infos",
+            parent: "jshimota:Battery Info Connector",
             filename: "battery_info.groovy",
             importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/battery_info/battery_info.groovy",
             iconUrl: "",
@@ -86,7 +86,7 @@ preferences
 
 def configPage()
 {
-    dynamicPage(name: "", title: "Battery Info List", install: true, uninstall: true, refreshInterval: 0)
+    dynamicPage(name: "", title: "Battery Info Connector List to Google Sheets", install: true, uninstall: true, refreshInterval: 0)
             {
                 section("")
                         {

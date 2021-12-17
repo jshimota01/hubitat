@@ -47,10 +47,10 @@ static String version() { return '0.1.0.2' }
 // Definition Name below was modified so as not to step on existing app - this may cause problems with developer repository as a PR may fail with file not found -
 // jshimota - 10-15-2021
 definition(
-        name: "Battery Infos",
+        name: "Battery Info Connector",
         namespace: "jshimota",
         author: "James Shimota",
-        description: "Parent - Battery Info connector to Google Sheets",
+        description: "Parent - Battery info connector to Google Sheets",
         category: "Convenience",
         singleInstance: true,
         filename: "battery_infos.groovy",
@@ -67,13 +67,13 @@ preferences
 
 def configPage()
 {
-    dynamicPage(name: "", title: "Parent - Battery Info connector to Google Sheets", install: true, uninstall: true, refreshInterval: 0)
+    dynamicPage(name: "", title: "Battery Info Connectors To Google Sheets", install: true, uninstall: true, refreshInterval: 0)
             {
                 if (app.getInstallationState() == 'COMPLETE')
                 {
                     section
                             {
-                                app(name: "childApps", appName: "Battery Info", namespace: "jshimota", title: "Create an Battery Info list", multiple: true)
+                                app(name: "childApps", appName: "Battery Info Connector Child", namespace: "jshimota", title: "Create an Battery Info list", multiple: true)
                             }
                 }
                 else
@@ -88,7 +88,7 @@ def configPage()
 
 def installed()
 {
-    log.info "There are ${childApps.size()} Battery Info devices"
+    log.info "There are now ${childApps.size()} Battery Info Child lists"
     childApps.each
             {
                 child -> log.info "  Battery Info: ${child.label}"
