@@ -43,6 +43,8 @@ Additional Features
     
     The value of the image is managed separately from the value of the textual response.  In this way, when creating dashboard icons, you can choose as needed.  However in some cases a tile is needed that contains both, and in HTML layout.
     Enabling the HTML attribute will provide a default layout HTML tile for use with SuperTiles and other dashboard apps.  It is NOT fully fleshed and tested but works in a basic form.
+    As of x.2.10 - The HTML snippet used as a complete tile option (by selecting it in attributes when making a dashboard tile) has been radically altered.  This was done to provide more functional/accurate support for Hubitat Dashboard for Android - a tool I rely on.
+    Additionally, as of x.2.1x further features to support the tiles have been added - Font Color can be specified either as hex #xxxxxx or using websafe color names.  Font-size can be specified from 1%-500% or using standard font values such as 12px or LG etc.  Lastly, the vertical position within the tile of the test ovelay is now adjustable!  the default, 55 (percent) puts the text about 2/3rds from the top. but you can specify 1-100 (%) and control it from top edge to bottom edge.
     
     The driver calls to the internet for the icons, stored in the GitHub repository:
     " https://raw.githubusercontent.com/jshimota01/hubitat/main/meteorological_seasons/season_icons/ "
