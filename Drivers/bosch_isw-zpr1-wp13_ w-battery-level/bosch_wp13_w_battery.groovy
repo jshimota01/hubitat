@@ -1,4 +1,6 @@
-/*
+/**
+ *
+ * ORIGINAL :
  *  Copyright 2017 Tomas Axerot
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -12,12 +14,49 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  *  License for the specific language governing permissions and limitations
  *  under the License.
+ *
  */
-import physicalgraph.zigbee.clusters.iaszone.ZoneStatus
+
+/**
+ *  Bosch Zigbee Motion Sensor ISW-ZPR1-WP13 customized - added Battery Level
+ *  (should also work with ISW-ZDL1-WP11G but no device to test with)
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/**
+ *
+ *  Change History:
+ *
+ *      ORIGINAL SOURCE
+ *      2017-05-23    Thomas Axerot {unknown}       Copyright 2017 Thomas Axerot                        https://github.com/tomasaxerot/SmartThings/tree/master/devicetypes/tomasaxerot/bosch-motion-detector.src
+ *
+ *      Date          Source        Version         What                                               URL
+ *      ----          ------        -------         ----                                               ---
+ *      2021-10-07    jshimota      0.1.0.0         The beginning - start by butchering his driver
+ *
+ */
+
+static String version() { return '0.1.1.1' }
+
 
 
 metadata {
-    definition(name: "Bosch Motion Detector", namespace: "tomasaxerot", author: "Tomas Axerot") {
+    // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
+    // jshimota - 10-15-2021
+    definition (name: "Bosch ISW-ZPR1-WP13 Motion Detector with Battery Level", namespace: "jshimota", author: "James Shimota", filename: "bosch_wp13_w_battery.groovy", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/bosch_isw-zpr1-wp13_%20w-battery-level/bosch_wp13_w_battery.groovy") {
+        capability "Initialize"
         capability "Motion Sensor"
         capability "Configuration"
         capability "Battery"
@@ -32,24 +71,20 @@ metadata {
         fingerprint inClusters: "0000,0001,0003,0402,0500,0020,0B05", outClusters: "0019", manufacturer: "Bosch", model: "ISW-ZPR1-WP13", deviceJoinName: "Bosch PIR Motion Detector"
     }
 
-    simulator {
+/**    simulator {
         status "active": "zone report :: type: 19 value: 0031"
         status "inactive": "zone report :: type: 19 value: 0030"
     }
+ */
 
     preferences {
-        section {
-            image(name: 'educationalcontent', multiple: true, images: [
-                    "http://cdn.device-gse.smartthings.com/Motion/Motion1.jpg",
-                    "http://cdn.device-gse.smartthings.com/Motion/Motion2.jpg",
-                    "http://cdn.device-gse.smartthings.com/Motion/Motion3.jpg"
-            ])
-        }
-        section {
-            input title: "Temperature Offset", description: "This feature allows you to correct any temperature variations by selecting an offset. Ex: If your sensor consistently reports a temp that's 5 degrees too warm, you'd enter '-5'. If 3 degrees too cold, enter '+3'.", displayDuringSetup: false, type: "paragraph", element: "paragraph"
-            input "tempOffset", "number", title: "Degrees", description: "Adjust temperature by this many degrees", range: "*..*", displayDuringSetup: false
-        }
+        input(name: "debugLogging", type: "bool", title: styling_getLogo() + styling_addTitleDiv("Enable debug logging"), description: ""  + styling_getDefaultCSS(), defaultValue: false, submitOnChange: true, displayDuringSetup: false, required: false)
+        input(name: "infoLogging", type: "bool", title: styling_addTitleDiv("Enable info logging"), description: "", defaultValue: true, submitOnChange: true, displayDuringSetup: false, required: false)
+        input title: "Temperature Offset", description: "This feature allows you to correct any temperature variations by selecting an offset. Ex: If your sensor consistently reports a temp that's 5 degrees too warm, you'd enter '-5'. If 3 degrees too cold, enter '+3'.", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        input "tempOffset", "number", title: "Degrees", description: "Adjust temperature by this many degrees", range: "*..*", displayDuringSetup: false
     }
+
+}
 
     tiles(scale: 2) {
         multiAttributeTile(name: "motion", type: "generic", width: 6, height: 4) {
