@@ -33,6 +33,7 @@
  *      2021-10-26    jshimota      0.2.10      Added Font color and font size options, rebuilt Tile so it fits Hubitat Android Dashboard correctly. HE dashboard is still messed.
  *      2021-10-27    jshimota      0.2.11      Added variable to adjust word in tile overlay vertical position
  *      2021-12-01    jshimota      0.2.12      Botched the scheduled update - was only running the current season, not the date which is relied upon. should be fixed.
+ *      2021-12-23    jshimota      0.2.13      Fixed Debug posting to log when debug log disabled.
  *
  *
  */
@@ -45,7 +46,7 @@ import java.text.SimpleDateFormat
 // import java.io.InputStreamReader;
  
 
-static String version() { return '0.2.11' }
+static String version() { return '0.2.13' }
 
 metadata {
     definition(
@@ -146,7 +147,7 @@ def updated() {
         if (autoUpdate)log.info("Update: Automatic Update enabled")
     }
     if (logEnable) runIn(1800, logsOff)
-    log.debug("autoupdate: Next scheduled refresh set")
+    if (logEnable) log.debug("autoupdate: Next scheduled refresh set")
     unschedule()
     refresh()
     schedUpdate()
