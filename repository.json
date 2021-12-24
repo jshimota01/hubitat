@@ -10,9 +10,9 @@
 			"description": "A need developed for me to be able to set Rules and automations within my Hubitat environment that would allow me to gain control seasonally.  Meteorological Seasons is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver. This driver, when used during creation of a virtual device, creates a clean way to bridge seasons to dashboard tiles, variables for Rules and other nice features  as well.  Now useful for both hemispheres!"
 		  },
  		  {
-			"name": "Virtual Inverse-able Switch",
+			"name": "Virtual Inverse-able Switch w-autoOff and Toggle",
 			"category": "Convenience",
-			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "Misc. Devices" ],
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOff", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/packageManifest.json",
 			"description": "This switch will show ON but will have a device state of Off if the preference is set to Reverse Actions. Useful for apps that allow a switch to control on-off state but you want to reflect the app not the switch"
 		  },
