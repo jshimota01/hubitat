@@ -44,32 +44,34 @@ metadata{
 }
 
 def ID(str) {
-    Number ID = 12345
-    sendEvent(name: "ID = ", value: "${ID}")
+    Number ID = 1347
+    def descriptionText = "ID being set" as Object
+    sendEvent(name: "ID", value: "${ID}")
+    if (txtEnable) log.info "${descriptionText}"
 }
 def Battery_Type(str) {
-    String Battery_Type = "AAA"
-    sendEvent(name: "Battery_Type = ", value: "${Battery_Type}")
+    String Battery_Type = "AA"
+    sendEvent(name: "Battery_Type", value: "${Battery_Type}")
 }
 def Battery_Qty(str) {
     Number Battery_Qty = 4
-    sendEvent(name: "Battery_Qty = ", value: "${Battery_Qty}")
+    sendEvent(name: "Battery_Qty", value: "${Battery_Qty}")
 }
 def Battery_Brand(str) {
-    String Battery_Brand = "Everyready"
-    sendEvent(name: "Battery_Brand = ", value: "${Battery_Brand}")
+    String Battery_Brand = "Amazon"
+    sendEvent(name: "Battery_Brand", value: "${Battery_Brand}")
 }
 def Battery_Rechargeable(str) {
     Boolean Battery_Rechargeable = false
-    sendEvent(name: "Rechargeable? = ", value: "${Battery_Rechargeable}")
+    sendEvent(name: "Battery_Rechargeable", value: "${Battery_Rechargeable}")
 }
 def Battery_First_Installed(str) {
-    String Battery_First_Installed = "12/01/2021"
-    sendEvent(name: "Battery_Brand = ", value: "${Battery_First_Installed}")
+    String Battery_First_Installed = "12/10/2021"
+    sendEvent(name: "Battery_First_Installed", value: "${Battery_First_Installed}")
 }
 def Battery_Last_Changed(str) {
-    String Battery_Last_Changed = "12/01/2021"
-    sendEvent(name: "Battery_Brand = ", value: "${Battery_Last_Changed}")
+    String Battery_Last_Changed = "12/29/2021"
+    sendEvent(name: "Battery_Last_Changed", value: "${Battery_Last_Changed}")
 }
 
 def initialize(){
