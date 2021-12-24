@@ -1,4 +1,4 @@
-Virtual Inverse-able Switch 
+Virtual Inverse-able Switch w-autoOff and Toggle
 
 Why?
 
@@ -21,6 +21,8 @@ I have not tested this on any platforms besides my Hubitat c5 currently running 
 New Features
 1.x		Initial release
 1.1		Added support parent and initialization to off state regardless of Reverse Action preference switch
+2.0     Added autoOff and Toggle
+2.1     Released via HPM - deprecated Previous version
 
 Installation and Configuration
 

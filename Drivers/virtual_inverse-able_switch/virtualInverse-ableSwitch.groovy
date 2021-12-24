@@ -1,5 +1,5 @@
 /*
- * Virtual Inverse-able w-autotoggle Switch
+ * Virtual Inverse-able Switch w-autoOff and Toggle
  *
  *  Licensed Virtual the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -18,10 +18,14 @@
  *      2021-10-11    jshimota      0.1.1       Added redundant set using parent and added initialize to follow preference so always starts in off position
  *      2021-10-17    jshimota      0.1.2       Added Toggle feature
  *      2021-10-20    jshimota      0.2.0       Added AutoOffOn - will toggle based on device setting in preferences
+ *      2021-12-24    jshimota      0.2.1       Clean up of Name and manifest package
  * */
+
+static String version() { return '0.2.1' }
+
 metadata {
     definition(
-            name: "Virtual Inverse-able w-autotoggle Switch",
+            name: "Virtual Inverse-able Switch w-autoOff and Toggle",
             namespace: "jshimota",
             author: "James Shimota",
             importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtualInverse-ableSwitch.groovy"
