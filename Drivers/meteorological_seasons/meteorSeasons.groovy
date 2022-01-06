@@ -47,7 +47,7 @@ import java.text.SimpleDateFormat
 // import java.io.InputStreamReader;
 
 
-static String version() { return '0.2.14' }
+static String version() { return '0.2.15' }
 
 metadata {
     definition(
