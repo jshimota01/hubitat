@@ -54,6 +54,7 @@ Additional Features
 	
     As of version 2.x the ability to set for the southern hemisphere was added.  The default is “Northern” hemisphere, but turning OFF the switch and saving preferences will flip the world and align the correct seasons, their dates, names and images.
    
+   Added in version 2.15 - the ability to select between Autumn and Fall as the name of the season prior to winter.  Southern Hemisphere folks seem to use Autumn for the name and this is a bow to them.  Also, while technically Feb 29 was not incorrect, one feedback did mention it so date was changed to say 'Feb 28'. I do NOT check leap year!
     *** Important - If changes occur to any preference, click Save Preferences below the preferences section
 
 Use the driver in RM rules
