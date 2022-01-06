@@ -34,19 +34,20 @@
  *      2021-10-27    jshimota      0.2.11      Added variable to adjust word in tile overlay vertical position
  *      2021-12-01    jshimota      0.2.12      Botched the scheduled update - was only running the current season, not the date which is relied upon. should be fixed.
  *      2021-12-23    jshimota      0.2.13      Fixed Debug posting to log when debug log disabled.
- *
+ *      2022-01-04    jshimota      0.2.14      Added Autumn switch
+ *      2022-01-05    jshimota      0.2.15      Changed date to feb 28th - no leap year check.
  *
  */
 
 import java.text.SimpleDateFormat
 
-//import java.io.BufferedReader;
-//import java.io.File;
+// import java.io.BufferedReader;
+// import java.io.File;
 // import java.io.IOException;
 // import java.io.InputStreamReader;
- 
 
-static String version() { return '0.2.13' }
+
+static String version() { return '0.2.14' }
 
 metadata {
     definition(
@@ -60,6 +61,7 @@ metadata {
         // Line below removed as I took out calcDate command
         // command "calcSeason", [[name: "rawDate", type: "STRING", description: "Enter date as (dd-MM-yyyy) to calculate the season for."]]
         command "currentSeason", ["$Cdate"]
+        command "autumn"
         command "fall"
         command "winter"
         command "spring"
@@ -84,6 +86,7 @@ metadata {
         attribute "tileFontSize", "number"
         attribute "tileFontColor", "string"
         attribute "tileVertWordPos", "number"
+        attribute "autumnFallName", "string"
 
         // Line below removed as I took out calcDate command
         // attribute "rawDateFormattedMonth", "string"
@@ -100,6 +103,7 @@ preferences {
     input("htmlVtile", "bool", title: "Use HTML attribute instead of seasonTile\n(Enabled is Yes)")
     input("iconPathOvr", "string", title: "Alternate path to season icons \n(must contain file names fall.svg, winter.svg, spring.svg, summer and unknown.svg)")
     input(name: "hemisphere", type: "bool", title: "Hemisphere", description: "On=Northern/Off=Southern", defaultValue: true, required: true, displayDuringSetup: true)
+    input(name: "existingAutumnFall", type: "bool", title: "Autumn/Fall", description: "On=Autumn/Off=Fall", defaultValue: false, required: true, displayDuringSetup: true)
 
     // Line below removed as I took out calcDate command
     // input(name: "rawDateFormat", type: "string", title:"RawDate Format", description: "Enter the date format to apply for entering and displaying RawDate purposes", defaultValue: "dd-MM-yyyy", required: true, displayDuringSetup: true)
@@ -155,13 +159,14 @@ def updated() {
 }
 
 def refresh() {
-    runCmd()
+    // runCmd()
     tileFontColor()
     tileFontSize()
     tileVertWordPos()
     currentSeason()
-    hemisphereName()
-    currentSeason()
+    // hemisphereName()
+    // autumnFallName()
+    // currentSeason()
     runCmd()
 }
 
@@ -188,6 +193,7 @@ def runCmd() {
     sendEvent(name: "todaysFormattedMonth", value: proposedFormattedMonth)
     sendEvent(name: "todaysHtmlFriendlyDate", value: proposedHtmlFriendlyDate)
     if (hemisphere) sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText)
+    if (existingAutumnFall) sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText) else sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)
     currentSeason()
 }
 
@@ -207,16 +213,28 @@ def hemisphereName() {
         if (txtEnable) log.info "${descriptionText}"
     }
 }
-def currentSeason() {
-    if (device.currentValue("todaysFormattedMonth") == (null)) {
-        runCmd()
-    } else if (device.currentValue("todaysFormattedMonth") == ("Not Initialized")) {
-        seasonPreviouslySet = false
-        existingSeasonName = "${seasonName}"
+def autumnFallName() {
+    if (existingAutumnFall) {
+        sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText)
+        def descriptionText = "Current Autumn/Fall choice is now Autumn"
+        if (txtEnable) log.info "${descriptionText}"
     } else {
-        seasonPreviouslySet = true
-        existingSeasonName = "${seasonName}"
+        sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)
+        def descriptionText= "Current Autumn/Fall choice is now Fall"
+        if (txtEnable) log.info "${descriptionText}"
     }
+}
+
+def currentSeason() {
+    // if (device.currentValue("todaysFormattedMonth") == (null)) {
+    //     runCmd()
+    // } else if (device.currentValue("todaysFormattedMonth") == ("Not Initialized")) {
+    //     seasonPreviouslySet = false
+    //     existingSeasonName = "${seasonName}"
+    // } else {
+    //     seasonPreviouslySet = true
+    //     existingSeasonName = "${seasonName}"
+    // }
     // Line below removed cuz it may be causing problem
     // sendEvent(name: "rawDate", value: rawDate, descriptionText: descriptionText)
     if (device.currentValue("todaysFormattedMonth") == (null)) {
@@ -224,17 +242,21 @@ def currentSeason() {
     } else if (device.currentValue("todaysFormattedMonth") == ("Not Initialized")) {
         seasonPreviouslySet = false
         existingSeasonName = "not set"
-        hemiispherePreviouslySet = false
+        hemispherePreviouslySet = false
         existingHemisphereName = "not set"
+        autumnFallPreviouslySet = false
+        existingAutumnFall = "not set"
     } else {
         seasonPreviouslySet = true
         existingSeasonName = "${seasonName}"
-        hemiispherePreviouslySet = true
+        hemispherePreviouslySet = true
         existingHemisphereName = "${hemisphereName}"
+        autumnFallPreviouslySet = true
+        existingAutumnFallName = "${autumnFallName}"
     }
     if (hemisphere) {
         if (device.currentValue("todaysFormattedMonth") == ("September") || device.currentValue("todaysFormattedMonth") == ("October") || device.currentValue("todaysFormattedMonth") == ("November")) {
-            fall()
+            if(!autumnFall) fall() else autumn()
         } else if (device.currentValue("todaysFormattedMonth") == ("December") || device.currentValue("todaysFormattedMonth") == ("January") || device.currentValue("todaysFormattedMonth") == ("February")) {
             winter()
         } else if (device.currentValue("todaysFormattedMonth") == ("March") || device.currentValue("todaysFormattedMonth") == ("April") || device.currentValue("todaysFormattedMonth") == ("May")) {
@@ -248,7 +270,7 @@ def currentSeason() {
         } else if (device.currentValue("todaysFormattedMonth") == ("December") || device.currentValue("todaysFormattedMonth") == ("January") || device.currentValue("todaysFormattedMonth") == ("February")) {
             summer()
         } else if (device.currentValue("todaysFormattedMonth") == ("March") || device.currentValue("todaysFormattedMonth") == ("April") || device.currentValue("todaysFormattedMonth") == ("May")) {
-            fall()
+            if(!autumnFall) fall() else autumn()
         } else if (device.currentValue("todaysFormattedMonth") == ("June") || device.currentValue("todaysFormattedMonth") == ("July") || device.currentValue("todaysFormattedMonth") == ("August")) {
             winter()
         }
@@ -262,6 +284,7 @@ def currentSeason() {
         sendEvent(name: "seasonTile", value: "<div id='seasonTile'><img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;'><p class='small' style='text-align:center'>(Not Initialized)</p></img></div>", descriptionText: descriptionText)
         sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}unknown.svg' style='height: 100px;' />", descriptionText: descriptionText)
         sendEvent(name: "hemisphereName", value: "not set", descriptionText: descriptionText)
+        sendEvent(name: "autumnFallName", value: "not set", descriptionText: descriptionText)
     }
     if (seasonPreviouslySet) {
         descriptionText = "Current season refreshed or changed"
@@ -277,10 +300,18 @@ def currentSeason() {
         if (hemisphere) descriptionText = "Current hemisphere initialized to Northern" else descriptionText = "Current hemisphere initialized to Southern"
         if (txtEnable) log.info "${descriptionText}"
     }
+    if (autumnFallPreviouslySet) {
+        descriptionText = "Current Autumn/Fall choice refreshed or changed"
+        if (txtEnable) log.info "${descriptionText}"
+    } else {
+        if (existingAutumnFall) descriptionText = "Current Autumn/Fall choice initialized to Autumn" else descriptionText = "Current Autumn/Fall choice initialized to Fall"
+        if (txtEnable) log.info "${descriptionText}"
+    }
 }
 
 def fall() {
     hemisphereName()
+    autumnFallName()
     def descriptionText = "Current season is now Fall" as Object
     String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
@@ -293,10 +324,30 @@ def fall() {
     sendEvent(name: "seasonTile", value: "<div style='background-image: url(${iconPath}${seasonName}.svg);background-position: center;background-repeat: no-repeat;background-size: contain;width: 100%;height: 100%;'><div style='font-family: Georgia, serif;text-align: center;position: relative;top:${existingTileVertWordPos}%;font-size:${existingTileFontSize}%;color:${existingTileFontColor};text-transform: uppercase;font-style: oblique;'><h1 style='font-size:${existingTileFontSize}%;'>${seasonName}</h1></div></div>", descriptionText: descriptionText)
     sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}${seasonName}.svg' style='height: 100px;' />", descriptionText: descriptionText)
     if (hemisphere) sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText)
+    if (existingAutumnFall) sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText) else sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)    
+        }
+
+def autumn() {
+    hemisphereName()
+    autumnFallName()
+    def descriptionText = "Current season is now Autumn" as Object
+    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
+    if (iconPathOvr > " ") iconPath = iconPathOvr
+    if (txtEnable) log.info "${descriptionText}"
+    sendEvent(name: "seasonName", value: "Autumn", descriptionText: descriptionText)
+    String seasonName = "autumn"
+    sendEvent(name: "seasonNum", value: 1, descriptionText: descriptionText)
+    if (hemisphere) sendEvent(name: "seasonBegin", value: "September 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "March 1", descriptionText: descriptionText)
+    if (hemisphere) sendEvent(name: "seasonEnd", value: "November 30", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "May 31", descriptionText: descriptionText)
+    sendEvent(name: "seasonTile", value: "<div style='background-image: url(${iconPath}${seasonName}.svg);background-position: center;background-repeat: no-repeat;background-size: contain;width: 100%;height: 100%;'><div style='font-family: Georgia, serif;text-align: center;position: relative;top:${existingTileVertWordPos}%;font-size:${existingTileFontSize}%;color:${existingTileFontColor};text-transform: uppercase;font-style: oblique;'><h1 style='font-size:${existingTileFontSize}%;'>${seasonName}</h1></div></div>", descriptionText: descriptionText)
+    sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}${seasonName}.svg' style='height: 100px;' />", descriptionText: descriptionText)
+    if (hemisphere) sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText)
+    if (existingAutumnFall) sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText) else sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)   
 }
 
 def winter() {
     hemisphereName()
+    autumnFallName()
     def descriptionText = "Current season is now Winter" as Object
     String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
@@ -305,14 +356,16 @@ def winter() {
     String seasonName = "winter"
     sendEvent(name: "seasonNum", value: 2, descriptionText: descriptionText)
     if (hemisphere) sendEvent(name: "seasonBegin", value: "December 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "June 1", descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonEnd", value: "February 29", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText)
+    if (hemisphere) sendEvent(name: "seasonEnd", value: "February 28", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText)
     sendEvent(name: "seasonTile", value: "<div style='background-image: url(${iconPath}${seasonName}.svg);background-position: center;background-repeat: no-repeat;background-size: contain;width: 100%;height: 100%;'><div style='font-family: Georgia, serif;text-align: center;position: relative;top:${existingTileVertWordPos}%;font-size:${existingTileFontSize}%;color:${existingTileFontColor};text-transform: uppercase;font-style: oblique;'><h1 style='font-size:${existingTileFontSize}%;'>${seasonName}</h1></div></div>", descriptionText: descriptionText)
     sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}${seasonName}.svg' style='height: 100px;' />", descriptionText: descriptionText)
     if (hemisphere) sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText)
+    if (existingAutumnFall) sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText) else sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)   
 }
 
 def spring() {
     hemisphereName()
+    autumnFallName()
     def descriptionText = "Current season is now Spring" as Object
     String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
@@ -325,10 +378,12 @@ def spring() {
     sendEvent(name: "seasonTile", value: "<div style='background-image: url(${iconPath}${seasonName}.svg);background-position: center;background-repeat: no-repeat;background-size: contain;width: 100%;height: 100%;'><div style='font-family: Georgia, serif;text-align: center;position: relative;top:${existingTileVertWordPos}%;font-size:${existingTileFontSize}%;color:${existingTileFontColor};text-transform: uppercase;font-style: oblique;'><h1 style='font-size:${existingTileFontSize}%;'>${seasonName}</h1></div></div>", descriptionText: descriptionText)
     sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}${seasonName}.svg' style='height: 100px;' />", descriptionText: descriptionText)
     if (hemisphere) sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText)
+    if (existingAutumnFall) sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText) else sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)   
 }
 
 def summer() {
     hemisphereName()
+    autumnFallName()
     def descriptionText = "Current season is now Summer" as Object
     String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
     if (iconPathOvr > " ") iconPath = iconPathOvr
@@ -337,8 +392,9 @@ def summer() {
     String seasonName = "summer"
     sendEvent(name: "seasonNum", value: 4, descriptionText: descriptionText)
     if (hemisphere) sendEvent(name: "seasonBegin", value: "June 1", descriptionText: descriptionText) else sendEvent(name: "seasonBegin", value: "December 1", descriptionText: descriptionText)
-    if (hemisphere) sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "February 29", descriptionText: descriptionText)
+    if (hemisphere) sendEvent(name: "seasonEnd", value: "August 31", descriptionText: descriptionText) else sendEvent(name: "seasonEnd", value: "February 28", descriptionText: descriptionText)
     sendEvent(name: "seasonTile", value: "<div style='background-image: url(${iconPath}${seasonName}.svg);background-position: center;background-repeat: no-repeat;background-size: contain;width: 100%;height: 100%;'><div style='font-family: Georgia, serif;text-align: center;position: relative;top:${existingTileVertWordPos}%;font-size:${existingTileFontSize}%;color:${existingTileFontColor};text-transform: uppercase;font-style: oblique;'><h1 style='font-size:${existingTileFontSize}%;'>${seasonName}</h1></div></div>", descriptionText: descriptionText)
     sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}${seasonName}.svg' style='height: 100px;' />", descriptionText: descriptionText)
     if (hemisphere) sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText)
+    if (existingAutumnFall) sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText) else sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)   
 }
