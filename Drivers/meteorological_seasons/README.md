@@ -17,6 +17,7 @@ I have not tested this on any platforms besides my Hubitat c5 currently running 
 New Features
 1.x		Initial release
 2.x		Added support for BOTH hemispheres
+2.15    Added ability to select Fall/Autumn as season name
 
 Installation and Configuration
 
