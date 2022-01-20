@@ -20,8 +20,9 @@
  */
 
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.format.DateTimeFormatter
 
+//import java.util.Date
 //import java.time.Duration
 //import java.time.ZoneOffset
 //import java.time.ZonedDateTime
@@ -40,34 +41,34 @@ metadata {
         capability "Actuator"
         capability "Refresh"
 
-        attribute "DayOfMonNum", "number"
-        attribute "DayText3", "string"
-        attribute "DayOfMonNumNoLead", "number"
         attribute "DayName", "string"
+        attribute "DayNameText3", "string"
+        attribute "DayOfMonNum", "number"
+        attribute "DayOfMonNumNoLead", "number"
         attribute "DayOfWeekNum", "number"
-        //attribute "DayOfMonSuf", "string"
         attribute "DayOfYearNum", "number"
         attribute "WeekOfYearNum", "number"
         attribute "MonthName", "string"
-        attribute "MonthNum", "number"
         attribute "MonthNameText3", "string"
+        attribute "MonthNum", "number"
         attribute "MonthNumNoLead", "number"
-        //attribute "DaysInMonthNum", "number"
-        //attribute "LeapBool","boolean"
         attribute "YearNum4Dig", "number"
         attribute "YearNum2Dig", "number"
-        //attribute "TimeLowerAntePost", "string"
         attribute "TimeUpperAntePost", "string"
-        //attribute "TimeHour12NumNoLead", "number"
-        //attribute "TimeHour24NumNoLead", "number"
+        attribute "TimeLowerAntePost", "string"
         attribute "TimeHour12Num", "number"
         attribute "TimeHour24Num", "number"
+        attribute "TimeHour12NumNoLead", "number"
+        attribute "TimeHour24NumNoLead", "number"
         attribute "TimeMinNum", "number"
         attribute "TZIDText3", "string"
         attribute "TZID", "string"
-        //attribute "DSTBool","boolean"
         attribute "GMTDiffHours", "string"
-        //attribute "TZText3", "string"
+
+        //attribute "DayOfMonSuf", "string"
+        //attribute "DaysInMonthNum", "number"
+        //attribute "LeapBool","boolean"
+        //attribute "DSTBool","boolean"
 
         attribute "tileFontSize", "number"
         attribute "tileFontColor", "string"
@@ -88,19 +89,19 @@ preferences {
 def tileFontColor() {
     String tileFontColor = "#FFFFFFFF"
     if(existingTileFontColor > " ") tileFontColor = existingTileFontColor
-    sendEvent(name: "Tile Font Color", value: "${tileFontColor}")
+    sendEvent(name: "tileFontColor", value: "${tileFontColor}")
 }
 
 def tileVertWordPos() {
     tileVertWordPos = 55
     if(existingTileVertWordPos > " ") tileVertWordPos = existingTileVertWordPos
-    sendEvent(name: "Tile Vertical Word Position", value: tileVertWordPos)
+    sendEvent(name: "tileVertWordPos", value: tileVertWordPos)
 }
 
 def tileFontSize() {
     tileFontSize = 100
     if(existingTileFontSize > " ") tileFontSize = existingTileFontSize
-    sendEvent(name: "Tile Font Size", value: tileFontSize)
+    sendEvent(name: "tileFontSize", value: tileFontSize)
 }
 
 def logsOff() {
@@ -112,25 +113,26 @@ def updated() {
     log.info "updated..."
     log.warn "debug logging is: ${logEnable}"
     log.warn "description logging is: ${txtEnable}"
+    if (logEnable) runIn(1800, logsOff)
+    refresh()
+}
+
+def refresh() {
+    runCmd()
     if (logEnable) {
         if (!autoUpdate)log.warn("Update: Automatic Update DISABLED")
     }
     if (logEnable) {
         if (autoUpdate)log.info("Update: Automatic Update ENABLED")
     }
-    if (logEnable) runIn(1800, logsOff)
-    if (logEnable) log.debug("autoupdate: Next scheduled refresh set")
-    unschedule()
-    refresh()
-    schedUpdate()
-}
-
-def refresh() {
-    tileFontColor()
-    tileFontSize()
-    tileVertWordPos()
-    runCmd()
-    schedUpdate()
+    if (autoUpdate) {
+        if (logEnable) log.debug("Autoupdate: Running Schedule Update")
+        schedUpdate()
+    }
+    if (!autoUpdate) {
+        if (logEnable) log.warn("Update: Clearing Update Schedule ...")
+        unschedule()
+    }
 }
 
 def schedUpdate() {
@@ -145,94 +147,96 @@ def schedUpdate() {
 
 def runCmd() {
     now = new Date()
-    // simpleDateFormatForMonth = new SimpleDateFormat('MMMM')
-    dTDayOfMonNumPattern = new SimpleDateFormat('dd')
-    dTDayText3Pattern = new SimpleDateFormat('EEE')
-    dTDayOfMonNumNoLeadPattern = new SimpleDateFormat('d')
     dTDayNamePattern = new SimpleDateFormat('EEEE')
+    dTDayNameText3Pattern = new SimpleDateFormat('EEE')
+    dTDayOfMonNumPattern = new SimpleDateFormat('dd')
+    dTDayOfMonNumNoLeadPattern = new SimpleDateFormat('d')
     dTDayOfWeekNumPattern = new SimpleDateFormat('u')
-    //dTDayOfMonSufPattern = new SimpleDateFormat('s')
     dTDayOfYearNumPattern = new SimpleDateFormat('D')
     dTWeekOfYearNumPattern = new SimpleDateFormat('W')
     dTMonthNamePattern = new SimpleDateFormat('MMMM')
-    dTMonthNumPattern = new SimpleDateFormat('MM')
     dTMonthNameText3Pattern = new SimpleDateFormat('MMM')
+    dTMonthNumPattern = new SimpleDateFormat('MM')
     dTMonthNumNoLeadPattern = new SimpleDateFormat('M')
-    //dTDaysInMonthNumPattern = new SimpleDateFormat('t')
-    //dTLeapBoolPattern = new SimpleDateFormat('L')
     dTYearNum4DigPattern = new SimpleDateFormat('yyyy')
     dTYearNum2DigPattern = new SimpleDateFormat('yy')
-    //dTTimeLowerAntePostPattern = new SimpleDateFormat('q')
-    dTTimeUpperAntePostPattern = new SimpleDateFormat('a')
-    //dTTimeHour12NumNoLeadPattern = new SimpleDateFormat('g')
-    //dTTimeHour24NumNoLeadPattern = new SimpleDateFormat('G')
-    dTTimeHour12NumPattern = new SimpleDateFormat('h')
-    dTTimeHour24NumPattern = new SimpleDateFormat('H')
+    dTTimeHour12NumPattern = new SimpleDateFormat('hh')
+    dTTimeHour24NumPattern = new SimpleDateFormat('HH')
+    dTTimeHour12NumNoLeadPattern = new SimpleDateFormat('h')
+    dTTimeHour24NumNoLeadPattern = new SimpleDateFormat('HH')
     dTTimeMinNumPattern = new SimpleDateFormat('m')
     dTTZIDPattern = new SimpleDateFormat('zzzz')
     dTTZIDText3Pattern = new SimpleDateFormat('z')
-    //dTDSTBoolPattern = new SimpleDateFormat('I')
     dTGMTDiffHoursPattern = new SimpleDateFormat('Z')
-    //dTTZText3Pattern = new SimpleDateFormat('T')
+    dTTimeUpperAntePostPattern = new SimpleDateFormat('a')
+    dTTimeLowerAntePostPattern = new SimpleDateFormat('a')
+    //dTDayOfMonSufPattern = new SimpleDateFormat('s')
+    //dTDaysInMonthNumPattern = new SimpleDateFormat('t')
+    //dTLeapBoolPattern = new SimpleDateFormat('L')
+    //dTDSTBoolPattern = new SimpleDateFormat('I')
 
-
-    // proposedFormattedMonth = simpleDateFormatForMonth.format(now)
-    DayOfMonNum = dTDayOfMonNumPattern.format(now)
-    DayText3 = dTDayText3Pattern.format(now)
-    DayOfMonNumNoLead = dTDayOfMonNumNoLeadPattern.format(now)
     DayName = dTDayNamePattern.format(now)
+    DayNameText3 = dTDayNameText3Pattern.format(now)
+    DayOfMonNum = dTDayOfMonNumPattern.format(now)
+    DayOfMonNumNoLead = dTDayOfMonNumNoLeadPattern.format(now)
     DayOfWeekNum = dTDayOfWeekNumPattern.format(now)
-    //DayOfMonSuf = dTDayOfMonSufPattern.format(now)
     DayOfYearNum = dTDayOfYearNumPattern.format(now)
     WeekOfYearNum = dTWeekOfYearNumPattern.format(now)
     MonthName = dTMonthNamePattern.format(now)
-    MonthNum = dTMonthNumPattern.format(now)
     MonthNameText3 = dTMonthNameText3Pattern.format(now)
+    MonthNum = dTMonthNumPattern.format(now)
     MonthNumNoLead = dTMonthNumNoLeadPattern.format(now)
-    //DaysInMonthNum = dTDaysInMonthNumPattern.format(now)
-    //LeapBool = isLeapYear(now)
     YearNum4Dig = dTYearNum4DigPattern.format(now)
     YearNum2Dig = dTYearNum2DigPattern.format(now)
-    //TimeLowerAntePost = dTTimeLowerAntePostPattern.format(now)
-    TimeUpperAntePost = dTTimeUpperAntePostPattern.format(now)
-    //TimeHour12NumNoLead = dTTimeHour12NumNoLeadPattern.format(now)
-    //TimeHour24NumNoLead = dTTimeHour24NumNoLeadPattern.format(now)
     TimeHour12Num = dTTimeHour12NumPattern.format(now)
     TimeHour24Num = dTTimeHour24NumPattern.format(now)
+    TimeHour12NumNoLead = dTTimeHour12NumNoLeadPattern.format(now)
+    TimeHour24NumNoLead = dTTimeHour24NumNoLeadPattern.format(now)
     TimeMinNum = dTTimeMinNumPattern.format(now)
+    TimeUpperAntePost = dTTimeUpperAntePostPattern.format(now)
+    TimeLowerAntePostTmp = dTTimeLowerAntePostPattern.format(now)
+    TimeLowerAntePost = TimeLowerAntePostTmp.toLowerCase()
     TZID = dTTZIDPattern.format(now)
     TZIDText3 = dTTZIDText3Pattern.format(now)
-    //DSTBool = dTDSTBoolPattern.format(now)
     GMTDiffHours = dTGMTDiffHoursPattern.format(now)
-    //TZText3 = dTTZText3Pattern.format(now)
 
-    //sendEvent(name: "todaysFormattedMonth", value: proposedFormattedMonth)
-    sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
-    sendEvent(name: "DayText3", value: DayText3)
-    sendEvent(name: "DayOfMonNumNoLead", value: DayOfMonNumNoLead)
+    //TimeLowerAntePost = dTTimeLowerAntePostPattern.format(now)
+
+    //DayOfMonSuf = dTDayOfMonSufPattern.format(now)
+    //DaysInMonthNum = dTDaysInMonthNumPattern.format(now)
+    //LeapBool = isLeapYear(now)
+    //DSTBool = dTDSTBoolPattern.format(now)
+
     sendEvent(name: "DayName", value: DayName)
+    sendEvent(name: "DayNameText3", value: DayNameText3)
+    sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
+    sendEvent(name: "DayOfMonNumNoLead", value: DayOfMonNumNoLead)
     sendEvent(name: "DayOfWeekNum", value: DayOfWeekNum)
-    //sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
     sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
     sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
     sendEvent(name: "MonthName", value: MonthName)
-    sendEvent(name: "MonthNum", value: MonthNum)
     sendEvent(name: "MonthNameText3", value: MonthNameText3)
+    sendEvent(name: "MonthNum", value: MonthNum)
     sendEvent(name: "MonthNumNoLead", value: MonthNumNoLead)
-    //sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
-    //sendEvent(name: "LeapBool", value: LeapBool)
     sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
     sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
-    //sendEvent(name: "TimeLowerAntePost", value: TimeLowerAntePost)
-    sendEvent(name: "TimeUpperAntePost", value: TimeUpperAntePost)
-    //sendEvent(name: "TimeHour12NumNoLead", value: TimeHour12NumNoLead)
-    //sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
     sendEvent(name: "TimeHour12Num", value: TimeHour12Num)
     sendEvent(name: "TimeHour24Num", value: TimeHour24Num)
+    sendEvent(name: "TimeHour12NumNoLead", value: TimeHour12NumNoLead)
+    sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
     sendEvent(name: "TimeMinNum", value: TimeMinNum)
+    sendEvent(name: "TimeUpperAntePost", value: TimeUpperAntePost)
+    sendEvent(name: "TimeLowerAntePost", value: TimeLowerAntePost)
     sendEvent(name: "TZID", value: TZID)
     sendEvent(name: "TZIDText3", value: TZIDText3)
-    //sendEvent(name: "DSTBool", value: DSTBool)
     sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
-    //sendEvent(name: "TZText3", value: TZText3)
+
+    //sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
+    //sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
+    //sendEvent(name: "LeapBool", value: LeapBool)
+    //sendEvent(name: "DSTBool", value: DSTBool)
+
+    tileFontColor()
+    tileFontSize()
+    tileVertWordPos()
 }
