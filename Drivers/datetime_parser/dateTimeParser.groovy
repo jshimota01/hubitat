@@ -12,16 +12,26 @@
  *
  * Change History:
  *
- * Date Source Version What URL
- * ---- ------ ------- ---- ---
- * 2022-01-20 jshimota 0.1.0 Starting version
- * 2021-09-30 Simon Burke 0.1.1 Used DateFormat app components https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
- *
+ * Date         Source      Version What                                        URL
+ * ----         ------      ------- ----                                        ---
+ * 2022-01-19   jshimota    0.1.0   Starting version
+ * 2021-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components   https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
+ * 2022-01-19   jshimota    0.1.2   Alpha release for testing
+ * 2022-01-20   jshimota    0.1.3   Worked on Scheduling cleanup and logging
+ * 2022-01-20   jshimota    0.1.4   First efforts to identify workarounds on php variations not found in Java
+ * 2022-01-20   jshimota    0.1.5   Heavy work done on basic function cleanup, as well as optimization
+ * 2022-01-20   jshimota    0.1.6   Added final missing attributes - DST, ObservesDST, LeapYear, Day Suffix and Ordinal
+ * 2022-01-20   jshimota    0.1.7   Tried adding Simons time and date stuff back, changed mind
+ * 2022-01-20   jshimota    0.1.8   Added update schedule ability
+ * 2022-01-20   jshimota    0.1.9   Commented tile features completely - no intent to support
+ * 2022-01-20   jshimota    0.2.0   Release (getting HPM value for package)
  */
 
 import java.text.SimpleDateFormat
-import java.time.format.DateTimeFormatter
 
+static String version() { return '0.1.9' }
+
+//import java.time.Month
 //import java.util.Date
 //import java.time.Duration
 //import java.time.ZoneOffset
@@ -29,7 +39,6 @@ import java.time.format.DateTimeFormatter
 //import java.time.format.DateTimeFormatter
 //import java.time.temporal.ChronoUnit
 
-static String version() { return '0.1.1' }
 
 metadata {
     definition(
@@ -41,68 +50,70 @@ metadata {
         capability "Actuator"
         capability "Refresh"
 
+        attribute "DSTActiveBool", "boolean"
         attribute "DayName", "string"
         attribute "DayNameText3", "string"
         attribute "DayOfMonNum", "number"
         attribute "DayOfMonNumNoLead", "number"
         attribute "DayOfWeekNum", "number"
         attribute "DayOfYearNum", "number"
-        attribute "WeekOfYearNum", "number"
+        attribute "DaysInMonthNum", "number"
+        attribute "DayOfMonSuf", "string"
+        attribute "DayOfMonOrd", "string"
+        attribute "GMTDiffHours", "string"
+        attribute "LeapYearBool", "boolean"
         attribute "MonthName", "string"
         attribute "MonthNameText3", "string"
         attribute "MonthNum", "number"
         attribute "MonthNumNoLead", "number"
+        attribute "ObservesDST", "boolean"
+        attribute "WeekOfYearNum", "number"
         attribute "YearNum4Dig", "number"
         attribute "YearNum2Dig", "number"
-        attribute "TimeUpperAntePost", "string"
-        attribute "TimeLowerAntePost", "string"
+        attribute "TZID", "string"
+        attribute "TZIDText3", "string"
+        attribute "TimeAntePostUpper", "string"
+        attribute "TimeAntePostLower", "string"
         attribute "TimeHour12Num", "number"
         attribute "TimeHour24Num", "number"
         attribute "TimeHour12NumNoLead", "number"
         attribute "TimeHour24NumNoLead", "number"
         attribute "TimeMinNum", "number"
-        attribute "TZIDText3", "string"
-        attribute "TZID", "string"
-        attribute "GMTDiffHours", "string"
 
-        //attribute "DayOfMonSuf", "string"
-        //attribute "DaysInMonthNum", "number"
-        //attribute "LeapBool","boolean"
-        //attribute "DSTBool","boolean"
-
-        attribute "tileFontSize", "number"
-        attribute "tileFontColor", "string"
-        attribute "tileVertWordPos", "number"
+        //attribute "tileFontSize", "number"
+        //attribute "tileFontColor", "string"
+        //attribute "tileVertWordPos", "number"
 
     }
 }
 preferences {
     input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false
     input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
-    input(name: "existingTileFontSize", type: "num", title: "HTML Tile Font Size (%)*", defaultValue: 100)
-    input(name: "existingTileVertWordPos", type: "num", title: "HTML Tile Word Position (%)*", defaultValue: 55)
-    input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
-    input("autoUpdate", "bool", title: "Enable automatic update every 5 mins?\n(Enabled is Yes)", defaultValue: true, required: true, displayDuringSetup: true)
-    input("htmlVtile", "bool", title: "Use HTML attribute?\n(Enabled is Yes)")
+    //input(name: "existingTileFontSize", type: "num", title: "HTML Tile Font Size (%)*", defaultValue: 100)
+    //input(name: "existingTileVertWordPos", type: "num", title: "HTML Tile Word Position (%)*", defaultValue: 55)
+    //input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
+    input("autoUpdate", "bool", title: "Enable automatic update?\n(Enabled is Yes)", defaultValue: true, required: true, displayDuringSetup: true)
+    input(name: "AutoUpdateInterval", type: "ENUM", multiple: false, options: ["1", "2", "5", "10", "15", "30", "45", "59"], title: "Auto Update Interval", description: "Number of minutes (0-59) between automatic updates", defaultValue: 5, required: true, displayDuringSetup: true)
+    //input("htmlVtile", "bool", title: "Use HTML attribute?\n(Enabled is Yes)")
 }
 
-def tileFontColor() {
-    String tileFontColor = "#FFFFFFFF"
-    if(existingTileFontColor > " ") tileFontColor = existingTileFontColor
-    sendEvent(name: "tileFontColor", value: "${tileFontColor}")
-}
-
-def tileVertWordPos() {
-    tileVertWordPos = 55
-    if(existingTileVertWordPos > " ") tileVertWordPos = existingTileVertWordPos
-    sendEvent(name: "tileVertWordPos", value: tileVertWordPos)
-}
-
-def tileFontSize() {
-    tileFontSize = 100
-    if(existingTileFontSize > " ") tileFontSize = existingTileFontSize
-    sendEvent(name: "tileFontSize", value: tileFontSize)
-}
+//def tileFontColor() {
+//    String tileFontColor = "#FFFFFFFF"
+//    if(existingTileFontColor > " ") tileFontColor = existingTileFontColor
+//    sendEvent(name: "tileFontColor", value: "${tileFontColor}")
+//}
+//
+//def tileVertWordPos() {
+//    tileVertWordPos = 55
+//    if(existingTileVertWordPos > " ") tileVertWordPos = existingTileVertWordPos
+//    sendEvent(name: "tileVertWordPos", value: tileVertWordPos)
+//}
+//
+//def tileFontSize() {
+//    tileFontSize = 100
+//    if(existingTileFontSize > " ") tileFontSize = existingTileFontSize
+//    sendEvent(name: "tileFontSize", value: tileFontSize)
+//}
 
 def logsOff() {
     log.warn "debug logging disabled..."
@@ -120,13 +131,13 @@ def updated() {
 def refresh() {
     runCmd()
     if (logEnable) {
-        if (!autoUpdate)log.warn("Update: Automatic Update DISABLED")
+        if (!autoUpdate) log.warn("Update: Automatic Update DISABLED")
     }
     if (logEnable) {
-        if (autoUpdate)log.info("Update: Automatic Update ENABLED")
+        if (autoUpdate) log.info("Update: Automatic Update ENABLED")
     }
     if (autoUpdate) {
-        if (logEnable) log.debug("Autoupdate: Running Schedule Update")
+        if (logEnable) log.debug("Autoupdate: Setting Update Schedule")
         schedUpdate()
     }
     if (!autoUpdate) {
@@ -137,22 +148,25 @@ def refresh() {
 
 def schedUpdate() {
     unschedule()
-    if (txtEnable) log.info("schedUpdate: Refresh schedule cleared ...")
+    if (txtEnable) log.info("schedUpdate:  Updateschedule cleared. Setting new schedule ...")
     if (autoUpdate) {
         if (txtEnable) log.info("Update: Setting next scheduled refresh...")
-        if (autoUpdate) schedule("0 0/5 * 1/1 * ? *", refresh) // every 5 minutes
-        if (autoUpdate) log.info("Update: Next scheduled refresh set")
+        schedule("0 0/${AutoUpdateInterval} 0 ? * * *", refresh)
+        log.debug("updatePolling: Setting up schedule with ${AutoUpdateInterval} minute interval")
     }
 }
 
+
 def runCmd() {
     now = new Date()
+
     dTDayNamePattern = new SimpleDateFormat('EEEE')
     dTDayNameText3Pattern = new SimpleDateFormat('EEE')
     dTDayOfMonNumPattern = new SimpleDateFormat('dd')
     dTDayOfMonNumNoLeadPattern = new SimpleDateFormat('d')
     dTDayOfWeekNumPattern = new SimpleDateFormat('u')
     dTDayOfYearNumPattern = new SimpleDateFormat('D')
+    dTDaysInMonthNumPattern = new SimpleDateFormat('MMMM')
     dTWeekOfYearNumPattern = new SimpleDateFormat('W')
     dTMonthNamePattern = new SimpleDateFormat('MMMM')
     dTMonthNameText3Pattern = new SimpleDateFormat('MMM')
@@ -168,12 +182,8 @@ def runCmd() {
     dTTZIDPattern = new SimpleDateFormat('zzzz')
     dTTZIDText3Pattern = new SimpleDateFormat('z')
     dTGMTDiffHoursPattern = new SimpleDateFormat('Z')
-    dTTimeUpperAntePostPattern = new SimpleDateFormat('a')
-    dTTimeLowerAntePostPattern = new SimpleDateFormat('a')
-    //dTDayOfMonSufPattern = new SimpleDateFormat('s')
-    //dTDaysInMonthNumPattern = new SimpleDateFormat('t')
-    //dTLeapBoolPattern = new SimpleDateFormat('L')
-    //dTDSTBoolPattern = new SimpleDateFormat('I')
+    dTTimeAntePostUpperPattern = new SimpleDateFormat('a')
+    dTTimeAntePostLowerPattern = new SimpleDateFormat('a') //drop to lower case using temp value
 
     DayName = dTDayNamePattern.format(now)
     DayNameText3 = dTDayNameText3Pattern.format(now)
@@ -193,50 +203,64 @@ def runCmd() {
     TimeHour12NumNoLead = dTTimeHour12NumNoLeadPattern.format(now)
     TimeHour24NumNoLead = dTTimeHour24NumNoLeadPattern.format(now)
     TimeMinNum = dTTimeMinNumPattern.format(now)
-    TimeUpperAntePost = dTTimeUpperAntePostPattern.format(now)
-    TimeLowerAntePostTmp = dTTimeLowerAntePostPattern.format(now)
-    TimeLowerAntePost = TimeLowerAntePostTmp.toLowerCase()
+    TimeAntePostUpper = dTTimeAntePostUpperPattern.format(now)
+    TimeAntePostLowerTmp = dTTimeAntePostLowerPattern.format(now)
+    TimeAntePostLower = TimeAntePostLowerTmp.toLowerCase()
     TZID = dTTZIDPattern.format(now)
     TZIDText3 = dTTZIDText3Pattern.format(now)
     GMTDiffHours = dTGMTDiffHoursPattern.format(now)
 
-    //TimeLowerAntePost = dTTimeLowerAntePostPattern.format(now)
+    int iYear = Integer.parseInt(YearNum4Dig)
+    int iMonth = Integer.parseInt(MonthNum) - 1 // 1 (months begin with 0)
+    int iDay = Integer.parseInt(DayOfMonNum)
+    Calendar currentCal = new GregorianCalendar(iYear, iMonth, iDay) // used to check boolean
+    DaysInMonthNum = currentCal.getActualMaximum(Calendar.DAY_OF_MONTH) // 2
+    LeapYearBool = currentCal.isLeapYear(Calendar.YEAR)
 
-    //DayOfMonSuf = dTDayOfMonSufPattern.format(now)
-    //DaysInMonthNum = dTDaysInMonthNumPattern.format(now)
-    //LeapBool = isLeapYear(now)
-    //DSTBool = dTDSTBoolPattern.format(now)
+    // check if it has DST now or in the future (doesn't check the past)
+    TimeZone timezonedefault = TimeZone.getDefault()
 
+    ObservesDST = timezonedefault.observesDaylightTime()
+    DSTActiveBool = timezonedefault.inDaylightTime(now)
+
+    if (iday == 1 || iDay == 21 || iDay == 31) OrdDay = "st"
+    if (iday == 2 || iDay == 22) OrdDay = "nd"
+    if (iday == 3 || iDay == 23) OrdDay = "rd" else OrdDay = "th"
+
+    DayOfMonSuf = OrdDay
+    DayOfMonOrd = String.valueOf(iDay) + OrdDay
+
+    sendEvent(name: "DSTActiveBool", value: DSTActiveBool)
     sendEvent(name: "DayName", value: DayName)
     sendEvent(name: "DayNameText3", value: DayNameText3)
     sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
     sendEvent(name: "DayOfMonNumNoLead", value: DayOfMonNumNoLead)
+    sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
+    sendEvent(name: "DayOfMonOrd", value: DayOfMonOrd)
     sendEvent(name: "DayOfWeekNum", value: DayOfWeekNum)
     sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
+    sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
     sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
+    sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
+    sendEvent(name: "LeapYearBool", value: LeapYearBool)
     sendEvent(name: "MonthName", value: MonthName)
     sendEvent(name: "MonthNameText3", value: MonthNameText3)
     sendEvent(name: "MonthNum", value: MonthNum)
     sendEvent(name: "MonthNumNoLead", value: MonthNumNoLead)
-    sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
-    sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
+    sendEvent(name: "ObservesDST", value: ObservesDST)
+    sendEvent(name: "TZID", value: TZID)
+    sendEvent(name: "TZIDText3", value: TZIDText3)
+    sendEvent(name: "TimeAntePostUpper", value: TimeAntePostUpper)
+    sendEvent(name: "TimeAntePostLower", value: TimeAntePostLower)
     sendEvent(name: "TimeHour12Num", value: TimeHour12Num)
     sendEvent(name: "TimeHour24Num", value: TimeHour24Num)
     sendEvent(name: "TimeHour12NumNoLead", value: TimeHour12NumNoLead)
     sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
     sendEvent(name: "TimeMinNum", value: TimeMinNum)
-    sendEvent(name: "TimeUpperAntePost", value: TimeUpperAntePost)
-    sendEvent(name: "TimeLowerAntePost", value: TimeLowerAntePost)
-    sendEvent(name: "TZID", value: TZID)
-    sendEvent(name: "TZIDText3", value: TZIDText3)
-    sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
+    sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
+    sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
 
-    //sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
-    //sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
-    //sendEvent(name: "LeapBool", value: LeapBool)
-    //sendEvent(name: "DSTBool", value: DSTBool)
-
-    tileFontColor()
-    tileFontSize()
-    tileVertWordPos()
+//    tileFontColor()
+//    tileFontSize()
+//    tileVertWordPos()
 }
