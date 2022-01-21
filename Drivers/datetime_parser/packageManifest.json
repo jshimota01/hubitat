@@ -9,7 +9,7 @@
   "licenseFile": "",
   "drivers": [
     {
-      "id": "66926837-739f-40d0-a9d2-20e8dda14489",
+      "id": "2100366c-1d71-435f-9072-63afa39c30e9",
       "name": "Date & Time Parser",
       "namespace": "jshimota",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/dateTimeParser.groovy",
