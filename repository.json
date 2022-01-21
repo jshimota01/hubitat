@@ -22,6 +22,13 @@
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/packageManifest.json",
 			"description": "Zigbee eWeLink-CMARS-Seedan Outlet is a driver that is modified from the great code of Markus Liljergren of *OhLa Lab* fame -see https://oh-lalabs.com/. Modifications include ewelink fingerprint and more "
+		  },
+		  {
+			"name": "Date & Time Parser",
+			"category": "Control",
+			"tags": [ "Date", "Timers", "Virtual", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/packageManifest.json",
+			"description": "A virtual device driver that seperates out date and time components into chunks.  Useful for check day of the week, hour of the day etc. in rules "
 		  }
 	]
 	
