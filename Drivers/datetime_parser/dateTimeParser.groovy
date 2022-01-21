@@ -25,11 +25,12 @@
  * 2022-01-20   jshimota    0.1.8   Added update schedule ability
  * 2022-01-20   jshimota    0.1.9   Commented tile features completely - no intent to support
  * 2022-01-20   jshimota    0.2.0   Release (getting HPM value for package)
+ * 2022-01-20   jshimota    0.2.1   Added user compare value requests
  */
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.1.9' }
+static String version() { return '0.2.1' }
 
 //import java.time.Month
 //import java.util.Date
@@ -79,6 +80,9 @@ metadata {
         attribute "TimeHour12NumNoLead", "number"
         attribute "TimeHour24NumNoLead", "number"
         attribute "TimeMinNum", "number"
+        attribute "comparisonDate", "number"
+        attribute "comparisonTime", "number"
+        attribute "comparisonDateTime", "number"
 
         //attribute "tileFontSize", "number"
         //attribute "tileFontColor", "string"
@@ -209,7 +213,11 @@ def runCmd() {
     TZID = dTTZIDPattern.format(now)
     TZIDText3 = dTTZIDText3Pattern.format(now)
     GMTDiffHours = dTGMTDiffHoursPattern.format(now)
+    comparisonDate = YearNum4Dig + MonthNum + DayOfMonNum
+    comparisonTime = TimeHour24Num + TimeMinNum
+    comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
 
+    // Leap Year
     int iYear = Integer.parseInt(YearNum4Dig)
     int iMonth = Integer.parseInt(MonthNum) - 1 // 1 (months begin with 0)
     int iDay = Integer.parseInt(DayOfMonNum)
@@ -217,12 +225,14 @@ def runCmd() {
     DaysInMonthNum = currentCal.getActualMaximum(Calendar.DAY_OF_MONTH) // 2
     LeapYearBool = currentCal.isLeapYear(Calendar.YEAR)
 
+    //DST - Observed and if Enabled
     // check if it has DST now or in the future (doesn't check the past)
     TimeZone timezonedefault = TimeZone.getDefault()
 
     ObservesDST = timezonedefault.observesDaylightTime()
     DSTActiveBool = timezonedefault.inDaylightTime(now)
 
+    // Ordinals
     if (iday == 1 || iDay == 21 || iDay == 31) OrdDay = "st"
     if (iday == 2 || iDay == 22) OrdDay = "nd"
     if (iday == 3 || iDay == 23) OrdDay = "rd" else OrdDay = "th"
@@ -259,6 +269,10 @@ def runCmd() {
     sendEvent(name: "TimeMinNum", value: TimeMinNum)
     sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
     sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
+    sendEvent(name: "comparisonDate", value: comparisonDate)
+    sendEvent(name: "comparisonTime", value: comparisonTime)
+    sendEvent(name: "comparisonDateTime", value: comparisonDateTime)
+
 
 //    tileFontColor()
 //    tileFontSize()
