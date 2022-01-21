@@ -81,8 +81,8 @@ metadata {
         attribute "DayOfWeekNum", "number"
         attribute "DayOfYearNum", "number"
         attribute "DaysInMonthNum", "number"
-        attribute "DayOfMonSuf", "string"
         attribute "DayOfMonOrd", "string"
+        attribute "DayOfMonSuf", "string"
         attribute "GMTDiffHours", "string"
         attribute "LeapYearBool", "boolean"
         attribute "MonthName", "string"
@@ -90,22 +90,22 @@ metadata {
         attribute "MonthNum", "number"
         attribute "MonthNumNoLead", "number"
         attribute "ObservesDST", "boolean"
-        attribute "WeekOfYearNum", "number"
-        attribute "YearNum4Dig", "number"
-        attribute "YearNum2Dig", "number"
         attribute "TZID", "string"
         attribute "TZIDText3", "string"
-        attribute "TimeAntePostUpper", "string"
         attribute "TimeAntePostLower", "string"
+        attribute "TimeAntePostUpper", "string"
         attribute "TimeHour12Num", "number"
-        attribute "TimeHour24Num", "number"
         attribute "TimeHour12NumNoLead", "number"
+        attribute "TimeHour24Num", "number"
         attribute "TimeHour24NumNoLead", "number"
         attribute "TimeMinNum", "number"
         attribute "TimeMinNumNoLead", "number"
+        attribute "WeekOfYearNum", "number"
+        attribute "YearNum2Dig", "number"
+        attribute "YearNum4Dig", "number"
         attribute "comparisonDate", "number"
-        attribute "comparisonTime", "number"
         attribute "comparisonDateTime", "number"
+        attribute "comparisonTime", "number"
 
         //attribute "tileFontSize", "number"
         //attribute "tileFontColor", "string"
@@ -273,12 +273,11 @@ def runCmd() {
     sendEvent(name: "DayNameText3", value: DayNameText3)
     sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
     sendEvent(name: "DayOfMonNumNoLead", value: DayOfMonNumNoLead)
-    sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
     sendEvent(name: "DayOfMonOrd", value: DayOfMonOrd)
+    sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
     sendEvent(name: "DayOfWeekNum", value: DayOfWeekNum)
     sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
     sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
-    sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
     sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
     sendEvent(name: "LeapYearBool", value: LeapYearBool)
     sendEvent(name: "MonthName", value: MonthName)
@@ -288,19 +287,20 @@ def runCmd() {
     sendEvent(name: "ObservesDST", value: ObservesDST)
     sendEvent(name: "TZID", value: TZID)
     sendEvent(name: "TZIDText3", value: TZIDText3)
-    sendEvent(name: "TimeAntePostUpper", value: TimeAntePostUpper)
     sendEvent(name: "TimeAntePostLower", value: TimeAntePostLower)
+    sendEvent(name: "TimeAntePostUpper", value: TimeAntePostUpper)
     sendEvent(name: "TimeHour12Num", value: TimeHour12Num)
-    sendEvent(name: "TimeHour24Num", value: TimeHour24Num)
     sendEvent(name: "TimeHour12NumNoLead", value: TimeHour12NumNoLead)
+    sendEvent(name: "TimeHour24Num", value: TimeHour24Num)
     sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
     sendEvent(name: "TimeMinNum", value: TimeMinNum)
     sendEvent(name: "TimeMinNumNoLead", value: TimeMinNumNoLead)
-    sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
+    sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
     sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
+    sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
     sendEvent(name: "comparisonDate", value: comparisonDate)
-    sendEvent(name: "comparisonTime", value: comparisonTime)
     sendEvent(name: "comparisonDateTime", value: comparisonDateTime)
+    sendEvent(name: "comparisonTime", value: comparisonTime)
 
 //    tileFontColor()
 //    tileFontSize()
