@@ -26,11 +26,33 @@
  * 2022-01-20   jshimota    0.1.9   Commented tile features completely - no intent to support
  * 2022-01-20   jshimota    0.2.0   Release (getting HPM value for package)
  * 2022-01-20   jshimota    0.2.1   Added user compare value requests
+ * 2022-01-21   jshimota    0.2.2   Fixed switch case for Suffix, added Nolead to minutes var, scheduler drop down and values
+ *
  */
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.2.1' }
+static String version() { return '0.2.2' }
+
+static String getOrdDay(val){
+    String OrdDay = "th"
+    switch (val){
+        case 1:
+        case 21:
+        case 31:
+            OrdDay = "st"
+            break
+        case 2:
+        case 22:
+            OrdDay = "nd"
+            break
+        case 3:
+        case 23:
+            OrdDay = "rd"
+            break
+    }
+    return OrdDay
+}
 
 //import java.time.Month
 //import java.util.Date
@@ -80,6 +102,7 @@ metadata {
         attribute "TimeHour12NumNoLead", "number"
         attribute "TimeHour24NumNoLead", "number"
         attribute "TimeMinNum", "number"
+        attribute "TimeMinNumNoLead", "number"
         attribute "comparisonDate", "number"
         attribute "comparisonTime", "number"
         attribute "comparisonDateTime", "number"
@@ -97,7 +120,7 @@ preferences {
     //input(name: "existingTileVertWordPos", type: "num", title: "HTML Tile Word Position (%)*", defaultValue: 55)
     //input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
     input("autoUpdate", "bool", title: "Enable automatic update?\n(Enabled is Yes)", defaultValue: true, required: true, displayDuringSetup: true)
-    input(name: "AutoUpdateInterval", type: "ENUM", multiple: false, options: ["1", "2", "5", "10", "15", "30", "45", "59"], title: "Auto Update Interval", description: "Number of minutes (0-59) between automatic updates", defaultValue: 5, required: true, displayDuringSetup: true)
+    input(name: "AutoUpdateInterval", type: "enum", multiple: false, options: [[1:"1 minute"],[2:"2 minutes"],[5:"5 minutes"],[10:"10 minutes"],[15:"15 minutes"],[20:"20 minutes"],[30:"30 minutes"],[45:"45 minutes"],[59:"59 minutes"]], title: "Auto Update Interval", description: "Number of minutes (range 0-59) between automatic updates", defaultValue: 5, required: true, displayDuringSetup: true)
     //input("htmlVtile", "bool", title: "Use HTML attribute?\n(Enabled is Yes)")
 }
 
@@ -155,7 +178,7 @@ def schedUpdate() {
     if (txtEnable) log.info("schedUpdate:  Updateschedule cleared. Setting new schedule ...")
     if (autoUpdate) {
         if (txtEnable) log.info("Update: Setting next scheduled refresh...")
-        schedule("0 0/${AutoUpdateInterval} 0 ? * * *", refresh)
+        schedule("0 0/${AutoUpdateInterval} * ? * * *", refresh)  //* 0/45 * ? * * *
         log.debug("updatePolling: Setting up schedule with ${AutoUpdateInterval} minute interval")
     }
 }
@@ -182,7 +205,8 @@ def runCmd() {
     dTTimeHour24NumPattern = new SimpleDateFormat('HH')
     dTTimeHour12NumNoLeadPattern = new SimpleDateFormat('h')
     dTTimeHour24NumNoLeadPattern = new SimpleDateFormat('HH')
-    dTTimeMinNumPattern = new SimpleDateFormat('m')
+    dTTimeMinNumNoLeadPattern = new SimpleDateFormat('m')
+    dTTimeMinNumPattern = new SimpleDateFormat('mm')
     dTTZIDPattern = new SimpleDateFormat('zzzz')
     dTTZIDText3Pattern = new SimpleDateFormat('z')
     dTGMTDiffHoursPattern = new SimpleDateFormat('Z')
@@ -207,6 +231,7 @@ def runCmd() {
     TimeHour12NumNoLead = dTTimeHour12NumNoLeadPattern.format(now)
     TimeHour24NumNoLead = dTTimeHour24NumNoLeadPattern.format(now)
     TimeMinNum = dTTimeMinNumPattern.format(now)
+    TimeMinNumNoLead = dTTimeMinNumNoLeadPattern.format(now)
     TimeAntePostUpper = dTTimeAntePostUpperPattern.format(now)
     TimeAntePostLowerTmp = dTTimeAntePostLowerPattern.format(now)
     TimeAntePostLower = TimeAntePostLowerTmp.toLowerCase()
@@ -232,11 +257,14 @@ def runCmd() {
     ObservesDST = timezonedefault.observesDaylightTime()
     DSTActiveBool = timezonedefault.inDaylightTime(now)
 
-    // Ordinals
-    if (iday == 1 || iDay == 21 || iDay == 31) OrdDay = "st"
-    if (iday == 2 || iDay == 22) OrdDay = "nd"
-    if (iday == 3 || iDay == 23) OrdDay = "rd" else OrdDay = "th"
 
+    // Ordinals
+
+    // if (iday == 1 || iDay == 21 || iDay == 31) OrdDay = "st"
+    // if (iday == 2 || iDay == 22) OrdDay = "nd"
+    // if (iday == 3 || iDay == 23) OrdDay = "rd" else OrdDay = "th"
+
+    OrdDay = getOrdDay(iDay)
     DayOfMonSuf = OrdDay
     DayOfMonOrd = String.valueOf(iDay) + OrdDay
 
@@ -267,12 +295,12 @@ def runCmd() {
     sendEvent(name: "TimeHour12NumNoLead", value: TimeHour12NumNoLead)
     sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
     sendEvent(name: "TimeMinNum", value: TimeMinNum)
+    sendEvent(name: "TimeMinNumNoLead", value: TimeMinNumNoLead)
     sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
     sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
     sendEvent(name: "comparisonDate", value: comparisonDate)
     sendEvent(name: "comparisonTime", value: comparisonTime)
     sendEvent(name: "comparisonDateTime", value: comparisonDateTime)
-
 
 //    tileFontColor()
 //    tileFontSize()
