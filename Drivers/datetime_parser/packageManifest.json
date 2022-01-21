@@ -1,11 +1,11 @@
 {
   "packageName": "Date & Time Parser",
   "author": "James Shimota",
-  "version": "0.2.15",
+  "version": "0.2.0",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2022-01-021",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/README.md",
-  "communityLink": "https://community.hubitat.com/t/datetime-parser/xxxxxx",
+  "communityLink": "https://community.hubitat.com/t/alpha-release-date-time-parser-driver/87756/9",
   "licenseFile": "",
   "drivers": [
     {
@@ -15,7 +15,7 @@
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/dateTimeParser.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.2.15"
+      "version": "0.2.0"
     }
   ]
 }
