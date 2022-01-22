@@ -29,12 +29,14 @@
  * 2022-01-21   jshimota    0.2.2   Fixed switch case for Suffix, added Nolead to minutes var, scheduler drop down and values
  * 2022-01-22   jshimota    0.2.3   Added WeekOfYearOdd/Even for garbage cans.
  * 2022-01-22   jshimota    0.2.4   with SBurke help - fixed booleans not supported by HE on comparators
+ * 2022-01-22   jshimota    0.2.5   Add of Even/Odd value to day of month number variables
+ * 2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
  *
  */
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.2.4' }
+static String version() { return '0.2.6' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
@@ -77,6 +79,10 @@ metadata {
         attribute "DayOfMonOrd", "string"
         attribute "DayOfMonSuf", "string"
         attribute "GMTDiffHours", "string"
+        attribute "IsDayOfMonNumEven", "string"
+        attribute "IsDayOfMonNumOdd", "string"
+        attribute "IsDayOfYearNumEven", "string"
+        attribute "IsDayOfYearNumOdd", "string"
         attribute "IsDSTActive", "string"
         attribute "IsLeapYear", "string"
         attribute "IsObservesDST", "string"
@@ -253,13 +259,37 @@ def runCmd() {
     ObservesDST = timezonedefault.observesDaylightTime()
     DSTActiveBool = timezonedefault.inDaylightTime(now)
 
+    //DayOfMonNum odd or even
+    // DayOfMonNum = 6 // test case
+    int iDayOfMonNum =  Integer.parseInt(DayOfMonNum)
+    if (iDayOfMonNum % 2 == 0 ) {
+        DayOfMonNumEven = true
+        DayOfMonNumOdd = false
+    } else {
+        DayOfMonNumEven = false
+        DayOfMonNumOdd = true
+    }
+
+    //DayOfYearNum odd or even
+    // DayOfYearNum = 6 // test case
+    int iDayOfYearNum =  Integer.parseInt(DayOfYearNum)
+    if (iDayOfYearNum % 2 == 0 ) {
+        DayOfYearNumEven = true
+        DayOfYearNumOdd = false
+    } else {
+        DayOfYearNumEven = false
+        DayOfYearNumOdd = true
+    }
+
     //WeekOfYearNum odd or even
-    if (4 % 2 == 0 ) {
+    // WeekOfYearNum = 6 // test case
+    int iWeekOfYearNum =  Integer.parseInt(WeekOfYearNum)
+    if (iWeekOfYearNum % 2 == 0 ) {
         WeekOfYearNumEven = true
         WeekOfYearNumOdd = false
     } else {
-        WeekNumEven = false
-        WeekNumOdd = true
+        WeekOfYearNumEven = false
+        WeekOfYearNumOdd = true
     }
 
     // Ordinals
@@ -268,6 +298,10 @@ def runCmd() {
     DayOfMonOrd = String.valueOf(iDay) + OrdDay
 
     //convert all booleans to text strings
+    IsDayOfMonNumOdd = String.valueOf(DayOfMonNumOdd)
+    IsDayOfMonNumEven = String.valueOf(DayOfMonNumEven)
+    IsDayOfYearNumOdd = String.valueOf(DayOfYearNumOdd)
+    IsDayOfYearNumEven = String.valueOf(DayOfYearNumEven)
     IsDSTActive = String.valueOf(DSTActiveBool)
     IsLeapYear = String.valueOf(LeapYearBool)
     IsWeekOfYearNumOdd = String.valueOf(WeekOfYearNumOdd)
@@ -284,6 +318,10 @@ def runCmd() {
     sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
     sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
     sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
+    sendEvent(name: "IsDayOfMonNumEven", value: IsDayOfMonNumEven)
+    sendEvent(name: "IsDayOfMonNumOdd", value: IsDayOfMonNumOdd)
+    sendEvent(name: "IsDayOfYearNumEven", value: IsDayOfYearNumEven)
+    sendEvent(name: "IsDayOfYearNumOdd", value: IsDayOfYearNumOdd)
     sendEvent(name: "IsDSTActive", value: IsDSTActive)
     sendEvent(name: "IsLeapYear", value: IsLeapYear)
     sendEvent(name: "IsObservesDST", value: IsObservesDST)
