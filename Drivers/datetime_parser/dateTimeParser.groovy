@@ -28,6 +28,7 @@
  * 2022-01-20   jshimota    0.2.1   Added user compare value requests
  * 2022-01-21   jshimota    0.2.2   Fixed switch case for Suffix, added Nolead to minutes var, scheduler drop down and values
  * 2022-01-22   jshimota    0.2.3   Added WeekOfYearOdd/Even for garbage cans.
+ * 2022-01-22   jshimota    0.2.4   with SBurke help - fixed booleans not supported by HE on comparators
  *
  */
 
@@ -74,7 +75,6 @@ metadata {
         capability "Actuator"
         capability "Refresh"
 
-        attribute "DSTActiveBool", "boolean"
         attribute "DayName", "string"
         attribute "DayNameText3", "string"
         attribute "DayOfMonNum", "number"
@@ -85,12 +85,15 @@ metadata {
         attribute "DayOfMonOrd", "string"
         attribute "DayOfMonSuf", "string"
         attribute "GMTDiffHours", "string"
-        attribute "LeapYearBool", "boolean"
+        attribute "IsDSTActive", "string"
+        attribute "IsLeapYear", "string"
+        attribute "IsObservesDST", "string"
+        attribute "IsWeekOfYearNumEven", "string"
+        attribute "IsWeekOfYearNumOdd", "string"
         attribute "MonthName", "string"
         attribute "MonthNameText3", "string"
         attribute "MonthNum", "number"
         attribute "MonthNumNoLead", "number"
-        attribute "ObservesDST", "boolean"
         attribute "TZID", "string"
         attribute "TZIDText3", "string"
         attribute "TimeAntePostLower", "string"
@@ -102,8 +105,6 @@ metadata {
         attribute "TimeMinNum", "number"
         attribute "TimeMinNumNoLead", "number"
         attribute "WeekOfYearNum", "number"
-        attribute "WeekOfYearNumOdd", "boolean"
-        attribute "WeekOfYearNumEven", "boolean"
         attribute "YearNum2Dig", "number"
         attribute "YearNum4Dig", "number"
         attribute "comparisonDate", "number"
@@ -273,7 +274,13 @@ def runCmd() {
         WeekNumOdd = true
     }
 
-    sendEvent(name: "DSTActiveBool", value: DSTActiveBool)
+    //convert all booleans to text strings
+    IsDSTActive = String.valueOf(DSTActiveBool)
+    IsLeapYear = String.valueOf(LeapYearBool)
+    IsWeekOfYearNumOdd = String.valueOf(WeekOfYearNumOdd)
+    IsWeekOfYearNumEven = String.valueOf(WeekOfYearNumEven)
+    IsObservesDST = String.valueOf(ObservesDST)
+
     sendEvent(name: "DayName", value: DayName)
     sendEvent(name: "DayNameText3", value: DayNameText3)
     sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
@@ -284,12 +291,15 @@ def runCmd() {
     sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
     sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
     sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
-    sendEvent(name: "LeapYearBool", value: LeapYearBool)
+    sendEvent(name: "IsLeapYear", value: IsLeapYear)
+    sendEvent(name: "IsDSTActive", value: IsDSTActive)
+    sendEvent(name: "IsObservesDST", value: IsObservesDST)
+    sendEvent(name: "IsWeekOfYearNumEven", value: IsWeekOfYearNumEven)
+    sendEvent(name: "IsWeekOfYearNumOdd", value: IsWeekOfYearNumOdd)
     sendEvent(name: "MonthName", value: MonthName)
     sendEvent(name: "MonthNameText3", value: MonthNameText3)
     sendEvent(name: "MonthNum", value: MonthNum)
     sendEvent(name: "MonthNumNoLead", value: MonthNumNoLead)
-    sendEvent(name: "ObservesDST", value: ObservesDST)
     sendEvent(name: "TZID", value: TZID)
     sendEvent(name: "TZIDText3", value: TZIDText3)
     sendEvent(name: "TimeAntePostLower", value: TimeAntePostLower)
@@ -301,8 +311,6 @@ def runCmd() {
     sendEvent(name: "TimeMinNum", value: TimeMinNum)
     sendEvent(name: "TimeMinNumNoLead", value: TimeMinNumNoLead)
     sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
-    sendEvent(name: "WeekOfYearNumEven", value: WeekOfYearNumEven)
-    sendEvent(name: "WeekOfYearNumOdd", value: WeekOfYearNumOdd)
     sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
     sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
     sendEvent(name: "comparisonDate", value: comparisonDate)
