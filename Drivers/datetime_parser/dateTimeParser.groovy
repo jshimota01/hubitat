@@ -34,7 +34,7 @@
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.2.3' }
+static String version() { return '0.2.4' }
 
 static String getOrdDay(val){
     String OrdDay = "th"
@@ -291,8 +291,8 @@ def runCmd() {
     sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
     sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
     sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
-    sendEvent(name: "IsLeapYear", value: IsLeapYear)
     sendEvent(name: "IsDSTActive", value: IsDSTActive)
+    sendEvent(name: "IsLeapYear", value: IsLeapYear)
     sendEvent(name: "IsObservesDST", value: IsObservesDST)
     sendEvent(name: "IsWeekOfYearNumEven", value: IsWeekOfYearNumEven)
     sendEvent(name: "IsWeekOfYearNumOdd", value: IsWeekOfYearNumOdd)
