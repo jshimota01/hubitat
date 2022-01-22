@@ -27,12 +27,13 @@
  * 2022-01-20   jshimota    0.2.0   Release (getting HPM value for package)
  * 2022-01-20   jshimota    0.2.1   Added user compare value requests
  * 2022-01-21   jshimota    0.2.2   Fixed switch case for Suffix, added Nolead to minutes var, scheduler drop down and values
+ * 2022-01-22   jshimota    0.2.3   Added WeekOfYearOdd/Even for garbage cans.
  *
  */
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.2.2' }
+static String version() { return '0.2.3' }
 
 static String getOrdDay(val){
     String OrdDay = "th"
@@ -101,6 +102,8 @@ metadata {
         attribute "TimeMinNum", "number"
         attribute "TimeMinNumNoLead", "number"
         attribute "WeekOfYearNum", "number"
+        attribute "WeekOfYearNumOdd", "bool"
+        attribute "WeekOfYearNumEven", "bool"
         attribute "YearNum2Dig", "number"
         attribute "YearNum4Dig", "number"
         attribute "comparisonDate", "number"
@@ -194,7 +197,6 @@ def runCmd() {
     dTDayOfWeekNumPattern = new SimpleDateFormat('u')
     dTDayOfYearNumPattern = new SimpleDateFormat('D')
     dTDaysInMonthNumPattern = new SimpleDateFormat('MMMM')
-    dTWeekOfYearNumPattern = new SimpleDateFormat('W')
     dTMonthNamePattern = new SimpleDateFormat('MMMM')
     dTMonthNameText3Pattern = new SimpleDateFormat('MMM')
     dTMonthNumPattern = new SimpleDateFormat('MM')
@@ -212,6 +214,7 @@ def runCmd() {
     dTGMTDiffHoursPattern = new SimpleDateFormat('Z')
     dTTimeAntePostUpperPattern = new SimpleDateFormat('a')
     dTTimeAntePostLowerPattern = new SimpleDateFormat('a') //drop to lower case using temp value
+    dTWeekOfYearNumPattern = new SimpleDateFormat('W')
 
     DayName = dTDayNamePattern.format(now)
     DayNameText3 = dTDayNameText3Pattern.format(now)
@@ -242,6 +245,11 @@ def runCmd() {
     comparisonTime = TimeHour24Num + TimeMinNum
     comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
 
+    // Ordinals
+    OrdDay = getOrdDay(iDay)
+    DayOfMonSuf = OrdDay
+    DayOfMonOrd = String.valueOf(iDay) + OrdDay
+
     // Leap Year
     int iYear = Integer.parseInt(YearNum4Dig)
     int iMonth = Integer.parseInt(MonthNum) - 1 // 1 (months begin with 0)
@@ -253,20 +261,17 @@ def runCmd() {
     //DST - Observed and if Enabled
     // check if it has DST now or in the future (doesn't check the past)
     TimeZone timezonedefault = TimeZone.getDefault()
-
     ObservesDST = timezonedefault.observesDaylightTime()
     DSTActiveBool = timezonedefault.inDaylightTime(now)
 
-
-    // Ordinals
-
-    // if (iday == 1 || iDay == 21 || iDay == 31) OrdDay = "st"
-    // if (iday == 2 || iDay == 22) OrdDay = "nd"
-    // if (iday == 3 || iDay == 23) OrdDay = "rd" else OrdDay = "th"
-
-    OrdDay = getOrdDay(iDay)
-    DayOfMonSuf = OrdDay
-    DayOfMonOrd = String.valueOf(iDay) + OrdDay
+    //WeekOfYearNum odd or even
+    if (4 % 2 == 0 ) {
+        WeekOfYearNumEven = true
+        WeekOfYearNumOdd = false
+    } else {
+        WeekNumEven = false
+        WeekNumOdd = true
+    }
 
     sendEvent(name: "DSTActiveBool", value: DSTActiveBool)
     sendEvent(name: "DayName", value: DayName)
@@ -296,6 +301,8 @@ def runCmd() {
     sendEvent(name: "TimeMinNum", value: TimeMinNum)
     sendEvent(name: "TimeMinNumNoLead", value: TimeMinNumNoLead)
     sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
+    sendEvent(name: "WeekOfYearNumEven", value: WeekOfYearNumEven)
+    sendEvent(name: "WeekOfYearNumOdd", value: WeekOfYearNumOdd)
     sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
     sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
     sendEvent(name: "comparisonDate", value: comparisonDate)
