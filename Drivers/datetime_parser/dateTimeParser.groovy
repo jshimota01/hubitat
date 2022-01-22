@@ -36,24 +36,16 @@ import java.text.SimpleDateFormat
 
 static String version() { return '0.2.4' }
 
-static String getOrdDay(val){
-    String OrdDay = "th"
-    switch (val){
-        case 1:
-        case 21:
-        case 31:
-            OrdDay = "st"
-            break
-        case 2:
-        case 22:
-            OrdDay = "nd"
-            break
-        case 3:
-        case 23:
-            OrdDay = "rd"
-            break
+static String getOrdinal(int n) {
+    if (n >= 11 && n <= 13) {
+        return "th"
     }
-    return OrdDay
+    switch (n % 10) {
+        case 1:  return "st"
+        case 2:  return "nd"
+        case 3:  return "rd"
+        default: return "th"
+    }
 }
 
 //import java.time.Month
@@ -187,10 +179,10 @@ def schedUpdate() {
     }
 }
 
-
 def runCmd() {
     now = new Date()
 
+    // pattern definitions
     dTDayNamePattern = new SimpleDateFormat('EEEE')
     dTDayNameText3Pattern = new SimpleDateFormat('EEE')
     dTDayOfMonNumPattern = new SimpleDateFormat('dd')
@@ -217,6 +209,7 @@ def runCmd() {
     dTTimeAntePostLowerPattern = new SimpleDateFormat('a') //drop to lower case using temp value
     dTWeekOfYearNumPattern = new SimpleDateFormat('W')
 
+    // set attribute using pattern
     DayName = dTDayNamePattern.format(now)
     DayNameText3 = dTDayNameText3Pattern.format(now)
     DayOfMonNum = dTDayOfMonNumPattern.format(now)
@@ -246,11 +239,6 @@ def runCmd() {
     comparisonTime = TimeHour24Num + TimeMinNum
     comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
 
-    // Ordinals
-    OrdDay = getOrdDay(iDay)
-    DayOfMonSuf = OrdDay
-    DayOfMonOrd = String.valueOf(iDay) + OrdDay
-
     // Leap Year
     int iYear = Integer.parseInt(YearNum4Dig)
     int iMonth = Integer.parseInt(MonthNum) - 1 // 1 (months begin with 0)
@@ -273,6 +261,11 @@ def runCmd() {
         WeekNumEven = false
         WeekNumOdd = true
     }
+
+    // Ordinals
+    OrdDay = getOrdinal(iDay)
+    DayOfMonSuf = OrdDay
+    DayOfMonOrd = String.valueOf(iDay) + OrdDay
 
     //convert all booleans to text strings
     IsDSTActive = String.valueOf(DSTActiveBool)
