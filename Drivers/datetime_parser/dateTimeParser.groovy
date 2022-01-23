@@ -31,6 +31,7 @@
  * 2022-01-22   jshimota    0.2.4   with SBurke help - fixed booleans not supported by HE on comparators
  * 2022-01-22   jshimota    0.2.5   Add of Even/Odd value to day of month number variables
  * 2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
+ * 2022-01-23   jshimota    0.2.7   timehour24nolead fixed - added debug logging check to a line
  *
  */
 
@@ -181,7 +182,7 @@ def schedUpdate() {
     if (autoUpdate) {
         if (txtEnable) log.info("Update: Setting next scheduled refresh...")
         schedule("0 0/${AutoUpdateInterval} * ? * * *", refresh)  //* 0/45 * ? * * *
-        log.debug("updatePolling: Setting up schedule with ${AutoUpdateInterval} minute interval")
+        if (logEnable) log.debug("updatePolling: Setting up schedule with ${AutoUpdateInterval} minute interval")
     }
 }
 
@@ -205,7 +206,7 @@ def runCmd() {
     dTTimeHour12NumPattern = new SimpleDateFormat('hh')
     dTTimeHour24NumPattern = new SimpleDateFormat('HH')
     dTTimeHour12NumNoLeadPattern = new SimpleDateFormat('h')
-    dTTimeHour24NumNoLeadPattern = new SimpleDateFormat('HH')
+    dTTimeHour24NumNoLeadPattern = new SimpleDateFormat('H')
     dTTimeMinNumNoLeadPattern = new SimpleDateFormat('m')
     dTTimeMinNumPattern = new SimpleDateFormat('mm')
     dTTZIDPattern = new SimpleDateFormat('zzzz')
