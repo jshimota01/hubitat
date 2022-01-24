@@ -31,7 +31,7 @@
  * 2022-01-22   jshimota    0.2.4   with SBurke help - fixed booleans not supported by HE on comparators
  * 2022-01-22   jshimota    0.2.5   Add of Even/Odd value to day of month number variables
  * 2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
- * 2022-01-23   jshimota    0.2.7   timehour24nolead fixed - added debug logging check to a line
+ * 2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line
  *
  */
 
@@ -50,15 +50,6 @@ static String getOrdinal(int n) {
         default: return "th"
     }
 }
-
-//import java.time.Month
-//import java.util.Date
-//import java.time.Duration
-//import java.time.ZoneOffset
-//import java.time.ZonedDateTime
-//import java.time.format.DateTimeFormatter
-//import java.time.temporal.ChronoUnit
-
 
 metadata {
     definition(
@@ -109,41 +100,14 @@ metadata {
         attribute "comparisonDate", "number"
         attribute "comparisonDateTime", "number"
         attribute "comparisonTime", "number"
-
-        //attribute "tileFontSize", "number"
-        //attribute "tileFontColor", "string"
-        //attribute "tileVertWordPos", "number"
-
     }
 }
 preferences {
     input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false
     input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
-    //input(name: "existingTileFontSize", type: "num", title: "HTML Tile Font Size (%)*", defaultValue: 100)
-    //input(name: "existingTileVertWordPos", type: "num", title: "HTML Tile Word Position (%)*", defaultValue: 55)
-    //input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
     input("autoUpdate", "bool", title: "Enable automatic update?\n(Enabled is Yes)", defaultValue: true, required: true, displayDuringSetup: true)
     input(name: "AutoUpdateInterval", type: "enum", multiple: false, options: [[1:"1 minute"],[2:"2 minutes"],[5:"5 minutes"],[10:"10 minutes"],[15:"15 minutes"],[20:"20 minutes"],[30:"30 minutes"],[45:"45 minutes"],[59:"59 minutes"]], title: "Auto Update Interval", description: "Number of minutes (range 0-59) between automatic updates", defaultValue: 5, required: true, displayDuringSetup: true)
-    //input("htmlVtile", "bool", title: "Use HTML attribute?\n(Enabled is Yes)")
 }
-
-//def tileFontColor() {
-//    String tileFontColor = "#FFFFFFFF"
-//    if(existingTileFontColor > " ") tileFontColor = existingTileFontColor
-//    sendEvent(name: "tileFontColor", value: "${tileFontColor}")
-//}
-//
-//def tileVertWordPos() {
-//    tileVertWordPos = 55
-//    if(existingTileVertWordPos > " ") tileVertWordPos = existingTileVertWordPos
-//    sendEvent(name: "tileVertWordPos", value: tileVertWordPos)
-//}
-//
-//def tileFontSize() {
-//    tileFontSize = 100
-//    if(existingTileFontSize > " ") tileFontSize = existingTileFontSize
-//    sendEvent(name: "tileFontSize", value: tileFontSize)
-//}
 
 def logsOff() {
     log.warn "debug logging disabled..."
@@ -242,6 +206,8 @@ def runCmd() {
     TZID = dTTZIDPattern.format(now)
     TZIDText3 = dTTZIDText3Pattern.format(now)
     GMTDiffHours = dTGMTDiffHoursPattern.format(now)
+
+    // set attribute using non-pattern
     comparisonDate = YearNum4Dig + MonthNum + DayOfMonNum
     comparisonTime = TimeHour24Num + TimeMinNum
     comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
@@ -348,8 +314,4 @@ def runCmd() {
     sendEvent(name: "comparisonDate", value: comparisonDate)
     sendEvent(name: "comparisonDateTime", value: comparisonDateTime)
     sendEvent(name: "comparisonTime", value: comparisonTime)
-
-//    tileFontColor()
-//    tileFontSize()
-//    tileVertWordPos()
 }
