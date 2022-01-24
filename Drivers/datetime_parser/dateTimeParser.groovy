@@ -37,7 +37,7 @@
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.2.6' }
+static String version() { return '0.2.7' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
