@@ -32,12 +32,13 @@
  * 2022-01-22   jshimota    0.2.5   Add of Even/Odd value to day of month number variables
  * 2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
  * 2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line
+ * 2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
  *
  */
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.2.7' }
+static String version() { return '0.2.8' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
@@ -98,8 +99,11 @@ metadata {
         attribute "YearNum2Dig", "number"
         attribute "YearNum4Dig", "number"
         attribute "comparisonDate", "number"
+        attribute "comparisonDateStr", "string"
         attribute "comparisonDateTime", "number"
+        attribute "comparisonDateTimeStr", "string"
         attribute "comparisonTime", "number"
+        attribute "comparisonTimeStr", "string"
     }
 }
 preferences {
@@ -275,6 +279,12 @@ def runCmd() {
     IsWeekOfYearNumEven = String.valueOf(WeekOfYearNumEven)
     IsObservesDST = String.valueOf(ObservesDST)
 
+    //convert comparison number fields to strings
+    comparisonDateStr = String.valueOf(comparisonDate)
+    comparisonTimeStr = String.valueOf(comparisonTime)
+    comparisonDateTimeStr = String.valueOf(comparisonDateTime)
+
+
     sendEvent(name: "DayName", value: DayName)
     sendEvent(name: "DayNameText3", value: DayNameText3)
     sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
@@ -312,6 +322,9 @@ def runCmd() {
     sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
     sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
     sendEvent(name: "comparisonDate", value: comparisonDate)
+    sendEvent(name: "comparisonDateStr", value: comparisonDateStr)
     sendEvent(name: "comparisonDateTime", value: comparisonDateTime)
+    sendEvent(name: "comparisonDateTimeStr", value: comparisonDateTimeStr)
     sendEvent(name: "comparisonTime", value: comparisonTime)
+    sendEvent(name: "comparisonTimeStr", value: comparisonTimeStr)
 }
