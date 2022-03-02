@@ -1,10 +1,44 @@
-Date & Time Parser
+Date & Time Parser (aka schedule_ur_garbage_cans :) )
 
 Why?
 
-A need developed for me to be able to set rules and automations within my Hubitat environment that would allow me to gain control over time itself!  Okay. Nothing so "Doc Strange" but honestly, just being able to compare the day of the week, or the month, or week number of the year - each had a reason for me.  The idea hatched itself, as I was following dialog on the Hubitat community and others wanted 'what day of the week is it?' was discussed, I realized immediately afterwards that I too needed that specific bit of info.  Having dabbled with the season of the year (see Meteorological Seasons driver in HPM) I felt it wasn't much of a stretch to rip the guts out of my first driver and make a second along the lines of this new idea. 
-Having extensive PHP knowledge, I am very comfortable with date/time and formats so I decided I would see what an effort looked like - and here it is!
+Recent discussion (early 2022) on how to ID what day of the week it is in a rule prompted me to want a rule too... (in my case it was for garbage can day, which is split - every other week for all cans, grass/recycle is every week).
 
+A need developed for me to be able to set rules and automations within my Hubitat environment that would allow me to gain control over time itself!  Okay. Nothing so "Doc Strange" but honestly, just being able to compare the day of the week, or the month, or week number of the year - each had a reason for me.  The idea hatched itself, as I was following dialog on the Hubitat community and others wanted 'what day of the week is it?' was discussed, I realized immediately afterwards that I too needed that specific bit of info.  Having dabbled with the season of the year (see Meteorological Seasons driver in HPM) I felt it wasn't much of a stretch to rip the guts out of my first driver and make a second along the lines of this new idea. 
+
+Having extensive PHP knowledge, I am very comfortable with date/time and formats so I decided I would see what an effort looked like - and here it is!
+Having already done some date/time work with my Meteorological Seasons driver, I wrote this driver this AM to allow me to parse values so I can easily control rules. Initially I was pulling the variables list from PHP but then I learned that Java comes up... um. short. At least in pre-defined ways.
+  
+Besides the power this app is showing to me (well. I wrote it so.. yea.) I've just added an Even and Odd Week variable. so Folks scheduling garbage can pick ups... Tada! Point your rule and enjoy.
+
+***yet another update ***So, I've come to learn that boolean values for custom attributes aren't supported in Rules. This is known since...well .. 2020 at least.. regardless - I've converted all booleans to strings and adjusted their names to be a bit more humanistic. Much MUCH thanks to @sburke781 who just is huge as a persona around here!
+
+Updates overview as of 02/26/2022
+
+ Change History:
+ 
+Date         Source      Version What                                        URL
+----         ------      ------- ----                                        ---
+2022-01-19   jshimota    0.1.0   Starting version
+2022-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components   https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
+2022-01-19   jshimota    0.1.2   Alpha release for testing
+2022-01-20   jshimota    0.1.3   Worked on Scheduling cleanup and logging
+2022-01-20   jshimota    0.1.4   First efforts to identify workarounds on php variations not found in Java
+2022-01-20   jshimota    0.1.5   Heavy work done on basic function cleanup, as well as optimization
+2022-01-20   jshimota    0.1.6   Added final missing attributes - DST, ObservesDST, LeapYear, Day Suffix and Ordinal
+2022-01-20   jshimota    0.1.7   Tried adding Simons time and date stuff back, changed mind
+2022-01-20   jshimota    0.1.8   Added update schedule ability
+2022-01-20   jshimota    0.1.9   Commented tile features completely - no intent to support
+2022-01-20   jshimota    0.2.0   Release (getting HPM value for package)
+2022-01-20   jshimota    0.2.1   Added user compare value requests
+2022-01-21   jshimota    0.2.2   Fixed switch case for Suffix, added noLead to minutes var, scheduler drop down and values
+2022-01-22   jshimota    0.2.3   Added WeekOfYearOdd/Even for garbage cans.
+2022-01-22   jshimota    0.2.4   with SBurke help - fixed boolean's  not supported by HE on comparators
+2022-01-22   jshimota    0.2.5   Add of Even/Odd value to day of month number variables
+2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
+2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line
+2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
+ 
 Description
 
 Date & Time Parser is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver.
@@ -12,10 +46,8 @@ This creates a virtual device, and from it, dashboard tiles, variables for Rules
 
 Requirements
 
-I have not tested this on any platforms besides my Hubitat c5 currently running 2.2.9 Firmware.  That said, it is relatively benign and should work on any HE hub and with fingers crossed will continue to work as the HE world evolves.
+I have not tested this on any platforms besides my Hubitat c7 currently running 2.3.0.xxx Firmware.  That said, it is relatively benign and should work on any HE hub and with fingers crossed will continue to work as the HE world evolves.
 
-New Features
-1.x		Initial release
 
 Installation and Configuration
 
@@ -29,63 +61,67 @@ Installation and Configuration
         
 		It is possible that not in all cases does a 'Refresh' run at the time of install.  Click the Initialize button to initially set the values of the variables and attributes.
         
-     ***** NEED TO UPDATE BELOW ****   
-        
-		You may also override the current season value calculated by choosing one of the seasons and clicking.  However, by default - the driver WILL reset at 6am the next day to the current season.
-			*Unless you have disabled Autoupdate - in which case it will never change.
-
 Additional Features
 
-    The basic default settings are designed to cover most cases.  Normally, DescriptionText logging is enabled, but Debug logging is disabled.  Both are configurable.
+    The basic default settings are designed to cover most cases.  Normally, DescriptionText and Debug logging are disabled, but may be Enabled if necessary.  For testing and odd case use, the automatic update can be disabled, but is Enabled by default.   Auto Update interval can be set by picking from a drop down list from 1 - 59 minutes.  A tool such as this should have minimal impact so the default is 59 minutes.
     
-    The default update is enabled and scheduled at 6am each day.  The system clears all schedules, then adds another upon each morning refresh.  This guarantees no inadvertent multiple schedules will occur.
-    If you disable updates you can keep an override value in place (as described above by choosing and click any season)  This is useful for testing but is recommended to be left enabled.
-    
-    The value of the image is managed separately from the value of the textual response.  In this way, when creating dashboard icons, you can choose as needed.  However in some cases a tile is needed that contains both, and in HTML layout.
-    Enabling the HTML attribute will provide a default layout HTML tile for use with SuperTiles and other dashboard apps.  It is NOT fully fleshed and tested but works in a basic form.
-    As of x.2.10 - The HTML snippet used as a complete tile option (by selecting it in attributes when making a dashboard tile) has been radically altered.  This was done to provide more functional/accurate support for Hubitat Dashboard for Android - a tool I rely on.
-    Additionally, as of x.2.1x further features to support the tiles have been added - Font Color can be specified either as hex #xxxxxx or using websafe color names.  Font-size can be specified from 1%-500% or using standard font values such as 12px or LG etc.  Lastly, the vertical position within the tile of the test ovelay is now adjustable!  the default, 55 (percent) puts the text about 2/3rds from the top. but you can specify 1-100 (%) and control it from top edge to bottom edge.
-    
-    The driver calls to the internet for the icons, stored in the GitHub repository:
-    " https://raw.githubusercontent.com/jshimota01/hubitat/main/meteorological_seasons/season_icons/ "
-    A user could easily download the five icons (fall.svg, winter.svg, spring.svg, summer.svg and unknown.svg) and put them on their Hubitat or in a local web folder.
-    By updating the Alternate path for season icons, you can override the reference to your images location in this manner.  (**NOTE – end your reference path with a “/” (forward slash!))
-	Also, it is possible that you may wish to use your own images and replace the default SVG files. Simply make sure you name your replacement files correctly and identically as they are hardcoded.
-	
-    As of version 2.x the ability to set for the southern hemisphere was added.  The default is “Northern” hemisphere, but turning OFF the switch and saving preferences will flip the world and align the correct seasons, their dates, names and images.
-   
-   Added in version 2.15 - the ability to select between Autumn and Fall as the name of the season prior to winter.  Southern Hemisphere folks seem to use Autumn for the name and this is a bow to them.  Also, while technically Feb 29 was not incorrect, one feedback did mention it so date was changed to say 'Feb 28'. I do NOT check leap year!
-    *** Important - If changes occur to any preference, click Save Preferences below the preferences section
-
 Use the driver in RM rules
 
-    To access Rules values - the example here is for a Predicate (RM 5!) - but it can be used wherever.  Below is simply an Example!
-    Create a Rule, then name it.
-    Enabled Use Predicate Conditions
-    Click Define Predicate Conditions
-    Select New Condition in the drop down
+    To access these variables in an app such as Rule Machine - use the example here as a quide (an example Rule Machine 5.1 Rule).  Below is simply an example!
+    
+    Create a Rule, then name it
+    Click Select Trigger Events
+    Click 'click to set' from Select capability for new Trigger Event
     Select Custom Attribute from the Select Capability drop down
     Click Select Device
     Select your Virtual Device you created at installation
     Select Attribute from the drop down
-    Choose SeasonName
+    Choose DayNameText3 (for example)
     Choose the Equals sign
-    Enter a season text value – It MUST be one ofthe following: “Fall”, “Summer”, “Winter” or “Spring” [IE; Uppercase first letter!]
+    Enter the 3 character day name (Case sensitive!) text value –  [IE; Uppercase first letter!]
     Press enter to complete the text line entry
     Click Done with this Condition.
 
-Future updates
-
-      When I wrote this driver, I was reminded of some basics about this topic.  
-
-      First, there are two main forms of seasons - Meteorological and Astronomical.  Astronomical seasons are calculated using the equinoxes (which are not static dates each year!), and therefore varies.
-      
-      Example for Fall
-      Meteorological = September 1 through November 30
-      Astronomical = September 22 through December 21
-      
-      The ability for a user to choose between these 2 forms of Seasons was intended, but my programming skills couldn't yet deal with the implementation.
-      
-      The ability for users to be able to create a start/stop for each season was also intended, but never implemented.
-      
-      The ability for a user to enter any date to get the correct value was intended and implement but then removed as the date field entry was complicated and I didn't want the support hassle.
+Usable Variables with example :
+    DayName : Wednesday (string)
+    DayNameText3 : Wed (string)
+    DayOfMonNum : 02 (number)
+    DayOfMonNumNoLead : 2 (number)
+    DayOfMonOrd : 2nd (string)
+    DayOfMonSuf : nd (string)
+    DayOfWeekNum : 3 (number)
+    DayOfYearNum : 61 (number)
+    DaysInMonthNum : 31 (number)
+    GMTDiffHours : -0800 (string)
+    IsDSTActive : false (string)
+    IsDayOfMonNumEven : true (string)
+    IsDayOfMonNumOdd : false (string)
+    IsDayOfYearNumEven : false (string)
+    IsDayOfYearNumOdd : true (string)
+    IsLeapYear : false (string)
+    IsObservesDST : true (string)
+    IsWeekOfYearNumEven : false (string)
+    IsWeekOfYearNumOdd : true (string)
+    MonthName : March (string)
+    MonthNameText3 : Mar (string)
+    MonthNum : 03 (number)
+    MonthNumNoLead : 3 (number)
+    TZID : Pacific Standard Time (string)
+    TZIDText3 : PST (string)
+    TimeAntePostLower : am (string)
+    TimeAntePostUpper : AM (string)
+    TimeHour12Num : 05 (number)
+    TimeHour12NumNoLead : 5 (number)
+    TimeHour24Num : 05 (number)
+    TimeHour24NumNoLead : 5 (number)
+    TimeMinNum : 00 (number)
+    TimeMinNumNoLead : 0 (number)
+    WeekOfYearNum : 1 (number)
+    YearNum2Dig : 22 (number)
+    YearNum4Dig : 2022 (number)
+    comparisonDate : 20220302 (number)
+    comparisonDateStr : 20220302 (string)
+    comparisonDateTime : 202203020500 (number)
+    comparisonDateTimeStr : 202203020500 (string)
+    comparisonTime : 0500 (number)
+    comparisonTimeStr : 0500 (string)
