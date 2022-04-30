@@ -33,7 +33,7 @@
  * 2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
  * 2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line
  * 2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
- * 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity
+ * 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
  *
  */
 
