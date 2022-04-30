@@ -146,7 +146,7 @@ def refresh() {
 
 def schedUpdate() {
     unschedule()
-    if (txtEnable) log.info("schedUpdate:  Updateschedule cleared. Setting new schedule ...")
+    if (txtEnable) log.info("schedUpdate: Update schedule cleared. Setting new schedule ...")
     if (autoUpdate) {
         if (txtEnable) log.info("Update: Setting next scheduled refresh...")
         schedule("0 0/${AutoUpdateInterval} * ? * * *", refresh)  //* 0/45 * ? * * *
