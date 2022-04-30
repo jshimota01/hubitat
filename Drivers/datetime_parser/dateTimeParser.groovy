@@ -130,202 +130,204 @@ def updated() {
 def refresh() {
     runCmd()
     if (logEnable) {
-        if (!autoUpdate) log.warn("Update: Automatic Update DISABLED")
-    }
-    if (logEnable) {
-        if (autoUpdate) log.info("Update: Automatic Update ENABLED")
+        if (!autoUpdate) {
+            log.warn("Refresh: Automatic Update DISABLED")
+    } else {
+            log.info("Refresh: Automatic Update ENABLED")
+        }
     }
     if (autoUpdate) {
-        if (logEnable) log.debug("Autoupdate: Setting Update Schedule")
-        schedUpdate()
-    }
-    if (!autoUpdate) {
-        if (logEnable) log.warn("Update: Clearing Update Schedule ...")
         unschedule()
-    }
+        if (logEnable) log.debug("Refresh: Setting Update Schedule")
+            schedUpdate()
+    } else {
+         if (logEnable) log.warn("Refresh: Cleared Update Schedule ...")
+        }
+    return    
 }
 
-def schedUpdate() {
-    unschedule()
-    if (txtEnable) log.info("schedUpdate: Update schedule cleared. Setting new schedule ...")
-    if (autoUpdate) {
-        if (txtEnable) log.info("Update: Setting next scheduled refresh...")
-        schedule("0 0/${AutoUpdateInterval} * ? * * *", refresh)  //* 0/45 * ? * * *
-        if (logEnable) log.debug("updatePolling: Setting up schedule with ${AutoUpdateInterval} minute interval")
-    }
-}
-
-def runCmd() {
-    now = new Date()
-
-    // pattern definitions
-    dTDayNamePattern = new SimpleDateFormat('EEEE')
-    dTDayNameText3Pattern = new SimpleDateFormat('EEE')
-    dTDayOfMonNumPattern = new SimpleDateFormat('dd')
-    dTDayOfMonNumNoLeadPattern = new SimpleDateFormat('d')
-    dTDayOfWeekNumPattern = new SimpleDateFormat('u')
-    dTDayOfYearNumPattern = new SimpleDateFormat('D')
-    dTDaysInMonthNumPattern = new SimpleDateFormat('MMMM')
-    dTMonthNamePattern = new SimpleDateFormat('MMMM')
-    dTMonthNameText3Pattern = new SimpleDateFormat('MMM')
-    dTMonthNumPattern = new SimpleDateFormat('MM')
-    dTMonthNumNoLeadPattern = new SimpleDateFormat('M')
-    dTYearNum4DigPattern = new SimpleDateFormat('yyyy')
-    dTYearNum2DigPattern = new SimpleDateFormat('yy')
-    dTTimeHour12NumPattern = new SimpleDateFormat('hh')
-    dTTimeHour24NumPattern = new SimpleDateFormat('HH')
-    dTTimeHour12NumNoLeadPattern = new SimpleDateFormat('h')
-    dTTimeHour24NumNoLeadPattern = new SimpleDateFormat('H')
-    dTTimeMinNumNoLeadPattern = new SimpleDateFormat('m')
-    dTTimeMinNumPattern = new SimpleDateFormat('mm')
-    dTTZIDPattern = new SimpleDateFormat('zzzz')
-    dTTZIDText3Pattern = new SimpleDateFormat('z')
-    dTGMTDiffHoursPattern = new SimpleDateFormat('Z')
-    dTTimeAntePostUpperPattern = new SimpleDateFormat('a')
-    dTTimeAntePostLowerPattern = new SimpleDateFormat('a') //drop to lower case using temp value
-    dTWeekOfYearNumPattern = new SimpleDateFormat('W')
-
-    // set attribute using pattern
-    DayName = dTDayNamePattern.format(now)
-    DayNameText3 = dTDayNameText3Pattern.format(now)
-    DayOfMonNum = dTDayOfMonNumPattern.format(now)
-    DayOfMonNumNoLead = dTDayOfMonNumNoLeadPattern.format(now)
-    DayOfWeekNum = dTDayOfWeekNumPattern.format(now)
-    DayOfYearNum = dTDayOfYearNumPattern.format(now)
-    WeekOfYearNum = dTWeekOfYearNumPattern.format(now)
-    MonthName = dTMonthNamePattern.format(now)
-    MonthNameText3 = dTMonthNameText3Pattern.format(now)
-    MonthNum = dTMonthNumPattern.format(now)
-    MonthNumNoLead = dTMonthNumNoLeadPattern.format(now)
-    YearNum4Dig = dTYearNum4DigPattern.format(now)
-    YearNum2Dig = dTYearNum2DigPattern.format(now)
-    TimeHour12Num = dTTimeHour12NumPattern.format(now)
-    TimeHour24Num = dTTimeHour24NumPattern.format(now)
-    TimeHour12NumNoLead = dTTimeHour12NumNoLeadPattern.format(now)
-    TimeHour24NumNoLead = dTTimeHour24NumNoLeadPattern.format(now)
-    TimeMinNum = dTTimeMinNumPattern.format(now)
-    TimeMinNumNoLead = dTTimeMinNumNoLeadPattern.format(now)
-    TimeAntePostUpper = dTTimeAntePostUpperPattern.format(now)
-    TimeAntePostLowerTmp = dTTimeAntePostLowerPattern.format(now)
-    TimeAntePostLower = TimeAntePostLowerTmp.toLowerCase()
-    TZID = dTTZIDPattern.format(now)
-    TZIDText3 = dTTZIDText3Pattern.format(now)
-    GMTDiffHours = dTGMTDiffHoursPattern.format(now)
-
-    // set attribute using non-pattern
-    comparisonDate = YearNum4Dig + MonthNum + DayOfMonNum
-    comparisonTime = TimeHour24Num + TimeMinNum
-    comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
-
-    // Leap Year
-    int iYear = Integer.parseInt(YearNum4Dig)
-    int iMonth = Integer.parseInt(MonthNum) - 1 // 1 (months begin with 0)
-    int iDay = Integer.parseInt(DayOfMonNum)
-    Calendar currentCal = new GregorianCalendar(iYear, iMonth, iDay) // used to check boolean
-    DaysInMonthNum = currentCal.getActualMaximum(Calendar.DAY_OF_MONTH) // 2
-    LeapYearBool = currentCal.isLeapYear(Calendar.YEAR)
-
-    //DST - Observed and if Enabled
-    // check if it has DST now or in the future (doesn't check the past)
-    TimeZone timezonedefault = TimeZone.getDefault()
-    ObservesDST = timezonedefault.observesDaylightTime()
-    DSTActiveBool = timezonedefault.inDaylightTime(now)
-
-    //DayOfMonNum odd or even
-    // DayOfMonNum = 6 // test case
-    int iDayOfMonNum =  Integer.parseInt(DayOfMonNum)
-    if (iDayOfMonNum % 2 == 0 ) {
-        DayOfMonNumEven = true
-        DayOfMonNumOdd = false
-    } else {
-        DayOfMonNumEven = false
-        DayOfMonNumOdd = true
+    def schedUpdate() {
+        if (txtEnable) log.info("schedUpdate:  Update schedule cleared. Setting new schedule ...")
+        if (autoUpdate) {
+            if (txtEnable) log.info("schedUpdate: Setting next scheduled refresh...")
+            schedule("0 0/${AutoUpdateInterval} * ? * * *", refresh)  //default - * 0/45 * ? * * *
+            if (logEnable) log.debug("schedUpdate: Setting up schedule with ${AutoUpdateInterval} minute interval")
+            return
+        }
+        return
     }
 
-    //DayOfYearNum odd or even
-    // DayOfYearNum = 6 // test case
-    int iDayOfYearNum =  Integer.parseInt(DayOfYearNum)
-    if (iDayOfYearNum % 2 == 0 ) {
-        DayOfYearNumEven = true
-        DayOfYearNumOdd = false
-    } else {
-        DayOfYearNumEven = false
-        DayOfYearNumOdd = true
+    def runCmd() {
+        now = new Date()
+
+        // pattern definitions
+        dTDayNamePattern = new SimpleDateFormat('EEEE')
+        dTDayNameText3Pattern = new SimpleDateFormat('EEE')
+        dTDayOfMonNumPattern = new SimpleDateFormat('dd')
+        dTDayOfMonNumNoLeadPattern = new SimpleDateFormat('d')
+        dTDayOfWeekNumPattern = new SimpleDateFormat('u')
+        dTDayOfYearNumPattern = new SimpleDateFormat('D')
+        dTDaysInMonthNumPattern = new SimpleDateFormat('MMMM')
+        dTMonthNamePattern = new SimpleDateFormat('MMMM')
+        dTMonthNameText3Pattern = new SimpleDateFormat('MMM')
+        dTMonthNumPattern = new SimpleDateFormat('MM')
+        dTMonthNumNoLeadPattern = new SimpleDateFormat('M')
+        dTYearNum4DigPattern = new SimpleDateFormat('yyyy')
+        dTYearNum2DigPattern = new SimpleDateFormat('yy')
+        dTTimeHour12NumPattern = new SimpleDateFormat('hh')
+        dTTimeHour24NumPattern = new SimpleDateFormat('HH')
+        dTTimeHour12NumNoLeadPattern = new SimpleDateFormat('h')
+        dTTimeHour24NumNoLeadPattern = new SimpleDateFormat('H')
+        dTTimeMinNumNoLeadPattern = new SimpleDateFormat('m')
+        dTTimeMinNumPattern = new SimpleDateFormat('mm')
+        dTTZIDPattern = new SimpleDateFormat('zzzz')
+        dTTZIDText3Pattern = new SimpleDateFormat('z')
+        dTGMTDiffHoursPattern = new SimpleDateFormat('Z')
+        dTTimeAntePostUpperPattern = new SimpleDateFormat('a')
+        dTTimeAntePostLowerPattern = new SimpleDateFormat('a') //drop to lower case using temp value
+        dTWeekOfYearNumPattern = new SimpleDateFormat('W')
+
+        // set attribute using pattern
+        DayName = dTDayNamePattern.format(now)
+        DayNameText3 = dTDayNameText3Pattern.format(now)
+        DayOfMonNum = dTDayOfMonNumPattern.format(now)
+        DayOfMonNumNoLead = dTDayOfMonNumNoLeadPattern.format(now)
+        DayOfWeekNum = dTDayOfWeekNumPattern.format(now)
+        DayOfYearNum = dTDayOfYearNumPattern.format(now)
+        WeekOfYearNum = dTWeekOfYearNumPattern.format(now)
+        MonthName = dTMonthNamePattern.format(now)
+        MonthNameText3 = dTMonthNameText3Pattern.format(now)
+        MonthNum = dTMonthNumPattern.format(now)
+        MonthNumNoLead = dTMonthNumNoLeadPattern.format(now)
+        YearNum4Dig = dTYearNum4DigPattern.format(now)
+        YearNum2Dig = dTYearNum2DigPattern.format(now)
+        TimeHour12Num = dTTimeHour12NumPattern.format(now)
+        TimeHour24Num = dTTimeHour24NumPattern.format(now)
+        TimeHour12NumNoLead = dTTimeHour12NumNoLeadPattern.format(now)
+        TimeHour24NumNoLead = dTTimeHour24NumNoLeadPattern.format(now)
+        TimeMinNum = dTTimeMinNumPattern.format(now)
+        TimeMinNumNoLead = dTTimeMinNumNoLeadPattern.format(now)
+        TimeAntePostUpper = dTTimeAntePostUpperPattern.format(now)
+        TimeAntePostLowerTmp = dTTimeAntePostLowerPattern.format(now)
+        TimeAntePostLower = TimeAntePostLowerTmp.toLowerCase()
+        TZID = dTTZIDPattern.format(now)
+        TZIDText3 = dTTZIDText3Pattern.format(now)
+        GMTDiffHours = dTGMTDiffHoursPattern.format(now)
+
+        // set attribute using non-pattern
+        comparisonDate = YearNum4Dig + MonthNum + DayOfMonNum
+        comparisonTime = TimeHour24Num + TimeMinNum
+        comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
+
+        // Leap Year
+        int iYear = Integer.parseInt(YearNum4Dig)
+        int iMonth = Integer.parseInt(MonthNum) - 1 // 1 (months begin with 0)
+        int iDay = Integer.parseInt(DayOfMonNum)
+        Calendar currentCal = new GregorianCalendar(iYear, iMonth, iDay) // used to check boolean
+        DaysInMonthNum = currentCal.getActualMaximum(Calendar.DAY_OF_MONTH) // 2
+        LeapYearBool = currentCal.isLeapYear(Calendar.YEAR)
+
+        //DST - Observed and if Enabled
+        // check if it has DST now or in the future (doesn't check the past)
+        TimeZone timezonedefault = TimeZone.getDefault()
+        ObservesDST = timezonedefault.observesDaylightTime()
+        DSTActiveBool = timezonedefault.inDaylightTime(now)
+
+        //DayOfMonNum odd or even
+        // DayOfMonNum = 6 // test case
+        int iDayOfMonNum =  Integer.parseInt(DayOfMonNum)
+        if (iDayOfMonNum % 2 == 0 ) {
+            DayOfMonNumEven = true
+            DayOfMonNumOdd = false
+        } else {
+            DayOfMonNumEven = false
+            DayOfMonNumOdd = true
+        }
+
+        //DayOfYearNum odd or even
+        // DayOfYearNum = 6 // test case
+        int iDayOfYearNum =  Integer.parseInt(DayOfYearNum)
+        if (iDayOfYearNum % 2 == 0 ) {
+            DayOfYearNumEven = true
+            DayOfYearNumOdd = false
+        } else {
+            DayOfYearNumEven = false
+            DayOfYearNumOdd = true
+        }
+
+        //WeekOfYearNum odd or even
+        // WeekOfYearNum = 6 // test case
+        int iWeekOfYearNum =  Integer.parseInt(WeekOfYearNum)
+        if (iWeekOfYearNum % 2 == 0 ) {
+            WeekOfYearNumEven = true
+            WeekOfYearNumOdd = false
+        } else {
+            WeekOfYearNumEven = false
+            WeekOfYearNumOdd = true
+        }
+
+        // Ordinals
+        OrdDay = getOrdinal(iDay)
+        DayOfMonSuf = OrdDay
+        DayOfMonOrd = String.valueOf(iDay) + OrdDay
+
+        //convert all booleans to text strings
+        IsDayOfMonNumOdd = String.valueOf(DayOfMonNumOdd)
+        IsDayOfMonNumEven = String.valueOf(DayOfMonNumEven)
+        IsDayOfYearNumOdd = String.valueOf(DayOfYearNumOdd)
+        IsDayOfYearNumEven = String.valueOf(DayOfYearNumEven)
+        IsDSTActive = String.valueOf(DSTActiveBool)
+        IsLeapYear = String.valueOf(LeapYearBool)
+        IsWeekOfYearNumOdd = String.valueOf(WeekOfYearNumOdd)
+        IsWeekOfYearNumEven = String.valueOf(WeekOfYearNumEven)
+        IsObservesDST = String.valueOf(ObservesDST)
+
+        //convert comparison number fields to strings
+        comparisonDateStr = String.valueOf(comparisonDate)
+        comparisonTimeStr = String.valueOf(comparisonTime)
+        comparisonDateTimeStr = String.valueOf(comparisonDateTime)
+
+
+        sendEvent(name: "DayName", value: DayName)
+        sendEvent(name: "DayNameText3", value: DayNameText3)
+        sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
+        sendEvent(name: "DayOfMonNumNoLead", value: DayOfMonNumNoLead)
+        sendEvent(name: "DayOfMonOrd", value: DayOfMonOrd)
+        sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
+        sendEvent(name: "DayOfWeekNum", value: DayOfWeekNum)
+        sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
+        sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
+        sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
+        sendEvent(name: "IsDayOfMonNumEven", value: IsDayOfMonNumEven)
+        sendEvent(name: "IsDayOfMonNumOdd", value: IsDayOfMonNumOdd)
+        sendEvent(name: "IsDayOfYearNumEven", value: IsDayOfYearNumEven)
+        sendEvent(name: "IsDayOfYearNumOdd", value: IsDayOfYearNumOdd)
+        sendEvent(name: "IsDSTActive", value: IsDSTActive)
+        sendEvent(name: "IsLeapYear", value: IsLeapYear)
+        sendEvent(name: "IsObservesDST", value: IsObservesDST)
+        sendEvent(name: "IsWeekOfYearNumEven", value: IsWeekOfYearNumEven)
+        sendEvent(name: "IsWeekOfYearNumOdd", value: IsWeekOfYearNumOdd)
+        sendEvent(name: "MonthName", value: MonthName)
+        sendEvent(name: "MonthNameText3", value: MonthNameText3)
+        sendEvent(name: "MonthNum", value: MonthNum)
+        sendEvent(name: "MonthNumNoLead", value: MonthNumNoLead)
+        sendEvent(name: "TZID", value: TZID)
+        sendEvent(name: "TZIDText3", value: TZIDText3)
+        sendEvent(name: "TimeAntePostLower", value: TimeAntePostLower)
+        sendEvent(name: "TimeAntePostUpper", value: TimeAntePostUpper)
+        sendEvent(name: "TimeHour12Num", value: TimeHour12Num)
+        sendEvent(name: "TimeHour12NumNoLead", value: TimeHour12NumNoLead)
+        sendEvent(name: "TimeHour24Num", value: TimeHour24Num)
+        sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
+        sendEvent(name: "TimeMinNum", value: TimeMinNum)
+        sendEvent(name: "TimeMinNumNoLead", value: TimeMinNumNoLead)
+        sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
+        sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
+        sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
+        sendEvent(name: "comparisonDate", value: comparisonDate)
+        sendEvent(name: "comparisonDateStr", value: comparisonDateStr)
+        sendEvent(name: "comparisonDateTime", value: comparisonDateTime)
+        sendEvent(name: "comparisonDateTimeStr", value: comparisonDateTimeStr)
+        sendEvent(name: "comparisonTime", value: comparisonTime)
+        sendEvent(name: "comparisonTimeStr", value: comparisonTimeStr)
     }
-
-    //WeekOfYearNum odd or even
-    // WeekOfYearNum = 6 // test case
-    int iWeekOfYearNum =  Integer.parseInt(WeekOfYearNum)
-    if (iWeekOfYearNum % 2 == 0 ) {
-        WeekOfYearNumEven = true
-        WeekOfYearNumOdd = false
-    } else {
-        WeekOfYearNumEven = false
-        WeekOfYearNumOdd = true
-    }
-
-    // Ordinals
-    OrdDay = getOrdinal(iDay)
-    DayOfMonSuf = OrdDay
-    DayOfMonOrd = String.valueOf(iDay) + OrdDay
-
-    //convert all booleans to text strings
-    IsDayOfMonNumOdd = String.valueOf(DayOfMonNumOdd)
-    IsDayOfMonNumEven = String.valueOf(DayOfMonNumEven)
-    IsDayOfYearNumOdd = String.valueOf(DayOfYearNumOdd)
-    IsDayOfYearNumEven = String.valueOf(DayOfYearNumEven)
-    IsDSTActive = String.valueOf(DSTActiveBool)
-    IsLeapYear = String.valueOf(LeapYearBool)
-    IsWeekOfYearNumOdd = String.valueOf(WeekOfYearNumOdd)
-    IsWeekOfYearNumEven = String.valueOf(WeekOfYearNumEven)
-    IsObservesDST = String.valueOf(ObservesDST)
-
-    //convert comparison number fields to strings
-    comparisonDateStr = String.valueOf(comparisonDate)
-    comparisonTimeStr = String.valueOf(comparisonTime)
-    comparisonDateTimeStr = String.valueOf(comparisonDateTime)
-
-
-    sendEvent(name: "DayName", value: DayName)
-    sendEvent(name: "DayNameText3", value: DayNameText3)
-    sendEvent(name: "DayOfMonNum", value: DayOfMonNum)
-    sendEvent(name: "DayOfMonNumNoLead", value: DayOfMonNumNoLead)
-    sendEvent(name: "DayOfMonOrd", value: DayOfMonOrd)
-    sendEvent(name: "DayOfMonSuf", value: DayOfMonSuf)
-    sendEvent(name: "DayOfWeekNum", value: DayOfWeekNum)
-    sendEvent(name: "DayOfYearNum", value: DayOfYearNum)
-    sendEvent(name: "DaysInMonthNum", value: DaysInMonthNum)
-    sendEvent(name: "GMTDiffHours", value: GMTDiffHours)
-    sendEvent(name: "IsDayOfMonNumEven", value: IsDayOfMonNumEven)
-    sendEvent(name: "IsDayOfMonNumOdd", value: IsDayOfMonNumOdd)
-    sendEvent(name: "IsDayOfYearNumEven", value: IsDayOfYearNumEven)
-    sendEvent(name: "IsDayOfYearNumOdd", value: IsDayOfYearNumOdd)
-    sendEvent(name: "IsDSTActive", value: IsDSTActive)
-    sendEvent(name: "IsLeapYear", value: IsLeapYear)
-    sendEvent(name: "IsObservesDST", value: IsObservesDST)
-    sendEvent(name: "IsWeekOfYearNumEven", value: IsWeekOfYearNumEven)
-    sendEvent(name: "IsWeekOfYearNumOdd", value: IsWeekOfYearNumOdd)
-    sendEvent(name: "MonthName", value: MonthName)
-    sendEvent(name: "MonthNameText3", value: MonthNameText3)
-    sendEvent(name: "MonthNum", value: MonthNum)
-    sendEvent(name: "MonthNumNoLead", value: MonthNumNoLead)
-    sendEvent(name: "TZID", value: TZID)
-    sendEvent(name: "TZIDText3", value: TZIDText3)
-    sendEvent(name: "TimeAntePostLower", value: TimeAntePostLower)
-    sendEvent(name: "TimeAntePostUpper", value: TimeAntePostUpper)
-    sendEvent(name: "TimeHour12Num", value: TimeHour12Num)
-    sendEvent(name: "TimeHour12NumNoLead", value: TimeHour12NumNoLead)
-    sendEvent(name: "TimeHour24Num", value: TimeHour24Num)
-    sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
-    sendEvent(name: "TimeMinNum", value: TimeMinNum)
-    sendEvent(name: "TimeMinNumNoLead", value: TimeMinNumNoLead)
-    sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
-    sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
-    sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
-    sendEvent(name: "comparisonDate", value: comparisonDate)
-    sendEvent(name: "comparisonDateStr", value: comparisonDateStr)
-    sendEvent(name: "comparisonDateTime", value: comparisonDateTime)
-    sendEvent(name: "comparisonDateTimeStr", value: comparisonDateTimeStr)
-    sendEvent(name: "comparisonTime", value: comparisonTime)
-    sendEvent(name: "comparisonTimeStr", value: comparisonTimeStr)
-}
