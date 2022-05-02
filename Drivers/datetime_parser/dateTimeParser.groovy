@@ -150,8 +150,8 @@ def refresh() {
         if (txtEnable) log.info("schedUpdate:  Update schedule cleared. Setting new schedule ...")
         if (autoUpdate) {
             if (txtEnable) log.info("schedUpdate: Setting next scheduled refresh...")
-            schedule("0 0/${AutoUpdateInterval} * ? * * *", refresh)  //default - * 0/45 * ? * * *
-            if (logEnable) log.debug("schedUpdate: Setting up schedule with ${AutoUpdateInterval} minute interval")
+            schedule("0 0/${autoUpdateInterval} * ? * * *", "refresh")  //default - * 0/45 * ? * * *
+            if (logEnable) log.debug("schedUpdate: Setting up schedule with ${autoUpdateInterval} minute interval")
             return
         }
         return
