@@ -34,12 +34,13 @@
  * 2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line
  * 2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
  * 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
+ * 2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
  *
  */
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.2.9' }
+static String version() { return '0.3.0' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
@@ -96,6 +97,7 @@ metadata {
         attribute "TimeHour24NumNoLead", "number"
         attribute "TimeMinNum", "number"
         attribute "TimeMinNumNoLead", "number"
+        attribute "WeekOfMonNum", "number"
         attribute "WeekOfYearNum", "number"
         attribute "YearNum2Dig", "number"
         attribute "YearNum4Dig", "number"
@@ -150,12 +152,16 @@ def refresh() {
         if (txtEnable) log.info("schedUpdate:  Update schedule cleared. Setting new schedule ...")
         if (autoUpdate) {
             if (txtEnable) log.info("schedUpdate: Setting next scheduled refresh...")
-            schedule("0 0/${autoUpdateInterval} * ? * * *", "refresh")  //default - * 0/45 * ? * * *
+            runIn(1,mySchedule)
             if (logEnable) log.debug("schedUpdate: Setting up schedule with ${autoUpdateInterval} minute interval")
             return
         }
         return
     }
+
+def mySchedule() {
+           schedule("0 0/${autoUpdateInterval} * ? * * *", "refresh")  //default - * 0/45 * ? * * *
+}
 
     def runCmd() {
         now = new Date()
@@ -185,7 +191,8 @@ def refresh() {
         dTGMTDiffHoursPattern = new SimpleDateFormat('Z')
         dTTimeAntePostUpperPattern = new SimpleDateFormat('a')
         dTTimeAntePostLowerPattern = new SimpleDateFormat('a') //drop to lower case using temp value
-        dTWeekOfYearNumPattern = new SimpleDateFormat('W')
+        dTWeekOfMonNumPattern = new SimpleDateFormat('W')
+        dTWeekOfYearNumPattern = new SimpleDateFormat('w')
 
         // set attribute using pattern
         DayName = dTDayNamePattern.format(now)
@@ -194,6 +201,7 @@ def refresh() {
         DayOfMonNumNoLead = dTDayOfMonNumNoLeadPattern.format(now)
         DayOfWeekNum = dTDayOfWeekNumPattern.format(now)
         DayOfYearNum = dTDayOfYearNumPattern.format(now)
+        WeekOfMonNum = dTWeekOfMonNumPattern.format(now)
         WeekOfYearNum = dTWeekOfYearNumPattern.format(now)
         MonthName = dTMonthNamePattern.format(now)
         MonthNameText3 = dTMonthNameText3Pattern.format(now)
@@ -253,6 +261,17 @@ def refresh() {
         } else {
             DayOfYearNumEven = false
             DayOfYearNumOdd = true
+        }
+
+        //WeekOfMonNum odd or even
+        // WeekOfMonNum = 3 // test case
+        int iWeekOfMonNum =  Integer.parseInt(WeekOfMonNum)
+        if (iWeekOfMonNum % 2 == 0 ) {
+            WeekOfMonNumEven = true
+            WeekOfMonNumOdd = false
+        } else {
+            WeekOfMonEven = false
+            WeekOfMonOdd = true
         }
 
         //WeekOfYearNum odd or even
@@ -321,6 +340,7 @@ def refresh() {
         sendEvent(name: "TimeHour24NumNoLead", value: TimeHour24NumNoLead)
         sendEvent(name: "TimeMinNum", value: TimeMinNum)
         sendEvent(name: "TimeMinNumNoLead", value: TimeMinNumNoLead)
+        sendEvent(name: "WeekOfMonNum", value: WeekOfMonNum)
         sendEvent(name: "WeekOfYearNum", value: WeekOfYearNum)
         sendEvent(name: "YearNum2Dig", value: YearNum2Dig)
         sendEvent(name: "YearNum4Dig", value: YearNum4Dig)
