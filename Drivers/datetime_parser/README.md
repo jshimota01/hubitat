@@ -13,7 +13,9 @@ Besides the power this app is showing to me (well. I wrote it so.. yea.) I've ju
 
 ***yet another update ***So, I've come to learn that boolean values for custom attributes aren't supported in Rules. This is known since...well .. 2020 at least.. regardless - I've converted all booleans to strings and adjusted their names to be a bit more humanistic. Much MUCH thanks to @sburke781 who just is huge as a persona around here!
 
-Updates overview as of 02/26/2022
+***yet another - user id'd a case sensitive mistake - W is week of month, w is week of year.  Fixed. also he suggested adding week of month, so I did as well as odd and even month boolean.
+
+Updates overview as of 08/12/2022
 
  Change History:
  
@@ -38,6 +40,8 @@ Date         Source      Version What                                        URL
 2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
 2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line
 2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
+2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
+2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
  
 Description
 
@@ -100,6 +104,8 @@ Usable Variables with example :
     IsDayOfYearNumOdd : true (string)
     IsLeapYear : false (string)
     IsObservesDST : true (string)
+    IsWeekOfMonNumEven : false (string)
+    IsWeekOfMonNumOdd : true (string)
     IsWeekOfYearNumEven : false (string)
     IsWeekOfYearNumOdd : true (string)
     MonthName : March (string)
@@ -116,7 +122,8 @@ Usable Variables with example :
     TimeHour24NumNoLead : 5 (number)
     TimeMinNum : 00 (number)
     TimeMinNumNoLead : 0 (number)
-    WeekOfYearNum : 1 (number)
+    WeekOfMonNum : 4 (number)
+    WeekOfYearNum : 33 (number)
     YearNum2Dig : 22 (number)
     YearNum4Dig : 2022 (number)
     comparisonDate : 20220302 (number)
