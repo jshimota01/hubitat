@@ -7,7 +7,7 @@
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/README.md",
   "communityLink": "https://community.hubitat.com/t/alpha-release-date-time-parser-driver/87756/9",
   "licenseFile": "",
-  "releaseNotes": "0.2.2 - added variable for user request time in minutes - now has 0 and no lead 0\nAdded fix for scheduler drop down pre-fill.\nFixed bug on suffix of ordinal\n0.2.3 - added WeekOfYearNumOdd and Even for garbage can users\n0.2.4 changed all Booleans to strings as not supported in rm5\n0.2.5 added Even Odd variables for Day Of Month\n0.2.6 added Even Odd variables for Day Of Year\n0.2.7 debug text in log when disaabled fixed, 24hr no lead fix\n0.2.8 added string versions of comparison date time",
+  "releaseNotes": "0.2.2 - added variable for user request time in minutes - now has 0 and no lead 0\nAdded fix for scheduler drop down pre-fill.\nFixed bug on suffix of ordinal\n0.2.3 - added WeekOfYearNumOdd and Even for garbage can users\n0.2.4 changed all Booleans to strings as not supported in rm5\n0.2.5 added Even Odd variables for Day Of Month\n0.2.6 added Even Odd variables for Day Of Year\n0.2.7 debug text in log when disaabled fixed, 24hr no lead fix\n0.2.8 added string versions of comparison date time\n0.2.9 2 minor text changes for clarity, attempt to fix schedule loop\n0.3.0 Week of Year was case sensitive and showing week of month, added week of month as well\n0.3.1 Typo error found in Week of Mon variables",
   "drivers": [
     {
       "id": "2100366c-1d71-435f-9072-63afa39c30e9",
