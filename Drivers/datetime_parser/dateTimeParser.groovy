@@ -35,12 +35,18 @@
  * 2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
  * 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
  * 2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
+ * 2022-08-15   jshimota    0.3.1   Typo error found in Week of Mon variables
  *
  */
 
 import java.text.SimpleDateFormat
+/* import  java.lang.Object */
 
-static String version() { return '0.3.0' }
+/* import java.util.Date
+ * import java.util.Locale
+ */
+
+static String version() { return '0.3.1' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
@@ -81,6 +87,8 @@ metadata {
         attribute "IsDSTActive", "string"
         attribute "IsLeapYear", "string"
         attribute "IsObservesDST", "string"
+        attribute "IsWeekOfMonNumEven", "string"
+        attribute "IsWeekOfMonNumOdd", "string"
         attribute "IsWeekOfYearNumEven", "string"
         attribute "IsWeekOfYearNumOdd", "string"
         attribute "MonthName", "string"
@@ -115,6 +123,7 @@ preferences {
     input("autoUpdate", "bool", title: "Enable automatic update?\n(Enabled is Yes)", defaultValue: true, required: true, displayDuringSetup: true)
     input(name: "autoUpdateInterval", type: "enum", multiple: false, options: [[1:"1 minute"],[2:"2 minutes"],[5:"5 minutes"],[10:"10 minutes"],[15:"15 minutes"],[20:"20 minutes"],[30:"30 minutes"],[45:"45 minutes"],[59:"59 minutes"]], title: "Auto Update Interval", description: "Number of minutes (range 0-59) between automatic updates", defaultValue: 5, required: true, displayDuringSetup: true)
 }
+
 
 def logsOff() {
     log.warn "debug logging disabled..."
@@ -270,8 +279,8 @@ def mySchedule() {
             WeekOfMonNumEven = true
             WeekOfMonNumOdd = false
         } else {
-            WeekOfMonEven = false
-            WeekOfMonOdd = true
+            WeekOfMonNumEven = false
+            WeekOfMonNumOdd = true
         }
 
         //WeekOfYearNum odd or even
