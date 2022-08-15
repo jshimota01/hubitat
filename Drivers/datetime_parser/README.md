@@ -42,6 +42,7 @@ Date         Source      Version What                                        URL
 2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
 2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
+2022-08-15   jshimota    0.3.1   Typo error found in Week of Mon variables
  
 Description
 
