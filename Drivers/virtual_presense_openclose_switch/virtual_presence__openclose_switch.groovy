@@ -50,7 +50,7 @@
 static String version() { return '0.1.1.4' }
 
 metadata {
-    definition (name: "Virtual Presence Contact and Switch", namespace: "jshimota", author: "Jim Shimota", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/virtual_presence__openclose_switch.groovy") {
+    definition (name: "Virtual Presence Contact and Switch", namespace: "jshimota", author: "James Shimota", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/virtual_presence__openclose_switch.groovy") {
         capability "Initialize"
         capability "Actuator"
         capability "Switch"
