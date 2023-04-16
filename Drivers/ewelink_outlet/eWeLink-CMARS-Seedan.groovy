@@ -58,7 +58,8 @@
  *      2021-10-15    jshimota      0.1.1.0          Released version
  *      2021-11-23    jshimota      0.1.1.1          Added AutoOff
  *      2022-12-10    jshimota      0.1.1.2          Added Outlet / Switch 
- *
+ *      2023-04-14    jshimota      0.1.1.3          Added 3 mins to auto-shutoff array
+ *        
  */
 
 // BEGIN:getDefaultImports()
@@ -69,7 +70,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.1.2' }
+static String version() { return '0.1.1.3' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -138,7 +139,7 @@ metadata {
         // END:  getMetadataPreferencesForRecoveryMode(defaultMode="Slow")
         input(name: "enablePing", type: "bool", title: styling_addTitleDiv("Enable Automatic Ping"), description: styling_addDescriptionDiv("Sends an, infrequent, ping to the device if needed for knowing if Present (default: enabled)"), defaultValue: true)
         input name: "flashRate", type: "enum", title: "Flash rate", options: [[500: "500 ms"], [750: "750 ms"], [1000: "1 second"], [2000: "2 seconds"], [5000: "5 seconds"]], defaultValue: 750  //added by jshimota 10-9-2021
-        input name: "autoOffOn", type: "enum", description: "Automatically turns off the device after selected time.", title: "Enable Auto-Off-On", options: [[0:"Disabled"],[1:"1 second"],[2:"2 seconds"],[5:"5 seconds"],[10:"10 seconds"],[15:"15 seconds"],[20:"20 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"1 minute"],[120:"2 minutes"],[300:"5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1200:"20 minutes"],[1800:"30 minutes"],[2700:"45 minutes"],[3600:"1 hour"],[5400:"1.5 hours"]], defaultValue: 0
+        input name: "autoOffOn", type: "enum", description: "Automatically turns off the device after selected time.", title: "Enable Auto-Off-On", options: [[0:"Disabled"],[1:"1 second"],[2:"2 seconds"],[5:"5 seconds"],[10:"10 seconds"],[15:"15 seconds"],[20:"20 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"1 minute"],[120:"2 minutes"],[180:"3 minutes"],[300:"5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1200:"20 minutes"],[1800:"30 minutes"],[2700:"45 minutes"],[3600:"1 hour"],[5400:"1.5 hours"]], defaultValue: 0
     }
 }
 
