@@ -59,6 +59,7 @@
  *      2021-11-23    jshimota      0.1.1.1          Added AutoOff
  *      2022-12-10    jshimota      0.1.1.2          Added Outlet / Switch 
  *      2023-04-14    jshimota      0.1.1.3          Added 3 mins to auto-shutoff array
+ *      2023-04-20    jshimota      0.1.1.4          Added a 2nd eWeLink for user with diff application number in fingerprint
  *        
  */
 
@@ -70,7 +71,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.1.3' }
+static String version() { return '0.1.1.4' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -121,6 +122,7 @@ metadata {
         fingerprint model:"4257050-RZHAC", manufacturer:"CentraLite", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B04,0B05", outClusters:"0019"
         fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000"
         fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota 10-8-2021
+        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"08"  //Added by jshimota for rixlumb1 04/20/2023
     }
 
     preferences {
