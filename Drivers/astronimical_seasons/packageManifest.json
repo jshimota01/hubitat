@@ -1,0 +1,21 @@
+{
+  "packageName": "Astro Seasons",
+  "author": "James Shimota",
+  "version": "0.1.1",
+  "minimumHEVersion": "2.4.1",
+  "dateReleased": "2023-06-24",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_seasons/README.md",
+  "communityLink": "https://community.hubitat.com/t/astro-seasons-driver/80450",
+  "licenseFile": "",
+  "drivers": [
+    {
+      "id": "66926837-739f-40d0-a9d2-20e8dda14489",
+      "name": "Astronomical Seasons",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_seasons/astroSeasons.groovy",
+      "required": false,
+      "oauth": false,
+      "version": "0.1.1"
+    }
+  ]
+}
