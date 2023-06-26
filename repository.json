@@ -29,6 +29,13 @@
 			"tags": [ "Date", "Timers", "Virtual", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/packageManifest.json",
 			"description": "A virtual device driver that seperates out date and time components into chunks.  Useful for check day of the week, hour of the day etc. in rules "
+		  },
+		  {
+			"name": "Virtual Presence Contact and Switch",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/packageManifest.json",
+			"description": "A virtual device driver that ties Presence, Sensor and Switch (Present/Open/On) capabilities.  Useful for connecting to Alexa, or having Presence give an on/off state "
 		  }
 	]
 	
