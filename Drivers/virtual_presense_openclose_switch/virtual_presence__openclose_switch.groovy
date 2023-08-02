@@ -45,9 +45,10 @@
  *      2023-01-14    jshimota      0.1.1.2          Added Variable Auto Presence array for my own needs
  *		2023-04-15	  jshimota		0.1.1.3			 Added Open/Closed variables for community request / changed Command button label
  *      2023-04-15    jshimota      0.1.1.4          Debug work on auto on off for all 3 states
+ *		2023-08-02	  jshimota 		0.1.1.5			 Set Default Init State to Off
  **/
 
-static String version() { return '0.1.1.4' }
+static String version() { return '0.1.1.5' }
 
 metadata {
     definition (name: "Virtual Presence Contact and Switch", namespace: "jshimota", author: "James Shimota", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/virtual_presence__openclose_switch.groovy") {
@@ -73,6 +74,7 @@ metadata {
     preferences {
         input name: "debugLogEnable", type: "bool", title: "Enable debug logging", defaultValue: false
         input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
+        input name: "defInitState", type: "bool", title: "Set Default Initialize On", defaultValue: false
         input name: "autoPresenceOffOn", type: "enum", description: "Automatically turns presence to Arrived for the device after selected time.", title: "Enable Auto-Presence Arrived", options: [[0:"Disabled"],[1:"1 second"],[2:"2 seconds"],[3:"3 seconds"],[4:"4 seconds"],[5:"5 seconds"],[10:"10 seconds"],[15:"15 seconds"],[20:"20 seconds"],[25:"25 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"1 minute"],[120:"2 minutes"],[300:"5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1200:"20 minutes"],[1800:"30 minutes"],[2700:"45 minutes"],[3200:"1 hour"]], defaultValue: 0
         input name: "autoContactOffOn", type: "enum", description: "Automatically turns contact to Opened for the device after selected time.", title: "Enable Auto-Contact Open", options: [[0:"Disabled"],[1:"1 second"],[2:"2 seconds"],[3:"3 seconds"],[4:"4 seconds"],[5:"5 seconds"],[10:"10 seconds"],[15:"15 seconds"],[20:"20 seconds"],[25:"25 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"1 minute"],[120:"2 minutes"],[300:"5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1200:"20 minutes"],[1800:"30 minutes"],[2700:"45 minutes"],[3200:"1 hour"]], defaultValue: 0
         input name: "autoSwitchOffOn", type: "enum", description: "Automatically turns switch  to On for the device after selected time.", title: "Enable Auto-Switch On", options: [[0:"Disabled"],[1:"1 second"],[2:"2 seconds"],[3:"3 seconds"],[4:"4 seconds"],[5:"5 seconds"],[10:"10 seconds"],[15:"15 seconds"],[20:"20 seconds"],[25:"25 seconds"],[30:"30 seconds"],[45:"45 seconds"],[60:"1 minute"],[120:"2 minutes"],[300:"5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1200:"20 minutes"],[1800:"30 minutes"],[2700:"45 minutes"],[3200:"1 hour"]], defaultValue: 0
@@ -153,15 +155,27 @@ def logsOff() {
 }
 
 def initialize() {
-    if (txtEnable) log.info "INITIALIZE button pushed."
-    sendEvent(name: "presence", value: "present", isStateChange: true)
-    sendEvent(name: "contact", value: "open", isStateChange: true)
-    sendEvent(name: "switch", value: "on", isStateChange: true)
-    state.device = false
-    if (txtEnable) log.info "${device.displayName} is initialized"
-    if (txtEnable) log.info "Initialized: Switch is On"
-    if (txtEnable) log.info "Initialized: Presence is Present"
-    if (txtEnable) log.info "Initialized: Contact is Open"
+	if (!defInitState) {
+		if (txtEnable) log.info "INITIALIZE button pushed."
+		sendEvent(name: "presence", value: "not present", isStateChange: true)
+		sendEvent(name: "contact", value: "closed", isStateChange: true)
+		sendEvent(name: "switch", value: "off", isStateChange: true)
+		state.device = true
+		if (txtEnable) log.info "${device.displayName} is initialized"
+		if (txtEnable) log.info "Initialized: Switch is Off"
+		if (txtEnable) log.info "Initialized: Presence is Not Present"
+		if (txtEnable) log.info "Initialized: Contact is Closed"
+    } else {
+		if (txtEnable) log.info "INITIALIZE button pushed."
+		sendEvent(name: "presence", value: "present", isStateChange: true)
+		sendEvent(name: "contact", value: "open", isStateChange: true)
+		sendEvent(name: "switch", value: "on", isStateChange: true)
+		state.device = false
+		if (txtEnable) log.info "${device.displayName} is initialized"
+		if (txtEnable) log.info "Initialized: Switch is On"
+		if (txtEnable) log.info "Initialized: Presence is Present"
+		if (txtEnable) log.info "Initialized: Contact is Open"
+	}
     if (autoPresenceOffOn.toInteger() > 0) {
         if (txtEnable) log.info "Initialized: autoPresenceOffOn is set to toggle in $autoPresenceOffOn seconds"
     } else {
@@ -260,6 +274,8 @@ def readCurrentValuesIntoLog() {
     } else {
         if (txtEnable) log.info "Read Current State Variable: autoSwitchOffOn is disabled."
     }
+    if (defInitState) log.info "Read Current Preference Variable: Default Initiaiize State On."
+    if (!defInitState) log.info "Read Current Preference Variable: Default Initiaiize State Off."
     if (txtEnable) log.info "Read Current Preference Variable: Description text enabled."
     if (!txtEnable) log.info "Read Current Preference Variable: Description text disabled."
     if (debugLogEnable) log.info "Read Current Preference Variable: Debug text enabled."

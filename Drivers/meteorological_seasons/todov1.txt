@@ -1,0 +1,42 @@
+
+store Met pulled values to variables
+Convert Met variables to formatted Dates
+Store Asto values to variables
+
+Set SeasonBegin to variable
+Set SeasonEnd to Variable
+Set SeasonNum to variable
+Set Month to variable
+
+store Asto values to variables.
+Convert astro variable to formatted Date
+
+Build Refresh button
+build force set tools (based on Hemispehere Pref and Fall/Aut Pref)
+	force set Autumn 
+	Force set Spring
+	Force set Winter
+	Force set Summer
+	
+
+Get preferences
+	debug switch
+	Description text switch
+	set images path
+	set tile text color
+	set word position %
+	set font size %
+	set hemisphere to variable
+	set autumn name to variable.
+	set Html vs SeasonTile switch
+
+Build tile
+	get images
+	get tile text color
+	get word position %
+	Get font size %
+	get Hemisphere
+	get Aut/Fall Switch
+
+
+

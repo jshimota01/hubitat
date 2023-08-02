@@ -15,14 +15,17 @@
  *      Date          Source        Version     What                                              URL
  *      ----          ------        -------     ----                                              ---
  *      2023-06-24    jshimota      0.1.1       Starting version
- *      2023-07-03    jshimota      0.1.5       Restart and recreate
+ *      2023-07-03    tomw          0.1.5       Restart and recreate
+ *      2023-07-04    kkossev       0.1.6       variable Initialize to startup values added
  *
- *      
+ *
  */
 
 import java.text.SimpleDateFormat
+// import hubitat.device.Protocol
 
-static String version() { return '0.1.5' }
+static String version() { return '0.1.6' }
+static timeStamp() { "2023/07/04 4:50 PM" }
 
 metadata {
     definition(
@@ -33,8 +36,8 @@ metadata {
     ) {
         capability "Actuator"
         capability "Refresh"
-        command "initialize", [[description: "Set/Reset device to startup values"]]
-        command "setSeason", [[name: "Season Name*", type: "ENUM", constraints: ["Spring", "Summer", "Autumn/Fall", "Winter"], description: "Select a meteorological season from one of the provided chooses to use."],[name: "Season Type*", type: "ENUM", constraints: ["Astrological", "Meteorological"], description: "Select a season type from one of the provided choices."]]
+        command "initialize", [[name: "Select 'Yes' to re-initialize the device to startup values", type: "ENUM", description: "Set device to startup values", required: true, constraints: ["--- Select ---", "Yes", "No"], defaultValue : "--- Select ---"]]
+        command "setSeason", [[name: "Season Name*", type: "ENUM", constraints: ["Spring", "Summer", "Autumn/Fall", "Winter"], description: "Select a meteorological season from one of the provided choices."],[name: "Season Type*", type: "ENUM", constraints: ["Astrological", "Meteorological"], description: "Select a season type from one of the provided choices."]]
 
         attribute "autumnFallName", "string"
         attribute "astroMeteorType", "string"
@@ -60,7 +63,8 @@ metadata {
 
 preferences {
     input name: "dbgEnable", type: "bool", title: "Enable debug logging", defaultValue: false
-    input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
+    input name: "txtEnable", type: "bool", title: "Enable logging", defaultValue: true
+    input(title: "Note", description: "<b>Debug</b> logging will auto disable after 30 minutes.", type: "paragraph", element: "paragraph")
     input(name: "existingTileFontSize", type: "num", title: "HTML Tile Font Size (%)*", defaultValue: 100)
     input(name: "existingTileVertWordPos", type: "num", title: "HTML Tile Word Position (%)*", defaultValue: 55)
     input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
@@ -68,8 +72,8 @@ preferences {
     input("htmlVtile", "bool", title: "Use HTML attribute instead of seasonTile\n(Enabled is Yes)")
     input("iconPathOvr", "string", title: "Alternate path to season icons \n(must contain file names fall.svg, winter.svg, spring.svg, summer.svg and unknown.svg)")
     input(name: "hemisphere", type: "bool", title: "Hemisphere", description: "Off=Northern/On=Southern", defaultValue: false, required: true, displayDuringSetup: true)
-    input(name: "astroMeteor", type: "bool", title: "Astronomical or Meteorological Season", description: "Off=Astronomical/On=Meteorolical", defaultValue: false, required: true, displayDuringSetup: true)
-    input(name: "existingAutumnFall", type: "bool", title: "Autumn/Fall", description: "Off=Fall/On=Autumn", defaultValue: false, required: true, displayDuringSetup: true)
+    input(name: "astroMeteor", type: "bool", title: "Astronomical or Meteorological Season", description: "Off=Astronomical/On=Meteorological", defaultValue: false, required: true, displayDuringSetup: true)
+    input(name: "existingAutumnFall", type: "bool", title: "Autumn/Fall", description: "Off=Autumn/On=Fall", defaultValue: false, required: true, displayDuringSetup: true)
 }
 
 /*  tomw section   */
@@ -83,25 +87,61 @@ def pullAstroSeason(url) {
     def res
     httpGet(url) {
         resp->
-			    if (dbgEnable) { log.debug "Full json response returned from USnavy.org : ${resp.data}" }
-        res = resp.data
+            if (dbgEnable) { log.debug "Full json response returned from USnavy.org : ${resp.data}" }
+            res = resp.data
     }
     return res
 }
 
 def parseResp(Map res) {
-    def phenom 
+    def phenom
     ["Equinox", "Solstice"].each {
         phenom = res?.data?.findAll { phe -> phe?.phenom == it }
         if(phenom) {
-            phenom.eachWithIndex { 
-                thisone, idx -> 
-                sendEvent(name: it+idx, value: "${thisone.month}-${thisone.day}-${thisone.year}")
-                if (dbgEnable) { log.debug "${it+idx}: ${phenom}" } 
+            phenom.eachWithIndex {
+                thisone, idx ->
+                    sendEvent(name: it+idx, value: "${thisone.month}-${thisone.day}-${thisone.year}")
+                    if (dbgEnable) { log.debug "${it+idx}: ${phenom}" }
             }
         }
     }
 }
+
+/* initialize button adapted from KKossev Zemismart Zigbee multigang switch 7/4/23 */
+void initializeVars(boolean fullInit = true) {
+    if (dbgEnable) log.debug "${device.displayName} InitializeVars()... fullInit = ${fullInit}"
+    if (fullInit) {
+        state.clear()
+        state.driverVersion = driverVersionAndTimeStamp()
+    String tileFontColor = "#FFFFFFFF"
+    tileVertWordPos = 55
+    tileFontSize = 100
+	dbgEnable == false
+	txtEnable == true
+	hemisphere == false
+	astroMeteor == false
+	existingAutumnFall == false
+	autoUpdate == true
+	htmlVtile == false
+	iconPathOvr = ""
+    }
+}
+
+def initialize( str ) {
+    if (str != "Yes") {
+        log.warn "initialize aborted, YES not selected!"
+    }
+    else {
+        initialize()
+    }
+}
+
+def initialize() {
+    log.warn "Initialize button pressed ... resetting all values to default."
+    initializeVars(fullInit = true)
+}
+
+static driverVersionAndTimeStamp() { version() + ' ' + timeStamp() }
 
 def tileFontColor() {
     String tileFontColor = "#FFFFFFFF"
@@ -184,7 +224,7 @@ def runCmd() {
     sendEvent(name: "todaysFormattedMonth", value: proposedFormattedMonth)
     sendEvent(name: "todaysHtmlFriendlyDate", value: proposedHtmlFriendlyDate)
     if (hemisphere) sendEvent(name: "hemisphereName", value: "Southern", descriptionText: descriptionText) else sendEvent(name: "hemisphereName", value: "Northern", descriptionText: descriptionText)
-    if (astroMeteor) sendEvent(name: "astroMeteorType", value: "Meteorological", descriptionText: descriptionText) else sendEvent(name: "astroMeteorType", value: "Astronomical", descriptionText: descriptionText)        
+    if (astroMeteor) sendEvent(name: "astroMeteorType", value: "Meteorological", descriptionText: descriptionText) else sendEvent(name: "astroMeteorType", value: "Astronomical", descriptionText: descriptionText)
     if (existingAutumnFall) sendEvent(name: "autumnFallName", value: "Autumn", descriptionText: descriptionText) else sendEvent(name: "autumnFallName", value: "Fall", descriptionText: descriptionText)
     currentMetSeason()
 }

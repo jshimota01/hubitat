@@ -1,9 +1,9 @@
 {
   "packageName": "Virtual Presence Contact and Switch",
   "author": "James Shimota",
-  "version": "0.1.1.4",
+  "version": "0.1.1.5",
   "minimumHEVersion": "2.3.5",
-  "dateReleased": "2023-04-15",
+  "dateReleased": "2023-08-02",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/README.md",
   "communityLink": "https://community.hubitat.com/t/rename-commands-on-devices/117143/4",
   "licenseFile": "",
@@ -15,7 +15,7 @@
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/virtual_presence__openclose_switch.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.1.1.4"
+      "version": "0.1.1.5"
     }
   ]
 }
