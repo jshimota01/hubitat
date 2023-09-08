@@ -60,6 +60,7 @@
  *      2022-12-10    jshimota      0.1.1.2          Added Outlet / Switch 
  *      2023-04-14    jshimota      0.1.1.3          Added 3 mins to auto-shutoff array
  *      2023-04-20    jshimota      0.1.1.4          Added a 2nd eWeLink for user with diff application number in fingerprint
+ *      2023-09-08    jshimota      0.1.1.5          Fixed some logging issues for clarity
  *        
  */
 
@@ -71,7 +72,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.1.4' }
+static String version() { return '0.1.1.5' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -301,7 +302,7 @@ ArrayList<String> parse(String description) {
         default:
             switch(msgMap["clusterId"]) {
                 case "0006":
-                    logging("ON/OFF CATCHALL CLUSTER EVENT - description:${description} | parseMap:${msgMap}", 100)
+                    logging("ON/OFF CATCHALL CLUSTER EVENT - description:${description} | parseMap:${msgMap}", 1)
                     sendOnOffEvent(Integer.parseInt(msgMap['sourceEndpoint'], 16), Integer.parseInt(msgMap['data'][0], 16) == 1)
                     sendlastCheckinEvent(minimumMinutesToRepeat=25)
                     break
@@ -363,14 +364,14 @@ void sendOnOffEvent(boolean onOff) {
  *  --------- WRITE ATTRIBUTE METHODS ---------
  */
 ArrayList<String> on() {
-    logging("on()", 1)
+    if (infoLogging) log.info "Switch/Outlet turned ON"
     state.flashing = false
     sendEvent(name: "flashing", value: state.flashing)
     return zigbeeCommand(0x006, 0x01)
 }
 
 ArrayList<String> off() {
-    logging("off()", 1)
+    if (infoLogging) log.info "Switch/Outlet turned OFF"
     state.flashing = false
     sendEvent(name: "flashing", value: state.flashing)
     return zigbeeCommand(0x006, 0x00)
@@ -450,7 +451,7 @@ private String getDriverVersion() {
     // added line below to enhance attribution - jshimota 10-13-2021
     additionalComment = """Original driver by Markus Liljergren, customized to support eWeLink SA-003.<br>Also, AutoOff, Flash and Toggle capabilities added."""
     if(additionalComment != "") state.additionalComment = additionalComment
-    String version = "v0.1.1.2"  // jshimota 12-10-2022 changed to 1.0.1.123b to v0.1.1.2 to reflect modification
+    String version = "v0.1.1.5"  // jshimota 12-10-2022 changed to 1.0.1.123b to v0.1.1.2 to reflect modification
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
     updateDataValue('driver', version)
