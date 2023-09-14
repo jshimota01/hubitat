@@ -60,7 +60,7 @@
  *      2022-12-10    jshimota      0.1.1.2          Added Outlet / Switch 
  *      2023-04-14    jshimota      0.1.1.3          Added 3 mins to auto-shutoff array
  *      2023-04-20    jshimota      0.1.1.4          Added a 2nd eWeLink for user with diff application number in fingerprint
- *        
+ *
  */
 
 // BEGIN:getDefaultImports()
@@ -450,7 +450,7 @@ private String getDriverVersion() {
     // added line below to enhance attribution - jshimota 10-13-2021
     additionalComment = """Original driver by Markus Liljergren, customized to support eWeLink SA-003.<br>Also, AutoOff, Flash and Toggle capabilities added."""
     if(additionalComment != "") state.additionalComment = additionalComment
-    String version = "v0.1.1.2"  // jshimota 12-10-2022 changed to 1.0.1.123b to v0.1.1.2 to reflect modification
+    String version = "v0.1.1.5"  // jshimota 12-10-2022 changed to 1.0.1.123b to v0.1.1.2 to reflect modification
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
     updateDataValue('driver', version)

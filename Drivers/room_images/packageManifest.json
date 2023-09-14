@@ -1,0 +1,21 @@
+{
+  "packageName": "Room Images",
+  "author": "James Shimota",
+  "version": "0.0.1",
+  "minimumHEVersion": "2.2.8",
+  "dateReleased": "2023-09-15",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/room_images/README.md",
+  "communityLink": "https://community.hubitat.com/t/room-images-driver/xxxxx",
+  "licenseFile": "",
+  "drivers": [
+    {
+      "id": "669268a7-73af-40a0-a9d2-2ae8dda14489",
+      "name": "Room Images",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/room_images/roomImages.groovy",
+      "required": false,
+      "oauth": false,
+      "version": "0.0.1"
+    }
+  ]
+}
