@@ -99,6 +99,11 @@ Changelog (as of today, 2021-10-15 - all changes by JAS)
 		<td>0.1.1.1</td>
 		<td>Added AutoOff to Driver</td>
 	</tr>
+		<tr>
+		<td>09/08/2023</td>
+		<td>0.1.1.5</td>
+		<td>numerous changes I had locally that weren't being uploaded</td>
+	</tr>
 </tbody>
 </table>
 
