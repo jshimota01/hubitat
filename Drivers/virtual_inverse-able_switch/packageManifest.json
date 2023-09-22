@@ -1,7 +1,7 @@
 {
   "packageName": "Virtual Inverse-able Switch w-autoOff and Toggle",
   "author": "James Shimota",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2021-12-24",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/README.md",
@@ -15,7 +15,7 @@
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtualInverse-ableSwitch.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.2.1"
+      "version": "0.2.2"
     }
   ]
 }

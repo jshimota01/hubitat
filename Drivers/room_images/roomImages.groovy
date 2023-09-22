@@ -120,7 +120,7 @@ void getMeta() {
     // sendEvent(name: "comparisonTimeStr", value: comparisonTimeStr)
     // sendEvent(name: "seasonImg", value: "<img class='seasonImg' src='${iconPath}${seasonName}.svg' style='height: 100px;' />", descriptionText: descriptionText)
 
-    String iconPath = "https://raw.githubusercontent.com/jshimota/hubitat/main/room_images/"
+    String iconPath = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/room_images/room_images/"
     if(iconPathOvr > " ") iconPath = iconPathOvr
 
 
