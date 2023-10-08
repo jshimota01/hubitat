@@ -17,7 +17,7 @@
  *
  *
  */
- 
+
 /*
  *         v1.0.3  JAS - split out category and color 08/08/23
  *         v1.0.2  PR from cmbruns
@@ -25,9 +25,9 @@
  *			 full PM10-equivalent value, not the 6-category meaning previously used and matches Ecowitt air quality sensor range.
  *         v1.0.1  renamed "PM2.5" attribute to not use a dot (.)
  * csteele v1.0.0  created.
- */ 
+ */
 
-static String version()	{  return '1.0.3'  }
+static String version()	{  return '1.0.4'  }
 
 import groovy.transform.Field
 
@@ -60,17 +60,17 @@ void pollAirNow() {
 	if ( apiKey == null ) {
 		return
 	}
-	Map params = [ 
-	   uri: 'https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=' + (String)location.latitude + '&longitude=' + (String)location.longitude + '&distance=25&API_KEY=' + (String)apiKey,
-	   timeout: 20 ]
-	//if (debugOutput) log.debug "params:${params}"
+	Map params = [
+			uri: 'https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=' + (String)location.latitude + '&longitude=' + (String)location.longitude + '&distance=25&API_KEY=' + (String)apiKey,
+			timeout: 20 ]
+	if (debugOutput) log.debug "params:${params}"
 	asynchttpGet('pollHandler', params)
 }
 
 
 void pollHandler(resp, data) {
 	if (resp.getStatus() == 200 || resp.getStatus() == 207) {
-		//if (debugOutput) log.debug "R: $resp.data"
+		if (debugOutput) log.debug "R: $resp.data"
 		aqi = parseJson(resp.data)
 
 		def isBasis = aqiBasis[basedOn as Integer]
@@ -87,30 +87,32 @@ void pollHandler(resp, data) {
 				def descriptionText = "${device.displayName} ${obs.ParameterName} is ${obs.AQI}"
 				def attrNam = obs.ParameterName.replace('.', '_')
 
-				if (debugOutput) log.info "${descriptionText}"
+				if (debugOutput) log.debug "${descriptionText}"
 				sendEvent(name: attrNam, value: obs.AQI, descriptionText: descriptionText)
 
 				if (isBasis == obs.ParameterName) {
 					descriptionText = "${device.displayName} airQualityIndex is ${obs.AQI}"
-					if (txtEnable) log.info "${descriptionText}"
+					if (txtEnable) log.info "AQI Values updated. Enable Debug to monitor changes realtime."
+					if (debugOutput) log.debug "${descriptionText}"
 					sendEvent(name: "airQualityIndex", value: obs.AQI, descriptionText: descriptionText)
-                    
-  					descriptionText = "${device.displayName} airQualityCategory is ${aqiCategory[obs.Category.Number]}"
-					if (txtEnable) log.info "${descriptionText}"
+
+					descriptionText = "${device.displayName} airQualityCategory is ${aqiCategory[obs.Category.Number]}"
+					if (debugOutput) log.debug "${descriptionText}"
 					sendEvent(name: "airQualityCategory", value: aqiCategory, descriptionText: descriptionText)
-                    
+
 					descriptionText = "${device.displayName} airQualityColor is ${aqiColor[obs.Category.Number]}"
-					if (debugOutput) log.info "${descriptionText}"
+					if (debugOutput) log.debug "${descriptionText}"
 					sendEvent(name: "airQualityColor", value: aqiColor[obs.Category.Number], descriptionText: descriptionText)
 				}
 			}
 		}
 		if (isBasis == "maxAQI") {
 			descriptionText = "${device.displayName} airQualityIndex is $maxAQI"
-			if (txtEnable) log.info "${descriptionText}"
+			if (txtEnable) log.info "AQI Values updated. Enable Debug to monitor changes realtime."
+			if (debugOutput) log.debug "${descriptionText}"
 			sendEvent(name: "airQualityIndex", value: maxAQI, descriptionText: descriptionText)
 			descriptionText = "${device.displayName} airQualityColor is ${aqiColor[maxAQICat]}"
-			if (debugOutput) log.info "${descriptionText}"
+			if (debugOutput) log.debug "${descriptionText}"
 			sendEvent(name: "airQualityColor", value: aqiColor[maxAQICat], descriptionText: descriptionText)
 
 		}
@@ -132,8 +134,8 @@ void uninstalled() {
 
 
 def logsOff(){
-    log.warn "debug logging disabled..."
-    device.updateSetting("debugOutput",[value:"false",type:"bool"])
+	log.warn "debug logging disabled..."
+	device.updateSetting("debugOutput",[value:"false",type:"bool"])
 }
 
 
