@@ -36,6 +36,13 @@
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/packageManifest.json",
 			"description": "A virtual device driver that ties Presence, Sensor and Switch (Present/Open/On) capabilities.  Useful for connecting to Alexa, or having Presence give an on/off state "
+		  },
+		  {
+			"name": "Inverse Link Two Switches",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/packageManifest.json",
+			"description": "A Parent App with children to set two switches to always be inversed to each other.  Can be disabled with its own switch.  Useful for folks who hate boolean! "
 		  }
 	]
 	
