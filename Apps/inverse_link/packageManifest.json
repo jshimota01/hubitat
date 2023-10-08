@@ -2,18 +2,18 @@
   "packageName": "Inverse Link Two Switches",
   "author": "James Shimota",
   "version": "0.1.0.5",
-  "minimumHEVersion": "2.3.9",
+  "minimumHEVersion": "2.3.4.132",
   "licenseFile": "http://www.gnu.org/licenses/lgpl-3.0.txt",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/README.md",
   "communityLink": "",
   "dateReleased": "2023-10-08",
-  "drivers": [
+  "apps": [
     {
       "id": "0d0a7ad7-9c9b-4d06-bf03-fb4d8cb3a242",
       "name": "Inverse Link Two Switches",
       "namespace": "jshimota (Shumo)",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/inverse_link.groovy",
-      "required": false,
+      "required": true,
       "oauth": false,
       "primary": false,
       "version": "0.1.0.5"
