@@ -1,21 +1,32 @@
 {
-  "packageName": "Zigbee eWeLink-CMARS-Seedan Outlet",
+  "packageName": "Inverse Link Two Switches",
   "author": "James Shimota",
-  "version": "0.1.1.6",
-  "minimumHEVersion": "2.2.9",
+  "version": "0.1.0.5",
+  "minimumHEVersion": "2.3.9",
   "licenseFile": "http://www.gnu.org/licenses/lgpl-3.0.txt",
-  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/README.md",
-  "communityLink": "https://community.hubitat.com/t/release-zigbee-ewelink-cmars-seedan-outlet-driver/81319",
-  "dateReleased": "2021-10-15",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/README.md",
+  "communityLink": "",
+  "dateReleased": "2023-10-08",
   "drivers": [
     {
-      "id": "0d0a7ad7-9c9b-4c06-bf03-fb2d3cb3a242",
-      "name": "Zigbee eWeLink-CMARS-Seedan Outlet/Switch",
+      "id": "0d0a7ad7-9c9b-4d06-bf03-fb4d8cb3a242",
+      "name": "Inverse Link Two Switches",
       "namespace": "jshimota (Shumo)",
-      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/inverse_link.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.1.1.6"
-    }
+      "primary": false,
+      "version": "0.1.0.5"
+    },
+    {
+      "id": "ad005bcd-c6a8-4c48-b683-4f280aeff4f6",
+      "name": "Inverse Link Two Switches Child",
+      "namespace": "jshimota (Shumo)",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/inverse_link_child.groovy",
+      "required": true,
+      "oauth": false,
+      "primary": false,
+      "version": "0.1.0.5"
+    },
   ]
 }
