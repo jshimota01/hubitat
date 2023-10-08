@@ -5,7 +5,7 @@
   "minimumHEVersion": "2.3.4.132",
   "licenseFile": "http://www.gnu.org/licenses/lgpl-3.0.txt",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/README.md",
-  "communityLink": "",
+  "communityLink": "https://community.hubitat.com/t/release-inverse-link-two-switches/125687",
   "dateReleased": "2023-10-08",
   "apps": [
     {
