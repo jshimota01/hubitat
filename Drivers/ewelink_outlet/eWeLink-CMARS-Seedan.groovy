@@ -62,7 +62,8 @@
  *      2023-04-20    jshimota      0.1.1.4          Added a 2nd eWeLink for user with diff application number in fingerprint
  *      2023-09-08    jshimota      0.1.1.5          Fixed some logging issues for clarity
  *      2023-09-09    jshimota      0.1.1.6          Found more problems in logging
- *        
+ *      2023-10-17    jshimota      0.1.1.7          More logging updates
+ *
  */
 
 // BEGIN:getDefaultImports()
@@ -73,7 +74,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.1.6' }
+static String version() { return '0.1.1.7' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -365,14 +366,14 @@ void sendOnOffEvent(boolean onOff) {
  *  --------- WRITE ATTRIBUTE METHODS ---------
  */
 ArrayList<String> on() {
-    if (infoLogging) log.info "Switch/Outlet turned ON"
+    if (infoLogging) log.info "$device.name turned ON"
     state.flashing = false
     sendEvent(name: "flashing", value: state.flashing)
     return zigbeeCommand(0x006, 0x01)
 }
 
 ArrayList<String> off() {
-    if (infoLogging) log.info "Switch/Outlet turned OFF"
+    if (infoLogging) log.info "$device.name turned OFF"
     state.flashing = false
     sendEvent(name: "flashing", value: state.flashing)
     return zigbeeCommand(0x006, 0x00)
@@ -396,13 +397,13 @@ ArrayList<String> flash() {
     if (state.flashing) {
         state.flashing = false
         sendEvent(name: "flashing", value: state.flashing)
-        if (infoLogging) log.info "Flash disabled"
+        if (infoLogging) log.info "$device.name Flash disabled"
         return
     } else {
         if (enableDesc) log.info "${device.getDisplayName()} was set to flash with a rate of ${flashRate ?: 750} milliseconds"
         state.flashing = true
         sendEvent(name: "flashing", value: state.flashing)
-        if (infoLogging) log.info "Flash enabled"
+        if (infoLogging) log.info "$device.name Flash enabled"
         return flashOn()
     }
 }
