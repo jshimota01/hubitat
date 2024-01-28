@@ -19,6 +19,12 @@
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
+ *
+ *
+ *
+ *
+ *  2024-01-24 thanhl94 - prevent log warn when 0x0510 is received and will only log when debug is enabled
+ *  2024-01-26 fix add of preference option for warnings
  */
 
 import groovy.transform.Field
@@ -84,7 +90,7 @@ metadata {
     }
 }
 
-@Field static final String VERSION = '1.03 (2023-04-22)'
+@Field static final String VERSION = '1.04 (2024-01-26 JAS)'
 
 /**
  * Send configuration parameters to the device
@@ -176,7 +182,7 @@ List<String> on() {
  * @return List of zigbee commands
  */
 List<String> ping() {
-    if (settings.txtEnable) { log.info 'ping...' }
+    if (settings.txtEnable) { log.info "${device.displayName} ping ..." }
     // Using attribute 0x00 as a simple ping/pong mechanism
     scheduleCommandTimeoutCheck()
     return zigbee.readAttribute(zigbee.BASIC_CLUSTER, PING_ATTR_ID, [:], 0)
@@ -360,7 +366,7 @@ void parse(final String description) {
 void parseBasicCluster(final Map descMap) {
     switch (descMap.attrInt as Integer) {
         case PING_ATTR_ID: // Using 0x01 read as a simple ping/pong mechanism
-            if (settings.txtEnable) { log.info 'pong..' }
+            if (settings.txtEnable) { log.info "${device.displayName} pong ..." }
             break
         case FIRMWARE_VERSION_ID:
             final String version = descMap.value ?: 'unknown'
@@ -398,6 +404,9 @@ void parseElectricalMeasureCluster(final Map descMap) {
         case ACTIVE_POWER_ID:
             handleActivePowerValue(value)
             break
+        case POWER_FACTOR_ID:
+            handlePowerFactorValue(value)
+            break
         case RMS_VOLTAGE_ID:
             handleRmsVoltageValue(value)
             break
@@ -405,6 +414,23 @@ void parseElectricalMeasureCluster(final Map descMap) {
             if (settings.warnEnable) { log.warn "${device} zigbee received unknown Electrical Measurement cluster attribute 0x${descMap.attrId} (value ${descMap.value})" }
             break
     }
+}
+
+
+/**
+ * Handle Power Factor (Only display when debug is enabled)
+ * @param value The new power factor Value
+ */
+
+void handlePowerFactorValue(final long value) {
+    // Reduce log warn when receiving cluster 0x0510 (Power Factor)
+    // If a low/idle device plugged into the switch.
+    // then it will send value ranging from 0 to ~25 from my observation
+
+    if (settings.logEnable) {
+        log.debug "${device} zigbee received Power Factor Value from cluster attribute 0x0510 (value ${value})"
+    }
+    return
 }
 
 /**
@@ -800,6 +826,7 @@ private void updatePowerFactor() {
 @Field static final int POWER_RESTORE_ID = 0x4003
 @Field static final int RMS_CURRENT_ID = 0x0508
 @Field static final int RMS_VOLTAGE_ID = 0x0505
+@Field static final int POWER_FACTOR_ID = 0x0510
 @Field static final int METERING_UNIT_OF_MEASURE_ID = 0x0300
 @Field static final int METERING_DIVISOR_ID = 0x0302
 @Field static final int METERING_SUMMATION_FORMATTING_ID = 0x0303

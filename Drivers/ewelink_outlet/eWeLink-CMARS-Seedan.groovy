@@ -63,6 +63,7 @@
  *      2023-09-08    jshimota      0.1.1.5          Fixed some logging issues for clarity
  *      2023-09-09    jshimota      0.1.1.6          Found more problems in logging
  *      2023-10-17    jshimota      0.1.1.7          More logging updates
+ *		2024-01-28    jshimota		0.1.1.8		     Changed skipping ping to debug logging - its annoying me
  *
  */
 
@@ -74,7 +75,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.1.7' }
+static String version() { return '0.1.1.8' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -199,7 +200,7 @@ void ping() {
         }
         sendZigbeeCommands(cmd)
     } else {
-        logging("SKIPPING ping() since there has been events received during the last 25 minutes...", 100)
+        log.debug("SKIPPING ping() since there has been events received during the last 25 minutes...", 100)
     }
 }
 

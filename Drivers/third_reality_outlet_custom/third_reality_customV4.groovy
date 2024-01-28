@@ -176,7 +176,7 @@ List<String> on() {
  * @return List of zigbee commands
  */
 List<String> ping() {
-    if (settings.txtEnable) { log.info 'ping...' }
+    if (settings.txtEnable) { log.info "${device.displayName} ping ..." }
     // Using attribute 0x00 as a simple ping/pong mechanism
     scheduleCommandTimeoutCheck()
     return zigbee.readAttribute(zigbee.BASIC_CLUSTER, PING_ATTR_ID, [:], 0)
@@ -360,7 +360,7 @@ void parse(final String description) {
 void parseBasicCluster(final Map descMap) {
     switch (descMap.attrInt as Integer) {
         case PING_ATTR_ID: // Using 0x01 read as a simple ping/pong mechanism
-            if (settings.txtEnable) { log.info 'pong..' }
+            if (settings.txtEnable) { log.info "${device.displayName} ping ..." }
             break
         case FIRMWARE_VERSION_ID:
             final String version = descMap.value ?: 'unknown'
@@ -405,6 +405,22 @@ void parseElectricalMeasureCluster(final Map descMap) {
             if (settings.warnEnable) { log.warn "${device} zigbee received unknown Electrical Measurement cluster attribute 0x${descMap.attrId} (value ${descMap.value})" }
             break
     }
+}
+
+/**
+ * Handle Power Factor (Only display when debug is enabled)
+ * @param value The new power factor Value
+ */
+
+void handlePowerFactorValue(final long value) {
+    // Reduce log warn when receiving cluster 0x0510 (Power Factor)
+    // If a low/idle device plugged into the switch.
+    // then it will send value ranging from 0 to ~25 from my observation
+
+    if (settings.logEnable) {
+        log.debug "${device} zigbee received Power Factor Value from cluster attribute 0x0510 (value ${value})"
+    }
+    return
 }
 
 /**
