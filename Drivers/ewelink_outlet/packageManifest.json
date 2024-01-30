@@ -1,7 +1,7 @@
 {
   "packageName": "Zigbee eWeLink-CMARS-Seedan Outlet",
   "author": "James Shimota",
-  "version": "0.1.1.8",
+  "version": "0.1.1.9",
   "minimumHEVersion": "2.2.9",
   "licenseFile": "http://www.gnu.org/licenses/lgpl-3.0.txt",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/README.md",
@@ -15,7 +15,7 @@
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/eWeLink-CMARS-Seedan.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.1.1.8"
+      "version": "0.1.1.9"
     }
   ]
 }
