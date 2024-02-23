@@ -66,7 +66,6 @@
  *		2024-01-28    jshimota		0.1.1.8		     Changed skipping ping to debug logging - its annoying me
  *		2024-01-28    jshimota		0.1.1.9		     fixed logging debug typo
  * 		2024-02-22	  jshimota      0.1.2.0			 added new fingerprint for gmachado
- * 		2024-02-23    jshimota      0.1.2.1		     Mods-cleanup fingerprint list per gmachado
  *
  */
 
@@ -78,7 +77,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.2.1' }
+static String version() { return '0.1.2.0' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -118,16 +117,19 @@ metadata {
         command "getInfo"
         // END:  getZigbeeGenericDeviceCommands()
 
-        fingerprint model:"3210-L", manufacturer:"CentraLite", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B04,0B05,FC03", outClusters:"0019", deviceJoinName:"Iris 3210-L Plug"
-        fingerprint model:"4257050-RZHAC", manufacturer:"CentraLite", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B04,0B05", outClusters:"0019"
-		fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota for gmachado 02/22/2024
-        fingerprint model:"outlet", manufacturer:"Samjin", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0009,0B04,0B05", outClusters:"0003,0019", application:"11"
-        fingerprint model:"Plug 01", manufacturer:"OSRAM", profileId:"C05E", endpointId:"03", inClusters:"1000,0000,0003,0004,0005,0006,0B04,FC0F", outClusters:"0019", deviceJoinName:"Sylvania Outlet"
-        fingerprint model:"PLUG", manufacturer:"LEDVANCE", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B05,FC01,FC08", outClusters:"0003,0019", deviceJoinName:"Sylvania Outlet"
-        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05,08"  //Added by jshimota for rixlumb1 04/20/2023
+        fingerprint deviceJoinName:"IKEA Tradfri Power Outlet", model:"TRADFRI control outlet", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,1000,FC7C", outClusters:"0005,0019,0020,1000", manufacturer:"IKEA of Sweden"
+        fingerprint deviceJoinName:"IKEA Tradfri Power Outlet", model:"TRADFRI control outlet", manufacturer:"IKEA of Sweden", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,FC7C", outClusters:"0005,0019,0020", application:"14"
+        fingerprint deviceJoinName:"Iris 3210-L Plug", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B04,0B05,FC03", outClusters:"0019", model:"3210-L", manufacturer:"CentraLite"
+        fingerprint model:"3320-L", manufacturer:"CentraLite", profileId:"0104", endpointId:"01", inClusters:"0000,0001,0003,0020,0402,0500,0B05", outClusters:"0019"
+        fingerprint deviceJoinName:"Sylvania Outlet", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B05,FC01,FC08", outClusters:"0003,0019", model:"PLUG", manufacturer:"LEDVANCE"
+        fingerprint deviceJoinName:"Sylvania Outlet", profileId:"C05E", endpointId:"03", inClusters:"1000,0000,0003,0004,0005,0006,0B04,FC0F", outClusters:"0019", model:"Plug 01", manufacturer:"OSRAM"
         fingerprint model:"SP 222", manufacturer:"innr", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0B05,1000,FC82", outClusters:"000A,0019", application:"10"
-		fingerprint model:"SWITCH-ZR02", manufacturer:"eWeLink", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,FC57", outClusters:"0019", application:"02" //added by jshimota for g.machado 02/23/24
-        fingerprint model:"TRADFRI control outlet", manufacturer:"IKEA of Sweden", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,1000, FC7C", outClusters:"0005,0019,0020,1000", application:"14", deviceJoinName:"IKEA Tradfri Power Outlet"
+        fingerprint model:"outlet", manufacturer:"Samjin", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0009,0B04,0B05", outClusters:"0003,0019", application:"11"
+        fingerprint model:"4257050-RZHAC", manufacturer:"CentraLite", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B04,0B05", outClusters:"0019"
+        fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000"
+        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota 10-8-2021
+        fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"08"  //Added by jshimota for rixlumb1 04/20/2023
+		fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota for gmachado 02/22/2024
     }
 
     preferences {
@@ -456,7 +458,7 @@ private String getDriverVersion() {
     // added line below to enhance attribution - jshimota 10-13-2021
     additionalComment = """Original driver by Markus Liljergren, customized to support eWeLink SA-003.<br>Also, AutoOff, Flash and Toggle capabilities added."""
     if(additionalComment != "") state.additionalComment = additionalComment
-    String version = "v0.1.2.1"  // jshimota 02-23-2024 changed to 1.2.1 to reflect modifications
+    String version = "v0.1.2.0"  // jshimota 02-22-2024 changed to 1.2.0 to reflect modification
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
     updateDataValue('driver', version)
