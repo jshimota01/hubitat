@@ -19,6 +19,7 @@
  */
 
 /*
+ *         v1.0.4  Cleaned up some logging items 11/10/23
  *         v1.0.3  JAS - split out category and color 08/08/23
  *         v1.0.2  PR from cmbruns
  *			 According to Hubitat docs the airQualityIndex attribute is supposed range from 0 to 500, meaning it should be the 
@@ -98,7 +99,7 @@ void pollHandler(resp, data) {
 
 					descriptionText = "${device.displayName} airQualityCategory is ${aqiCategory[obs.Category.Number]}"
 					if (debugOutput) log.debug "${descriptionText}"
-					sendEvent(name: "airQualityCategory", value: aqiCategory, descriptionText: descriptionText)
+					sendEvent(name: "airQualityCategory", value: aqiCategory[obs.Category.Number], descriptionText: descriptionText)
 
 					descriptionText = "${device.displayName} airQualityColor is ${aqiColor[obs.Category.Number]}"
 					if (debugOutput) log.debug "${descriptionText}"

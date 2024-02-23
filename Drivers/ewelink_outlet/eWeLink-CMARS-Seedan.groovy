@@ -65,6 +65,7 @@
  *      2023-10-17    jshimota      0.1.1.7          More logging updates
  *		2024-01-28    jshimota		0.1.1.8		     Changed skipping ping to debug logging - its annoying me
  *		2024-01-28    jshimota		0.1.1.9		     fixed logging debug typo
+ * 		2024-02-22	  jshimota      0.1.2.0			 added new fingerprint for gmachado
  *
  */
 
@@ -76,7 +77,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.1.9' }
+static String version() { return '0.1.2.0' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -128,6 +129,7 @@ metadata {
         fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000"
         fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota 10-8-2021
         fingerprint model:"SA-003-Zigbee", manufacturer:"eWeLink", profileId:"C05E", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"08"  //Added by jshimota for rixlumb1 04/20/2023
+		fingerprint model:"BASICZBR3", manufacturer:"SONOFF", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006", outClusters:"0000", application:"05"  //Added by jshimota for gmachado 02/22/2024
     }
 
     preferences {
