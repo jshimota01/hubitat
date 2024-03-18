@@ -67,7 +67,7 @@
  *		2024-01-28    jshimota		0.1.1.9		     fixed logging debug typo
  * 		2024-02-22	  jshimota      0.1.2.0			 added new fingerprint for gmachado
  * 		2024-02-23    jshimota      0.1.2.1		     Mods-cleanup fingerprint list per gmachado
- *
+ *      2024-03-17    jshimota      0.1.2.2          added new fingerprint for wierd peanut as test. should fail as man string is unparseable.
  */
 
 // BEGIN:getDefaultImports()
@@ -78,7 +78,7 @@ import java.security.MessageDigest
 // END:  getDefaultImports()
 import hubitat.helper.HexUtils
 
-static String version() { return '0.1.2.1' }
+static String version() { return '0.1.2.2' }
 
 metadata {
     // Definition Name below was modified so as not to step on existing driver - this may cause problems with developer repository as a PR may fail with file not found -
@@ -128,6 +128,7 @@ metadata {
         fingerprint model:"SP 222", manufacturer:"innr", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,0B05,1000,FC82", outClusters:"000A,0019", application:"10"
 		fingerprint model:"SWITCH-ZR02", manufacturer:"eWeLink", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,FC57", outClusters:"0019", application:"02" //added by jshimota for g.machado 02/23/24
         fingerprint model:"TRADFRI control outlet", manufacturer:"IKEA of Sweden", profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0008,1000, FC7C", outClusters:"0005,0019,0020,1000", application:"14", deviceJoinName:"IKEA Tradfri Power Outlet"
+        fingerprint model:"null", manufacturer:"Securifi Ltd.W´# YÝ", profileId:"0104", endpointId:"01", inClusters:"0000,0001,0003,0004,0005,0006,0B04,0B05", outClusters:"0000,0001,0003,0004,0005,0006,0019,0B04,0B05"
     }
 
     preferences {
