@@ -457,7 +457,7 @@ private String getDriverVersion() {
     // added line below to enhance attribution - jshimota 10-13-2021
     additionalComment = """Original driver by Markus Liljergren, customized to support eWeLink SA-003.<br>Also, AutoOff, Flash and Toggle capabilities added."""
     if(additionalComment != "") state.additionalComment = additionalComment
-    String version = "v0.1.2.1"  // jshimota 02-23-2024 changed to 1.2.1 to reflect modifications
+    String version = "v0.1.2.2"  // jshimota 02-23-2024 changed to 1.2.2 to reflect modifications
     logging("getDriverVersion() = ${version}", 100)
     sendEvent(name: "driver", value: version)
     updateDataValue('driver', version)
