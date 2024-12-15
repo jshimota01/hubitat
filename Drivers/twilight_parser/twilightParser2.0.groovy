@@ -28,10 +28,9 @@
  * 2024-04-28   jshimota    0.1.8   implemented epoch - later proved unnecessary  - left it for now
  * 2024-04-28   jshimota    0.1.9   implemented hard connection to HE Globals and fixed logging
  * 2024-11-10   jshimota	0.2.0   Added formatted values to be used in custom tiles
- * 2024-12-01   jshimota	0.2.1	Changed SDF to lowercase for formatted dates
  *
  */
-    static String version() { return '0.2.1' }
+    static String version() { return '0.2.0' }
     import java.text.SimpleDateFormat
     import java.time.*
 
@@ -241,22 +240,12 @@ def sunRiseSetHandler(resp, data) {
         dTTimeHourMinAPattern = new SimpleDateFormat('h:mm a')
 		
 		// use pattern
-
         formattedUsedTwilightBegin = dTTimeHourMinAPattern.format(state.localCivilTwilightBegin)
-        formattedUsedTwilightBegin = formattedUsedTwilightBegin.toLowerCase(Locale.US) 
-
         formattedUsedLocalSunrise = dTTimeHourMinAPattern.format(state.localSunrise)
-        formattedUsedLocalSunrise = formattedUsedLocalSunrise.toLowerCase(Locale.US)
-
         formattedUsedSolarNoon = dTTimeHourMinAPattern.format(state.localSolarNoon)
-        formattedUsedSolarNoon = formattedUsedSolarNoon.toLowerCase(Locale.US)
-
         formattedUsedLocalSunset = dTTimeHourMinAPattern.format(state.localSunset)
-        formattedUsedLocalSunset = formattedUsedLocalSunset.toLowerCase(Locale.US)
-            
         formattedUsedTwilightEnd = dTTimeHourMinAPattern.format(state.localCivilTwilightEnd)
-		formattedUsedTwilightEnd = formattedUsedTwilightEnd.toLowerCase(Locale.US)
-        
+				
         state.localDayLength                   = sunRiseSet.day_length
         state.usedLatitude = usedLatitude
         state.usedLongitude = usedLongitude

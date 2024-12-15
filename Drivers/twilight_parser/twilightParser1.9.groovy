@@ -27,11 +27,9 @@
  * 2024-04-10   jshimota    0.1.7   added functions to connect to HE Global Variables
  * 2024-04-28   jshimota    0.1.8   implemented epoch - later proved unnecessary  - left it for now
  * 2024-04-28   jshimota    0.1.9   implemented hard connection to HE Globals and fixed logging
- * 2024-11-10   jshimota	0.2.0   Added formatted values to be used in custom tiles
- * 2024-12-01   jshimota	0.2.1	Changed SDF to lowercase for formatted dates
  *
  */
-    static String version() { return '0.2.1' }
+    static String version() { return '0.1.9' }
     import java.text.SimpleDateFormat
     import java.time.*
 
@@ -47,13 +45,7 @@ metadata {
  		capability "Sensor"
 		capability 'Refresh'
 
-		attribute "formattedUsedTwilightBegin",      "string"
-		attribute "formattedUsedLocalSunrise",       "string"
-		attribute "formattedUsedSolarNoon",		     "string"
-		attribute "formattedUsedLocalSunset",        "string"
-		attribute "formattedUsedTwilightEnd",        "string"
-        
-        attribute "localSunrise",	                 "string"
+		attribute "localSunrise",	                 "string"
 		attribute "localSunset",	                 "string"
 		attribute "localSolarNoon",                  "string"
 		attribute "localDayLength",                  "string"
@@ -72,7 +64,7 @@ metadata {
 		attribute "usedTimeZone",                    "string"
         attribute "localSrEpoch",                    "date"
         attribute "localSsEpoch",                    "date"
-             
+              
 		command "deleteAllStateVariables"
 		command "deleteAllCurrentStates"
         }
@@ -236,27 +228,6 @@ def sunRiseSetHandler(resp, data) {
 		state.localNauticalTwilightEnd      = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", sunRiseSet.nautical_twilight_end)
 		state.localAstronomicalTwilightBegin    = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", sunRiseSet.astronomical_twilight_begin)
 		state.localAstronomicalTwilightEnd     = new Date().parse("yyyy-MM-dd'T'HH:mm:ssXXX", sunRiseSet.astronomical_twilight_end)
-
-		// define pattern
-        dTTimeHourMinAPattern = new SimpleDateFormat('h:mm a')
-		
-		// use pattern
-
-        formattedUsedTwilightBegin = dTTimeHourMinAPattern.format(state.localCivilTwilightBegin)
-        formattedUsedTwilightBegin = formattedUsedTwilightBegin.toLowerCase(Locale.US) 
-
-        formattedUsedLocalSunrise = dTTimeHourMinAPattern.format(state.localSunrise)
-        formattedUsedLocalSunrise = formattedUsedLocalSunrise.toLowerCase(Locale.US)
-
-        formattedUsedSolarNoon = dTTimeHourMinAPattern.format(state.localSolarNoon)
-        formattedUsedSolarNoon = formattedUsedSolarNoon.toLowerCase(Locale.US)
-
-        formattedUsedLocalSunset = dTTimeHourMinAPattern.format(state.localSunset)
-        formattedUsedLocalSunset = formattedUsedLocalSunset.toLowerCase(Locale.US)
-            
-        formattedUsedTwilightEnd = dTTimeHourMinAPattern.format(state.localCivilTwilightEnd)
-		formattedUsedTwilightEnd = formattedUsedTwilightEnd.toLowerCase(Locale.US)
-        
         state.localDayLength                   = sunRiseSet.day_length
         state.usedLatitude = usedLatitude
         state.usedLongitude = usedLongitude
@@ -321,12 +292,6 @@ def sunRiseSetHandler(resp, data) {
 		sendEvent(name: 'usedTimeZone', value: state.usedTimeZone)
 		sendEvent(name: 'usedTwilightBegin'    , value: usedTwilightBegin)
 		sendEvent(name: 'usedTwilightEnd'      , value: usedTwilightEnd)
-        
-   		sendEvent(name: 'formattedUsedTwilightBegin'    , value: formattedUsedTwilightBegin)
-   		sendEvent(name: 'formattedUsedLocalSunrise'    , value: formattedUsedLocalSunrise)
-   		sendEvent(name: 'formattedUsedSolarNoon'    , value: formattedUsedSolarNoon)
-   		sendEvent(name: 'formattedUsedLocalSunset'    , value: formattedUsedLocalSunset)
-   		sendEvent(name: 'formattedUsedTwilightEnd'    , value: formattedUsedTwilightEnd)
         
 // Special handling of day_length
 
