@@ -775,7 +775,7 @@ void playbackStateHandler(Map playerInfo, Boolean isGroupResponse=false) {
     }
 
     //Track Art Image
-    String trackImg = playerInfo.mainArt?.url ?: "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/dnd_off.png"
+    String trackImg = playerInfo.mainArt?.url ?: "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/na.png"
     if(isStateChange(device, "trackImage", trackImg)) {
         isMediaInfoChange = true
         sendEvent(name: "trackImage", value: trackImg, descriptionText: "Track Image", display: false, displayed: false)
