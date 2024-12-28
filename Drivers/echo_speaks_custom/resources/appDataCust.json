@@ -1,0 +1,43 @@
+{
+    "appDataVer": "4.0",
+    "versions": {
+        "mainApp": {
+            "ver": "4.2.4.1"
+        },
+        "actionApp": {
+            "ver": "4.2.4.0"
+        },
+        "zoneApp": {
+            "ver": "4.2.4.0"
+        },
+        "echoDevice": {
+            "ver": "4.2.4.2"
+        },
+        "zoneChildDevice": {
+            "ver": "4.2.4.0"
+        },
+        "wsDevice": {
+            "ver": "4.2.4.0"
+        },
+        "server": {
+            "ver": "2.7.0"
+        }
+    },
+    "amazonDomains": ["amazon.com", "amazon.ca", "amazon.co.uk", "amazon.com.au", "amazon.de", "amazon.it", "amazon.com.br", "amazon.com.mx", "amazon.es", "amazon.in", "amazon.fr", "amazon.se"],
+    "locales": ["en-US", "en-CA", "de-DE", "en-GB", "it-IT", "en-AU", "pt-BR", "es-MX", "es-UY", "es-ES", "fr-FR", "sv-SE"],
+    "settings": {
+        "sendMetrics": true,
+        "database": {
+            "metricsUrl": "https://echo-speaks-metrics.firebaseio.com/",
+            "configUrl": "https://echospeaks-config-alt.firebaseio.com/",
+            "configUrlAlt": "https://echospeaks-config-alt.firebaseio.com/"
+        }
+    },
+    "deviceFamilies": {
+        "block": ["AMAZONMOBILEMUSIC_ANDROID", "AMAZONMOBILEMUSIC_IOS", "TBIRD_IOS", "TBIRD_ANDROID", "VOX", "MSHOP"],
+        "echo": ["ROOK", "KNIGHT", "ECHO"],
+        "other": ["REAVER", "FIRE_TV", "FIRE_TV_CUBE", "ALEXA_AUTO", "MMSDK"],
+        "tablet": ["TABLET"],
+        "wha": ["WHA"]
+    }
+}
