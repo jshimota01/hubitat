@@ -7491,7 +7491,7 @@ public static Map getAppDuplTypes() { return appDuplicationTypesMapFLD }
         "A1RABVCI4QCIKC" : [ c: [ "a", "t" ], i: "echo_dot_gen3", n: "Echo Dot (Gen3)" ],
         "A3RMGO6LYLH7YN" : [ c: [ "a", "t" ], i: "echo_dot_gen4",  n: "Echo Dot (Gen4)" ],
 		// Modded JAS 12-22-2024 Fix incorrect model Identity
-		"A4ZXE0RM7LQ7A" : [ c: [ "a", "t" ], i: "echo_dot_gen5", n: "Echo Dot 5 (Gen5)" ],
+		"A4ZXE0RM7LQ7A" : [ c: [ "a", "t" ], i: "echo_dot_gen5", n: "Echo Dot (Gen5)" ],
         "A2H4LV5GIZ1JFT" : [ c: [ "a", "t" ], i: "echo_dot_clock_gen4",  n: "Echo Dot Clock (Gen4)" ],
         "A2U21SRK4QGSE1" : [ c: [ "a", "t" ], i: "echo_dot_clock_gen4",  n: "Echo Dot Clock (Gen4)" ],
         "A2DS1Q2TPDJ48U" : [ c: [ "a", "t" ], i: "echo_dot_clock_gen5",  n: "Echo Dot Clock (Gen5)" ],

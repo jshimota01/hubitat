@@ -36,6 +36,7 @@
  * 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
  * 2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
  * 2022-08-15   jshimota    0.3.1   Typo error found in Week of Mon variables
+ * 2025-03-14   jshimota    0.3.2   Added daily schedule run time to after HE and DST changes (2:45am)
  *
  */
 
@@ -46,7 +47,7 @@ import java.text.SimpleDateFormat
  * import java.util.Locale
  */
 
-static String version() { return '0.3.1' }
+static String version() { return '0.3.2' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
@@ -151,25 +152,37 @@ def refresh() {
         unschedule()
         if (logEnable) log.debug("Refresh: Setting Update Schedule")
             schedUpdate()
+			schedDailyUpdate()
     } else {
          if (logEnable) log.warn("Refresh: Cleared Update Schedule ...")
+ 			schedDailyUpdate()
         }
     return    
 }
 
-    def schedUpdate() {
-        if (txtEnable) log.info("schedUpdate:  Update schedule cleared. Setting new schedule ...")
-        if (autoUpdate) {
-            if (txtEnable) log.info("schedUpdate: Setting next scheduled refresh...")
-            runIn(1,mySchedule)
-            if (logEnable) log.debug("schedUpdate: Setting up schedule with ${autoUpdateInterval} minute interval")
-            return
-        }
+def schedUpdate() {
+    if (txtEnable) log.info("schedUpdate:  Update schedule cleared. Setting new schedule ...")
+    if (autoUpdate) {
+        if (txtEnable) log.info("schedUpdate: Setting next scheduled refresh...")
+        runIn(1,mySchedule)
+        if (logEnable) log.debug("schedUpdate: Setting up schedule with ${autoUpdateInterval} minute interval")
         return
     }
+    return
+}
+
+def schedDailyUpdate() {
+    runIn(1,dailySchedule)
+    if (logEnable) log.debug("schedDailyUpdate: Setting daily schedule at 2:45am each day")
+    return
+}
 
 def mySchedule() {
-           schedule("0 0/${autoUpdateInterval} * ? * * *", "refresh")  //default - * 0/45 * ? * * *
+           schedule("0 0/${autoUpdateInterval} * ? * * *", "refresh")  //default 5 mins
+}
+
+def dailySchedule() {
+           schedule("0 45 2 ? * * *", "dailyRefresh")  // hard set at 2:45am
 }
 
     def runCmd() {
