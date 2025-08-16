@@ -30,8 +30,8 @@ import java.text.SimpleDateFormat
 // JAS Modded 12/22/24 Error created with devVersionFLD being alphanumeric.
 // JAS Modded 12/22/24 Disabled all temperature work, not working but icons fixes were needed
 
-@Field static final String devVersionFLD  = '4.2.4.2'
-@Field static final String devModifiedFLD = '2024-12-21'
+@Field static final String devVersionFLD  = '4.2.4.3'
+@Field static final String devModifiedFLD = '2025-08-16'
 
 // @Field static final String devVersionFLD  = '4.2.4.0'
 // @Field static final String devModifiedFLD = '2024-03-07'
@@ -61,7 +61,7 @@ static Boolean isWS()        { return false }
 static Boolean isZone()      { return false }
 
 metadata {
-    definition (name: "Echo Speaks Device Custom", namespace: "jshimota", author: "James Shimota", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echo_speaks_custom/echo-speaks-device-custom.groovy") {
+    definition (name: "Echo Speaks Device Custom", namespace: "jshimota", author: "James Shimota", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echo_speaks_custom/echo-speaks-device-customv4.groovy") {
         capability "AudioNotification"
         capability "AudioVolume"
         capability "MusicPlayer"
