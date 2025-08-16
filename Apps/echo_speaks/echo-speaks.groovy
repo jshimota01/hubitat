@@ -32,12 +32,22 @@ import java.util.concurrent.Semaphore
 //************************************************
 //*               STATIC VARIABLES               *
 //************************************************
-@Field static final String appVersionFLD  = '4.2.4.0'
-@Field static final String appModifiedFLD = '2024-03-07'
+// Modded JAS 12-22-2024 Gen 5 without clock incorrectly identified
+// Modded JAS 01-01-2025 coordinating values of version and mod dates to stop init issue I caused
+// Modded JAS 08-15-2025 added Echo Spots device to list
+@Field static final String appVersionFLD  = '4.2.4.3'
+@Field static final String appModifiedFLD = '2025-08-16'
+
+// @Field static final String appVersionFLD  = '4.2.4.0'
+// @Field static final String appModifiedFLD = '2024-03-28'
+
 @Field static final String gitBranchFLD   = 'master'
 @Field static final String platformFLD    = 'Hubitat'
 @Field static final Boolean devModeFLD    = false
-@Field static final Map<String,Integer> minVersionsFLD = [echoDevice: 4240, actionApp: 4240, zoneApp: 4240, zoneEchoDevice: 4240, server: 270] //These values define the minimum versions of code this app will work with.
+// JAS Modded 08-16-25 updated str values to reflect my customizations
+@Field static final Map<String,Integer> minVersionsFLD = [echoDevice: 4243, actionApp: 4243, zoneApp: 4243, zoneEchoDevice: 4243, server: 270] //These values define the minimum versions of code this app will work with.
+
+// @Field static final Map<String,Integer> minVersionsFLD = [echoDevice: 4240, actionApp: 4240, zoneApp: 4240, zoneEchoDevice: 4240, server: 270] //These values define the minimum versions of code this app will work with.
 
 @Field static final String sNULL          = (String)null
 @Field static final String sBLANK         = ''
@@ -112,10 +122,17 @@ definition(
     author              : "Anthony Santilli",
     description         : "Integrate your Amazon Echo devices into your Hubitat environment to create virtual Echo Devices. This allows you to speak text, make announcements, control media playback including volume, and many other Alexa features.",
     category            : "My Apps",
-    iconUrl             : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.1x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
-    iconX2Url           : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.2x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
-    iconX3Url           : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.3x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
-    importUrl           : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/apps/echo-speaks.groovy",
+
+// Modded JAS 12-22-2024
+    iconUrl             : "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echo_speaks_custom/resources/icons/echo_speaks_3.1x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
+    iconX2Url           : "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echo_speaks_custom/resources/icons/echo_speaks_3.2x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
+    iconX3Url           : "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echo_speaks_custom/resources/icons/echo_speaks_3.3x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
+    importUrl           : "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/echo_speaks/echo-speaks.groovy",
+// 	Modded JAS 12-22-2024
+//    iconUrl             : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.1x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
+//    iconX2Url           : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.2x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
+//    iconX3Url           : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/resources/icons/echo_speaks_3.3x${(Boolean)state.updateAvailable ? "_update" : sBLANK}.png",
+//    importUrl           : "https://raw.githubusercontent.com/tonesto7/echo-speaks/master/apps/echo-speaks.groovy",
     oauth               : true,
     singleInstance      : false,
     documentationLink   : documentationUrl(),
@@ -5135,9 +5152,11 @@ Boolean childInstallOk() { return (Boolean)state.childInstallOkFlag }
 
 public static String gitBranch() { return gitBranchFLD }
 
-static String getAppImg(String imgName) { return "https://raw.githubusercontent.com/tonesto7/echo-speaks/${gitBranchFLD}/resources/icons/${imgName}.png" }
-
-static String getPublicImg(String imgName) { return "https://raw.githubusercontent.com/tonesto7/SmartThings-tonesto7-public/master/resources/icons/${imgName}.png" }
+// Modded JAS 12-22-2024
+static String getAppImg(String imgName) { return "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echo_speaks_custom/resources/icons/${imgName}.png" }
+// static String getAppImg(String imgName) { return "https://raw.githubusercontent.com/tonesto7/echo-speaks/${gitBranchFLD}/resources/icons/${imgName}.png" }
+static String getPublicImg(String imgName) { return "hhttps://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echo_speaks_custom/resources/icons/${imgName}.png" }
+// static String getPublicImg(String imgName) { return "https://raw.githubusercontent.com/tonesto7/SmartThings-tonesto7-public/master/resources/icons/${imgName}.png" }
 
 //static String sectTS(String t, String i = sNULL, Boolean bold=false) { return """<h3>${i ? """<img src="${i}" width="48"> """ : sBLANK} ${bold ? "<b>" : sBLANK}${t?.replaceAll("\\n", "<br>")}${bold ? "</b>" : sBLANK}</h3>""" }
 
@@ -5433,7 +5452,9 @@ void checkVersionData(Boolean now = false) { //This reads a JSON file from GitHu
 
 void getConfigData() {
     Map params = [
-        uri: "https://raw.githubusercontent.com/tonesto7/echo-speaks/${gitBranchFLD}/resources/appData.json",
+   // Modded JAS 12-27-24 to fix appdata firing for updates because I've changed versions
+        uri: "https://github.com/jshimota01/hubitat/tree/main/Drivers/echo_speaks_custom/resources/appDataCust.json",
+    //  uri: "https://raw.githubusercontent.com/tonesto7/echo-speaks/${gitBranchFLD}/resources/appData.json",
         contentType: sAPPJSON,
         timeout: 20
     ]
@@ -7478,19 +7499,24 @@ public static Map getAppDuplTypes() { return appDuplicationTypesMapFLD }
         "A32DOYMUN6DTXA" : [ c: [ "a", "t" ], i: "echo_dot_gen3",  n: "Echo Dot (Gen3)" ],
         "A1RABVCI4QCIKC" : [ c: [ "a", "t" ], i: "echo_dot_gen3", n: "Echo Dot (Gen3)" ],
         "A3RMGO6LYLH7YN" : [ c: [ "a", "t" ], i: "echo_dot_gen4",  n: "Echo Dot (Gen4)" ],
-        "A2DS1Q2TPDJ48U" : [ c: [ "a", "t" ], i: "echo_dot_clock_gen5",  n: "Echo Dot Clock (Gen5)" ],
+		// Modded JAS 12-22-2024 Fix incorrect model Identity
+		"A4ZXE0RM7LQ7A" : [ c: [ "a", "t" ], i: "echo_dot_gen5", n: "Echo Dot (Gen5)" ],
         "A2H4LV5GIZ1JFT" : [ c: [ "a", "t" ], i: "echo_dot_clock_gen4",  n: "Echo Dot Clock (Gen4)" ],
         "A2U21SRK4QGSE1" : [ c: [ "a", "t" ], i: "echo_dot_clock_gen4",  n: "Echo Dot Clock (Gen4)" ],
+        "A2DS1Q2TPDJ48U" : [ c: [ "a", "t" ], i: "echo_dot_clock_gen5",  n: "Echo Dot Clock (Gen5)" ],
         
         // Amazon Echo Spot's
         "A10A33FOX2NUBK" : [ c: [ "a", "t" ], i: "echo_spot_gen1", n: "Echo Spot" ],
+        // modded from community board 8-15-25
+        "A3EH2E0YZ30OD6" : [ c: [ "a", "t" ], i: "echo_spot_gen2", n: "Echo Spot 2" ],
 
         // Amazon Echo Show's
         "A1NL4BVLQ4L3N3" : [ c: [ "a", "t" ], i: "echo_show_gen1", n: "Echo Show (Gen1)" ],
         "AWZZ5CVHX2CD"   : [ c: [ "a", "t" ], i: "echo_show_gen2", n: "Echo Show (Gen2)" ],
         "A4ZP7ZC4PI6TO"  : [ c: [ "a", "t" ], i: "echo_show_5", n: "Echo Show 5 (Gen1)" ],
         "A1XWJRHALS1REP" : [ c: [ "a", "t" ], i: "echo_show_5", n: "Echo Show 5 (Gen2)" ],
-        "A4ZXE0RM7LQ7A" : [ c: [ "a", "t" ], i: "echo_show_5", n: "Echo Show 5 (Gen5)" ],
+		// Modded JAS 12-22-2024 
+        // "A4ZXE0RM7LQ7A" : [ c: [ "a", "t" ], i: "echo_show_5", n: "Echo Show 5 (Gen5)" ],
         "A1Z88NGR2BK6A2" : [ c: [ "a", "t" ], i: "echo_show_8", n: "Echo Show 8 (Gen1)" ],
         "A15996VY63BQ2D" : [ c: [ "a", "t" ], i: "echo_show_8", n: "Echo Show 8 (Gen2)" ],
         "AIPK7MM90V7TB"  : [ c: [ "a", "t" ], i: "echo_show_10_gen3", n: "Echo Show 10 (Gen3)" ],
