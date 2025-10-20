@@ -37,6 +37,7 @@
  * 2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
  * 2022-08-15   jshimota    0.3.1   Typo error found in Week of Mon variables
  * 2025-03-14   jshimota    0.3.2   Added daily schedule run time to after HE and DST changes (2:45am)
+ * 2025-10-19   jshimota    0.3.3   Added debug log - restructured log reporting
  *
  */
 
@@ -47,7 +48,7 @@ import java.text.SimpleDateFormat
  * import java.util.Locale
  */
 
-static String version() { return '0.3.2' }
+static String version() { return '0.3.3' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
@@ -116,11 +117,14 @@ metadata {
         attribute "comparisonDateTimeStr", "string"
         attribute "comparisonTime", "number"
         attribute "comparisonTimeStr", "string"
+        
+        command "scheduleRefresh"
     }
 }
 preferences {
     input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false
     input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true
+    input name: "dbgEnable", type: "bool", title: "Enable debugText logging", defaultValue: false
     input("autoUpdate", "bool", title: "Enable automatic update?\n(Enabled is Yes)", defaultValue: true, required: true, displayDuringSetup: true)
     input(name: "autoUpdateInterval", type: "enum", multiple: false, options: [[1:"1 minute"],[2:"2 minutes"],[5:"5 minutes"],[10:"10 minutes"],[15:"15 minutes"],[20:"20 minutes"],[30:"30 minutes"],[45:"45 minutes"],[59:"59 minutes"]], title: "Auto Update Interval", description: "Number of minutes (range 0-59) between automatic updates", defaultValue: 5, required: true, displayDuringSetup: true)
 }
@@ -150,30 +154,44 @@ def refresh() {
     }
     if (autoUpdate) {
         unschedule()
-        if (logEnable) log.debug("Refresh: Setting Update Schedule")
+        if (dbgEnable) log.debug("Refresh: Cleared all updates scheduled ...")
             schedUpdate()
 			schedDailyUpdate()
     } else {
-         if (logEnable) log.warn("Refresh: Cleared Update Schedule ...")
+        unschedule()
+         if (logEnable) log.warn("Refresh: Cleared all updates scheduled ...")
  			schedDailyUpdate()
         }
     return    
 }
 
-def schedUpdate() {
-    if (txtEnable) log.info("schedUpdate:  Update schedule cleared. Setting new schedule ...")
+def scheduleRefresh() {
     if (autoUpdate) {
-        if (txtEnable) log.info("schedUpdate: Setting next scheduled refresh...")
-        runIn(1,mySchedule)
-        if (logEnable) log.debug("schedUpdate: Setting up schedule with ${autoUpdateInterval} minute interval")
-        return
-    }
-    return
+        unschedule()
+        if (dbgEnable) log.debug("Refresh: Cleared all updates scheduled ...")
+            schedUpdate()
+			schedDailyUpdate()
+    } else {
+        unschedule()
+         if (logEnable) log.warn("Refresh: Cleared all updates scheduled ...")
+ 			schedDailyUpdate()
+        }
+    return    
 }
 
 def schedDailyUpdate() {
     runIn(1,dailySchedule)
-    if (logEnable) log.debug("schedDailyUpdate: Setting daily schedule at 2:45am each day")
+    if (dbgEnable) log.debug("schedDailyUpdate: Setting DAILY schedule at 2:45am each day")
+    return
+}
+
+def schedUpdate() {
+    if (dbgEnable) log.debug("schedUpdate: Setting new schedule ...")
+    if (autoUpdate) {
+        runIn(1,mySchedule)
+        if (txtEnable) log.info("schedUpdate: Set periodic scheduled refresh with ${autoUpdateInterval} minute interval")
+        return
+    }
     return
 }
 

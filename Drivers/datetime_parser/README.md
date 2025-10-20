@@ -43,6 +43,8 @@ Date         Source      Version What                                        URL
 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
 2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
 2022-08-15   jshimota    0.3.1   Typo error found in Week of Mon variables
+2025-03-14   jshimota    0.3.2   Added daily schedule run time to after HE and DST changes (2:45am)
+2025-10-19   jshimota    0.3.3   Added debug log - restructured log reporting
  
 Description
 
