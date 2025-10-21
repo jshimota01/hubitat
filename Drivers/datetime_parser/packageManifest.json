@@ -1,7 +1,7 @@
 {
   "packageName": "Date & Time Parser",
   "author": "James Shimota",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2025-10-19",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/README.md",
@@ -10,13 +10,13 @@
   "releaseNotes": "0.2.2 - added variable for user request time in minutes - now has 0 and no lead 0\nAdded fix for scheduler drop down pre-fill.\nFixed bug on suffix of ordinal\n0.2.3 - added WeekOfYearNumOdd and Even for garbage can users\n0.2.4 changed all Booleans to strings as not supported in rm5\n0.2.5 added Even Odd variables for Day Of Month\n0.2.6 added Even Odd variables for Day Of Year\n0.2.7 debug text in log when disaabled fixed, 24hr no lead fix\n0.2.8 added string versions of comparison date time\n0.2.9 2 minor text changes for clarity, attempt to fix schedule loop\n0.3.0 Week of Year was case sensitive and showing week of month, added week of month as well\n0.3.1 Typo error found in Week of Mon variables\n0.3.2 Added daily hard schedule at 2:45am\n0.3.2 Modified schedule routine and debug text for traces",
   "drivers": [
     {
-      "id": "2100366c-1e81-435f-9072-63afa39c30e9",
+      "id": "2100366c-1e81-435f-9072-6300a39c30e9",
       "name": "Date & Time Parser",
       "namespace": "jshimota",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/dateTimeParser.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.3.3"
+      "version": "0.3.4"
     }
   ]
 }
