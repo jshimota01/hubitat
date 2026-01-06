@@ -27,13 +27,16 @@ Requirements
 I have not tested this on any platforms besides my Hubitat c7 currently running 2.3.5.125 Firmware.  Also, the age of the Groovy Libraries is 2.4.21 - quite old. but I'm not doing anything crazy here. That said, it is relatively benign and should work on any HE hub and with fingers crossed will continue to work as the HE world develops.
 
 Versions
- *      2022-11-27    jshimota      0.1.0.0          My original fork (I took this from another Github Repo
+ *      2022-11-27    jshimota      0.1.0.0          My 'fork' of this driver taken from the above original source
  *      2022-11-27    jshimota      0.1.0.1          Added Toggle command to flip state programmatically
- *      2022-12-05    jshimota      0.1.1.0          The version I was using for months without any problems!
+ *      2022-12-05    jshimota      0.1.1.0          Released version
  *      2022-12-08    jshimota      0.1.1.1          Added AutoOff
  *      2023-01-14    jshimota      0.1.1.2          Added Variable Auto Presence array for my own needs
  *		2023-04-15	  jshimota		0.1.1.3			 Added Open/Closed variables for community request / changed Command button label
  *      2023-04-15    jshimota      0.1.1.4          Debug work on auto on off for all 3 states
+ *		2023-08-02	  jshimota 		0.1.1.5			 Set Default Init State to Off
+ *      2024-01-23    jshimota      0.1.1.6          Set Null check for Auto values
+ *      2026-01-06    jshimota      0.1.1.7          cleaned typo in filename
 
 Installation and Configuration
 
