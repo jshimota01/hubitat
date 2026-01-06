@@ -34,7 +34,7 @@
 			"name": "Virtual Presence Contact and Switch",
 			"category": "Convenience",
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
-			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/packageManifest.json",
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presence_openclose_switch/packageManifest.json",
 			"description": "A virtual device driver that ties Presence, Sensor and Switch (Present/Open/On) capabilities.  Useful for connecting to Alexa, or having Presence give an on/off state "
 		  },
 		  {
