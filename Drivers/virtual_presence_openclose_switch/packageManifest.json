@@ -12,7 +12,7 @@
       "id": "66c964c5-724b-46c4-bf7-b17c5db2e11d",
       "name": "Virtual Presence Contact and Switch",
       "namespace": "jshimota",
-      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presense_openclose_switch/virtual_presence_openclose_switch.groovy",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presence_openclose_switch/virtual_presence_openclose_switch.groovy",
       "required": false,
       "oauth": false,
       "version": "0.1.1.7"
