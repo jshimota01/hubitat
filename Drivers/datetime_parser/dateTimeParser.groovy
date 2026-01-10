@@ -138,6 +138,7 @@ def logsOff() {
 }
 
 def updated() {
+    if (dbgEnable) log.debug("updated: Beginning")
     log.info "updated..."
     log.warn "debug logging is: ${dbgEnable}"
     log.warn "description logging is: ${txtEnable}"
@@ -146,12 +147,13 @@ def updated() {
 }
 
 def refresh() {
+    if (dbgEnable) log.debug("refresh: Beginning")
     runCmd()
     if (txtEnable) {
         if (!autoUpdate) {
-        if (txtEnable) log.info("Refresh: Automatic Update DISABLED")
+            if (txtEnable) log.info("Refresh: Automatic Update DISABLED")
         } else {
-        if (txtEnable) log.info("Refresh: Automatic Update ENABLED")
+            if (txtEnable) log.info("Refresh: Automatic Update ENABLED")
         }
     }
     if (autoUpdate) {
@@ -167,12 +169,13 @@ def refresh() {
 }
 
 def dailyRefresh() {
+    if (dbgEnable) log.debug("dailyRefresh: Beginning")
     runCmd()
     if (logEnable) {
         if (!autoUpdate) {
-        if (txtEnable) log.info("Refresh: Automatic Update DISABLED")
+            if (txtEnable) log.info("Refresh: Automatic Update DISABLED")
         } else {
-        if (txtEnable) log.info("Refresh: Automatic Update ENABLED")
+            if (txtEnable) log.info("Refresh: Automatic Update ENABLED")
         }
     }
     if (autoUpdate) {
@@ -189,6 +192,7 @@ def dailyRefresh() {
 }
 
 def scheduleRefresh() {
+    if (dbgEnable) log.debug("scheduleRefresh: Beginning")
     if (autoUpdate) {
         unschedule()
         if (txtEnable) log.info("Refresh: Cleared all updates scheduled ...")
@@ -203,12 +207,14 @@ def scheduleRefresh() {
 }
 
 def schedDailyUpdate() {
+    if (dbgEnable) log.debug("schedDailyUpdate: Beginning")
     runIn(1,dailySchedule)
-        if (txtEnable) log.info("schedDailyUpdate: Setting DAILY schedule at 2:45am each day")
+    if (txtEnable) log.info("schedDailyUpdate: Setting DAILY schedule at 2:45am each day")
     return
 }
 
 def schedUpdate() {
+    if (dbgEnable) log.debug("schedUpdate: Beginning")
     if (dbgEnable) log.debug("schedUpdate: Setting new schedule ...")
     if (autoUpdate) {
         runIn(1,mySchedule)
@@ -219,10 +225,14 @@ def schedUpdate() {
 }
 
 def mySchedule() {
+    if (dbgEnable) log.debug("mySchedule: Beginning")
+    if (dbgEnable) log.debug("mySchedule: Setting new refresh interval to ${autoUpdateInterval} ...")
     schedule("0 0/${autoUpdateInterval} * ? * * *", "refresh")  //default 5 mins
 }
 
 def dailySchedule() {
+    if (dbgEnable) log.debug("dailySchedule: Beginning")
+    if (dbgEnable) log.debug("dailySchedule: Setting new dailyRefresh job for 2:45am ...")
     schedule("0 45 2 ? * * *", "dailyRefresh")  // hard set at 2:45am
 }
 
