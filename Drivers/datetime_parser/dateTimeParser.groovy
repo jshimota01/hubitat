@@ -40,6 +40,7 @@
  * 2025-10-19   jshimota    0.3.3   Added debug log - restructured log reporting
  * 2025-10-20   jshimota    0.3.4   added dailyRefresh
  * 2026-01-10   jshimota	0.3.5	changed log dbg and txt params for debugging
+ * 2026-03-08   jshimota    0.3.6   Moved daily schedule to 3:15 to get past Hub hour update on DST
  *
  */
 
@@ -50,7 +51,7 @@ import java.text.SimpleDateFormat
  * import java.util.Locale
  */
 
-static String version() { return '0.3.5' }
+static String version() { return '0.3.6' }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) {
@@ -232,8 +233,8 @@ def mySchedule() {
 
 def dailySchedule() {
     if (dbgEnable) log.debug("dailySchedule: Beginning")
-    if (dbgEnable) log.debug("dailySchedule: Setting new dailyRefresh job for 2:45am ...")
-    schedule("0 45 2 ? * * *", "dailyRefresh")  // hard set at 2:45am
+    if (dbgEnable) log.debug("dailySchedule: Setting new dailyRefresh job for 3:15am ...")
+    schedule("0 15 3 ? * * *", "dailyRefresh")  // hard set at 3:15am
 }
 
 def runCmd() {
