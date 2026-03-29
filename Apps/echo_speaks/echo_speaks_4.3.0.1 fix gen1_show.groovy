@@ -7138,7 +7138,7 @@ public static Map getAppDuplTypes() { return appDuplicationTypesMapFLD }
         "A1EIANJ7PNB0Q7" : [ c: [ "a", "t" ], i: "echo_show_15", n: "Echo Show 15 (Gen1)" ],
         "A11QM4H9HGV71H" : [ c: [ "a", "t" ], i: "echo_show_5", n: "Echo Show 5 (Gen3)" ],
         "A2UONLFQW0PADH" : [ c: [ "a", "t" ], i: "echo_show_5", n: "Echo Show 8 (Gen3)" ],
-		
+		"A345JHMQDGG1M5" : [ c: [ "a", "t" ], i: "echo_show_8", n: "Echo Show 8 (Gen4)" ],
 
         // Amazon Echo hub
         "ADMKNMEVNL158" : [ c: [ "a", "t" ], i: "unknown", n: "Echo Hub" ],
