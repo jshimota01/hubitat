@@ -66,7 +66,6 @@ metadata {
 			attribute "tileFontSize", "number"
 			attribute "tileFontColor", "string"
 			attribute "tileHorzWordPos", "string"
-			attribute "tileWrap", "string"
 			}   
 		}
 
@@ -80,13 +79,12 @@ metadata {
 		input(name: "existingTileHorzWordPos", type: "string", title: "HTML Word Position (left, right, center)", defaultValue: "left")
 		input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
         input("revFill", "bool", title: "Reverse the fill order")
-		input("preAdd", "bool", title: "On to encase message tile with 'pre' to format")
+		input("preAdd", "bool", title: "Switch on to wrap string text to format for new lines with 'pre'")
         input("colorE", "text", title: "Color for [E] Emergency", defaultValue: "red")
         input("colorH", "text", title: "Color for [H] High", defaultValue: "orange")
         input("colorL", "text", title: "Color for [L] Low", defaultValue: "goldenrod")
         input("colorN", "text", title: "Color for [N] Normal", defaultValue: "green")
         input("colorDefault", "text", title: "Default color (no tag)", defaultValue: "white")
-
 	}
 
 	void installed() {
@@ -134,9 +132,8 @@ metadata {
 				tileFontColor()
 				tileFontSize()
 				tileHorzWordPos()
-				tileWrap = '<style type="text/css"></style>'
 				state.msgCount=0
-                configure()
+				configure()
 				}
 			}
 
@@ -185,13 +182,18 @@ metadata {
 	void configure() {
 		log.trace "configure()"
         if(msgLimit == null) device.updateSetting("msgLimit",[value:5,type:"number"])
-		if(preAdd) {
-            tileWrap = '<style type="text/css"> .last5 {display:block;white-space:pre-line;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        } else {
-            tileWrap = '<style type="text/css"> .last5 {display:block;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        }
-		sendEvent(name:"last5", value:tileWrap + '<span class="last5"></span>')
-		sendEvent(name:"last5H", value:tileWrap + '<span class="last5"></span>')
+    sendEvent(name:"last5", value:'<style type="text/css">' +
+            '.last5 {\n' +
+            '     display: block;\n' +
+            '     white-space: pre-line;\n' +
+            '     color:' + "${existingTileFontColor}" + ';\n' +
+            '     text-align:' + "${existingTileHorzWordPos}" + ';\n' +
+            '	  font-size:' + "${existingTileFontSize}" + '%;\n' +
+            '}\n' +
+            '</style>\n' +
+            '<span class="last5">a</span>')
+//		sendEvent(name:"last5", value:'<span class="last5"></span>')
+		sendEvent(name:"last5H", value:'<span class="last5"></span>')
 		state.msgCount=0
         state.lastLimit = 0					   
         if(location.hub.firmwareVersionString >= "2.2.8.0") {
@@ -235,40 +237,25 @@ void deviceNotification(notification){
         //if (debugEnable) log.debug "deviceNotification entered: ${notification}"
 		if (debugEnable) log.debug "Final colorized notification: ${notification}"
 
-		//	insert new message at beginning	of last5 string
+    
+
+	//	insert new message at beginning	of last5 string
 		msgFilled = state.msgCount.toInteger()
-		
-		if(preAdd) {
-            tileWrap = '<style type="text/css"> .last5 {display:block;white-space:pre-line;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        } else {
-            tileWrap = '<style type="text/css"> .last5 {display:block;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        }
-		
 		String existing = device.currentValue("last5")?.replace('<span class="last5">', '')?.replace('</span>', '')?.trim()
 	    if(!revFill) {
     		if (msgFilled > 0 && existing) {
-            	wkTile = tileWrap + '<span class="last5">' + notification + '<br />' + existing + '</span>'
+            	wkTile = '<span class="last5">' + notification + '<br />' + existing + '</span>'
         	} else {
-            	wkTile = tileWrap + '<span class="last5">' + notification + '</span>'
+            	wkTile = '<span class="last5">' + notification + '</span>'
         	}
         } else {
-            if (msgFilled > 0 && existing) {
-			
-			    if(preAdd) {
-                wkTile = tileWrap + '<span class="last5"><pre>'+ existing + '<br />' + notification + '</pre></span>'
-            	} else {
-                wkTile = tileWrap + '<span class="last5">'+ existing + '<br />' + notification + '</span>'
-        		}
-
+			if (msgFilled > 0 && existing) {
+            	wkTile = "<span class='last5'>$existing<br />$notification</span>"
         	} else {
-
-			    if(preAdd) {
-                wkTile = tileWrap + '<span class="last5"><pre>' + notification + '</pre></span>'
-            	} else {
-                wkTile = tileWrap + '<span class="last5">' + notification + '</span>'
-        		}
+            	wkTile = '<span class="last5">' + notification + '</span>'
         	}
         }
+
 
 	//	when msg count exceeds limit, purge last message
 		if (debugEnable) log.debug "deviceNotification2 msgFilled: ${msgFilled} msgLimit: ${settings.msgLimit}" 
@@ -335,10 +322,37 @@ String colorizeNotification(String msg) {
         color = settings.colorN ?: "gray"
         cleanedMsg = msg.replaceFirst(/\[N\]/, '').trim()
     } else {
-        // color = settings.colorDefault ?: "white"
-        color = existingTileFontColor
+        color = settings.colorDefault ?: "white"
         cleanedMsg = msg
     }
+    // if(preAdd) {
+	    // String formatted = '<style type="text/css">' +
+            // '.last5 {\n' +
+            // '     display: block;\n' +
+            // '     white-space: pre-line;\n' +
+            // '     color:' + "${existingTileFontColor}" + ';\n' +
+            // '     text-align:' + "${existingTileHorzWordPos}" + ';\n' +
+            // '	  font-size:' + "${existingTileFontSize}" + '%;\n' +
+            // '     }\n' +
+            // '     </style>\n' +
+        	// '	  <span class="last5">' +
+        	// '     <pre>' +
+            // '     ' + "${cleanedMsg}" +  
+        	// '</pre></span>'
+	// } else {
+	    // String formatted = '<style type="text/css">' +
+            // '.last5 {\n' +
+            // '     display: block;\n' +
+            // '     color:' + "${existingTileFontColor}" + ';\n' +
+            // '     text-align:' + "${existingTileHorzWordPos}" + ';\n' +
+            // '	  font-size:' + "${existingTileFontSize}" + '%;\n' +
+            // '     }\n' +
+            // '     </style>\n' +
+        	// '	  <span class="last5">' +
+            // '     ' + "${cleanedMsg}" +  
+        	// '</span>'
+		// }
+		// String formatted = "${cleanedMsg}"
 
     String formatted = "<span style='color:${color};'>${cleanedMsg}</span>"																		   
     return formatted

@@ -125,17 +125,20 @@ metadata {
 					if (debugEnable) log.debug "out loop i: ${i} ${msgFilled}"
 					}
 				if (debugEnable) log.debug "done While i: ${i} ${msgFilled}"
-				sendEvent(name:"last5", value:wkTile)
+   				log.debug "tileWrap 128: ${tileWrap}"
+				sendEvent(name:"last5", value:tileWrap + wkTile)
 				state.msgCount=msgFilled
 				}
 			else
 				{												//process empty tile
-				if (debugEnable) log.debug "Initialize an empty tile" 
-				tileFontColor()
+				// if (debugEnable) log.debug "Initialize an empty tile" 
+				log.debug "Initialize an empty tile" 
+                tileFontColor()
 				tileFontSize()
 				tileHorzWordPos()
 				tileWrap = '<style type="text/css"></style>'
 				state.msgCount=0
+   				log.debug "tileWrap 140: ${tileWrap}"
                 configure()
 				}
 			}
@@ -160,7 +163,7 @@ metadata {
 			}
 		
 		if (!settings.create5H)
-			sendEvent(name:"last5H", value:'<span class="last5"></span>')
+			sendEvent(name:"last5H", value:'<span class="last5">last5h163</span>')
 		state.lastLimit=settings.msgLimit	
 	}
 
@@ -184,14 +187,10 @@ metadata {
 
 	void configure() {
 		log.trace "configure()"
+		tileWrap = '<style type="text/css"></style>'
         if(msgLimit == null) device.updateSetting("msgLimit",[value:5,type:"number"])
-		if(preAdd) {
-            tileWrap = '<style type="text/css"> .last5 {display:block;white-space:pre-line;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        } else {
-            tileWrap = '<style type="text/css"> .last5 {display:block;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        }
-		sendEvent(name:"last5", value:tileWrap + '<span class="last5"></span>')
-		sendEvent(name:"last5H", value:tileWrap + '<span class="last5"></span>')
+		sendEvent(name:"last5", value:'<span class="last5">configure188</span>')
+		sendEvent(name:"last5H", value:'<span class="last5">configure5h189</span>')
 		state.msgCount=0
         state.lastLimit = 0					   
         if(location.hub.firmwareVersionString >= "2.2.8.0") {
@@ -237,36 +236,21 @@ void deviceNotification(notification){
 
 		//	insert new message at beginning	of last5 string
 		msgFilled = state.msgCount.toInteger()
-		
-		if(preAdd) {
-            tileWrap = '<style type="text/css"> .last5 {display:block;white-space:pre-line;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        } else {
-            tileWrap = '<style type="text/css"> .last5 {display:block;text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
-        }
-		
-		String existing = device.currentValue("last5")?.replace('<span class="last5">', '')?.replace('</span>', '')?.trim()
+   		tileWrap = '<style type="text/css"> .last5 {display:block;white-space:pre-line;color:' + existingTileFontColor + ';text-align:' + existingTileHorzWordPos + ';font-size:' + existingTileFontSize + '%;</style>'
+    String existing = device.currentValue("last5")?.replace('<span class="last5">', '')?.replace('</span>', '')?.trim()
 	    if(!revFill) {
     		if (msgFilled > 0 && existing) {
-            	wkTile = tileWrap + '<span class="last5">' + notification + '<br />' + existing + '</span>'
+            	wkTile = '<span class="last5">firstwktile238' + notification + '<br />' + existing + '</span>'
         	} else {
-            	wkTile = tileWrap + '<span class="last5">' + notification + '</span>'
+            	wkTile = '<span class="last5">2ndwktile240' + notification + '</span>'
         	}
         } else {
             if (msgFilled > 0 && existing) {
-			
-			    if(preAdd) {
-                wkTile = tileWrap + '<span class="last5"><pre>'+ existing + '<br />' + notification + '</pre></span>'
-            	} else {
-                wkTile = tileWrap + '<span class="last5">'+ existing + '<br />' + notification + '</span>'
-        		}
-
+				log.debug "tileWrap 244: ${tileWrap}"
+                wkTile = tileWrap + '<span class="last5"><pre>3rdwktile245 $existing<br />$notification</pre></span>'
         	} else {
-
-			    if(preAdd) {
-                wkTile = tileWrap + '<span class="last5"><pre>' + notification + '</pre></span>'
-            	} else {
-                wkTile = tileWrap + '<span class="last5">' + notification + '</span>'
-        		}
+                log.debug "tileWrap 247: ${tileWrap}"
+                wkTile = tileWrap + '<span class="last5"><pre>4thwktile248' + notification + '</pre></span>'
         	}
         }
 
@@ -294,7 +278,7 @@ void deviceNotification(notification){
 					wkTile = wkTile.substring(0, i) + '</span>';
 					msgFilled--
 				}else{
-					wkTile='<span class="last5"></span>'
+					wkTile='<span class="last5">wktile275</span>'
 					msgFilled=0
 				}
 				wkLen=wkTile.length()
@@ -335,8 +319,7 @@ String colorizeNotification(String msg) {
         color = settings.colorN ?: "gray"
         cleanedMsg = msg.replaceFirst(/\[N\]/, '').trim()
     } else {
-        // color = settings.colorDefault ?: "white"
-        color = existingTileFontColor
+        color = settings.colorDefault ?: "white"
         cleanedMsg = msg
     }
 
