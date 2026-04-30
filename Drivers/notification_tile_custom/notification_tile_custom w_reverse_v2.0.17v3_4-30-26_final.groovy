@@ -82,7 +82,7 @@ preferences {
     input("create5H", "bool", title: "Create horizontal message tile?")
     input(name: "existingTileFontSize", type: "num", title: "HTML Tile Font Size (%)*", defaultValue: 100)
     input(name: "existingTileHorzWordPos", type: "string", title: "HTML Word Position (left, right, center)", defaultValue: "left")
-    input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (also supports 6 or 8 char Hex format with leading #)", defaultValue: "white")
+    input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (Hex format with leading #)", defaultValue: "#FFFFFFFF")
     input("revFill", "bool", title: "Reverse the fill order (Newest at bottom)")
     input("preAdd", "bool", title: "Encase message tile with 'pre' to format")
     input("colorE", "text", title: "Color for [E] Emergency", defaultValue: "red")
@@ -105,8 +105,8 @@ void configure() {
     if (debugEnable) log.trace "configure()"
     state.msgCount = 0
     // Reset the attributes to a clean state
-    sendEvent(name:"last5", value: "")
-    sendEvent(name:"last5H", value: "")
+    sendEvent(name:"last5", value: " ")
+    sendEvent(name:"last5H", value: " ")
     
     // Update preference display attributes
     sendEvent(name: "tileFontColor", value: existingTileFontColor)
@@ -186,7 +186,6 @@ String colorizeNotification(String msg) {
 	else if (msg.startsWith("[H]")) icon = "⚠️"
 	else if (msg.startsWith("[L]")) icon = "🔋"
 	else if (msg.startsWith("[N]")) icon = "ℹ️"
-    else icon = ""
 
 
     if (msg.startsWith("[E]")) {
@@ -202,7 +201,7 @@ String colorizeNotification(String msg) {
         color = settings.colorN ?: "green"
         cleaned = msg.replaceFirst(/\[N\]/, '').trim()
     } else {
-        color = existingTileFontColor ?: "white"
+        color = existingTileFontColor ?: "#FFFFFFFF"
     }
 
     return "<span style='color:${color}'> ${icon} ${cleaned}</span>"
