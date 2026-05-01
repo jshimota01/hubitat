@@ -1,5 +1,4 @@
 /*
- *  API Key - 143A76A8-27CB-4D78-8FEB-B37DF209A662
  * Import URL: https://raw.githubusercontent.com/HubitatCommunity/AirQuality-AirNow/master/AirQuality-AirNow.groovy"
  *
  *	Copyright 2021 C Steele
