@@ -43,14 +43,13 @@
 *    2026-04-21  jshimota      v2.0.17 added switch for PRE wrapper
 * 	 2026-04-30	 jshimota      v2.0.18 Gemini fixes
 *    2026-05-03  jshimota      v2.0.19 Repair of Gemini created issues 
-*    2026-05-03  jshimota      v2.0.20 format improvement
 */
 /*
 * Notification Tile (Custom) - Refactored
 */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
-static String version()    {  return '2.0.20'  }
+static String version()    {  return '2.0.19'  }
 
 @Field sdfList = ["ddMMMyyyy HH:mm","ddMMMyyyy HH:mm:ss","ddMMMyyyy hh:mma", "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "dd/MM/yyyy hh:mma", "MM/dd/yyyy hh:mma", "MM/dd HH:mm", "MM/dd h:mma", "HH:mm", "H:mm","h:mma", "HH:mm ddMMMyyyy","HH:mm:ss ddMMMyyyy","hh:mma ddMMMyyyy", "HH:mm:ss dd/MM/yyyy", "HH:mm:ss MM/dd/yyyy", "hh:mma dd/MM/yyyy ", "hh:mma MM/dd/yyyy", "HH:mm yyyy-MM-dd", "None"]
 
@@ -110,7 +109,7 @@ void configure() {
     state.msgCount = 0
 
     // 1. Create the formatted "empty" string
-    String emptyMsg = " No notifications"
+    String emptyMsg = "No notifications"
     if (preAdd) emptyMsg = "<pre style='margin:0;'>${emptyMsg}</pre>"
     
     // 2. Wrap it in the styles and span class
@@ -150,11 +149,8 @@ def deviceNotification(String notification) {
         SimpleDateFormat sdf = new SimpleDateFormat(sdfPref)
         timestamp = sdf.format(new Date())
     }
-    // Determine the separator based on the 'preAdd' switch
-    String spacer = preAdd ? "" : " "
-    
-    // Construct message with conditional spacing
-    String msgWithTime = leadingDate ? "${timestamp}${spacer}${cleanedMsg}" : "${cleanedMsg}${spacer}${timestamp}"
+	// Add a space before the timestamp for both configurations
+    String msgWithTime = leadingDate ? " ${timestamp} ${cleanedMsg}" : " ${cleanedMsg} ${timestamp}"
 
     // CHANGE: Ensure we handle the tag check clearly here
     String msgToColor = tag ? "${tag} ${msgWithTime}" : msgWithTime

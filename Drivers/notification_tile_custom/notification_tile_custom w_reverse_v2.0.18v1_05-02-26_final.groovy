@@ -42,15 +42,13 @@
 *    2026-04-21  jshimota      v2.0.16 added back my customizations of layout values and features
 *    2026-04-21  jshimota      v2.0.17 added switch for PRE wrapper
 * 	 2026-04-30	 jshimota      v2.0.18 Gemini fixes
-*    2026-05-03  jshimota      v2.0.19 Repair of Gemini created issues 
-*    2026-05-03  jshimota      v2.0.20 format improvement
 */
 /*
 * Notification Tile (Custom) - Refactored
 */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
-static String version()    {  return '2.0.20'  }
+static String version()    {  return '2.0.18'  }
 
 @Field sdfList = ["ddMMMyyyy HH:mm","ddMMMyyyy HH:mm:ss","ddMMMyyyy hh:mma", "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "dd/MM/yyyy hh:mma", "MM/dd/yyyy hh:mma", "MM/dd HH:mm", "MM/dd h:mma", "HH:mm", "H:mm","h:mma", "HH:mm ddMMMyyyy","HH:mm:ss ddMMMyyyy","hh:mma ddMMMyyyy", "HH:mm:ss dd/MM/yyyy", "HH:mm:ss MM/dd/yyyy", "hh:mma dd/MM/yyyy ", "hh:mma MM/dd/yyyy", "HH:mm yyyy-MM-dd", "None"]
 
@@ -104,21 +102,11 @@ void updated(){
 }
 
 void configure() {
-    if (debugEnable) log.debug "configure()"
-    
-    state.msgList = [] 
+    if (debugEnable) log.trace "configure()"
     state.msgCount = 0
-
-    // 1. Create the formatted "empty" string
-    String emptyMsg = " No notifications"
-    if (preAdd) emptyMsg = "<pre style='margin:0;'>${emptyMsg}</pre>"
-    
-    // 2. Wrap it in the styles and span class
-    String formattedEmpty = getTileStyles() + "<span class='last5'>${emptyMsg}</span>"
-
-    // 3. Send the formatted version to the attributes
-    sendEvent(name: "last5", value: formattedEmpty)
-	sendEvent(name: "last5H", value: "** No notifications **")
+    // Reset the attributes to a clean state
+    sendEvent(name:"last5", value: "")
+    sendEvent(name:"last5H", value: "")
     
     // Update preference display attributes
     sendEvent(name: "tileFontColor", value: existingTileFontColor)
@@ -132,52 +120,55 @@ String getTileStyles() {
     return "<style>.last5 {display:block;${whiteSpace}text-align:${existingTileHorzWordPos};font-size:${existingTileFontSize}%;}</style>"
 }
 
-def deviceNotification(String notification) {
+void deviceNotification(notification) {
     if (debugEnable) log.debug "deviceNotification entered: ${notification}" 
 
     if(sdfPref == null) device.updateSetting("sdfPref",[value:"ddMMMyyyy HH:mm",type:"enum"])
-    
-    String rawInput = notification?.trim() ?: ""
-    if (rawInput.length() > 800) {
-        rawInput = rawInput.substring(0, 797) + "..."
-    }
+    String originalMsg = notification?.trim() ?: ""
 
-    String tag = rawInput.find(/\[[A-Z]+\]/)
-    String cleanedMsg = rawInput.replaceFirst(/\[[A-Z]\]/, '').trim()
+    // 1. Determine Tag and Cleanup Message
+    String tag = originalMsg.find(/\[[A-Z]+\]/)
+    String cleanedMsg = originalMsg.replaceFirst(/\[[A-Z]\]/, '').trim()
 
+    // 2. Add Timestamp
     String timestamp = ""
     if (sdfPref != "None") {
         SimpleDateFormat sdf = new SimpleDateFormat(sdfPref)
         timestamp = sdf.format(new Date())
     }
-    // Determine the separator based on the 'preAdd' switch
-    String spacer = preAdd ? "" : " "
-    
-    // Construct message with conditional spacing
-    String msgWithTime = leadingDate ? "${timestamp}${spacer}${cleanedMsg}" : "${cleanedMsg}${spacer}${timestamp}"
+    String msgWithTime = leadingDate ? "${timestamp} ${cleanedMsg}" : "${cleanedMsg} ${timestamp}"
 
-    // CHANGE: Ensure we handle the tag check clearly here
-    String msgToColor = tag ? "${tag} ${msgWithTime}" : msgWithTime
-    String colorized = colorizeNotification(msgToColor) // Line 155
-    
+    // 3. Colorize
+    String colorized = colorizeNotification(tag ? "${tag} ${msgWithTime}" : msgWithTime)
     if (preAdd) colorized = "<pre style='margin:0;'>${colorized}</pre>"
     
+    // 4. Get Existing Content (Strip Styles for logic)
+    // We store the raw HTML messages in state.msgList to make manipulation easier
     if (state.msgList == null) state.msgList = []
     
-    if (!revFill) state.msgList.add(0, colorized) 
-    else state.msgList.add(colorized)    
-
-    int limit = (settings.msgLimit ?: 5).toInteger()
-    while (state.msgList.size() > limit) {
-        if (!revFill) state.msgList.removeAt(state.msgList.size() - 1) else state.msgList.removeAt(0)
+    // 5. Manage List Based on Fill Order
+    if (!revFill) {
+        state.msgList.add(0, colorized) // Newest at top
+    } else {
+        state.msgList.add(colorized)    // Newest at bottom
     }
 
+    // 6. Enforce Limit
+    int limit = (settings.msgLimit ?: 5).toInteger()
+    while (state.msgList.size() > limit) {
+        if (!revFill) state.msgList.removeLast() else state.msgList.removeAt(0)
+    }
+
+    // 7. Build Tile String and Check Length (1024 char limit)
     String wkTile = state.msgList.join("<br />")
+    
     while (wkTile.length() > 950 && state.msgList.size() > 1) { 
-        if (!revFill) state.msgList.removeAt(state.msgList.size() - 1) else state.msgList.removeAt(0)
+        // 950 to leave room for the <style> tag
+        if (!revFill) state.msgList.removeLast() else state.msgList.removeAt(0)
         wkTile = state.msgList.join("<br />")
     }
 
+    // 8. Final Output
     String finalOutput = getTileStyles() + "<span class='last5'>${wkTile}</span>"
     sendEvent(name:"last5", value: finalOutput)
     state.msgCount = state.msgList.size()
@@ -187,30 +178,30 @@ def deviceNotification(String notification) {
     }
 }
 
-// CHANGE: Explicitly define as 'def' or 'private String' to ensure visibility
-def colorizeNotification(String msg) {
+String colorizeNotification(String msg) {
     String color
     String cleaned = msg
-    String icon = "" 
+
+	if (msg.startsWith("[E]")) icon = "🚨"
+	else if (msg.startsWith("[H]")) icon = "⚠️"
+	else if (msg.startsWith("[L]")) icon = "🔋"
+	else if (msg.startsWith("[N]")) icon = "ℹ️"
+    else icon = ""
+
 
     if (msg.startsWith("[E]")) {
-        icon = "🚨"
         color = settings.colorE ?: "red"
-        cleaned = msg.replace("[E]", "").trim()
+        cleaned = msg.replaceFirst(/\[E\]/, '').trim()
     } else if (msg.startsWith("[H]")) {
-        icon = "⚠️"
         color = settings.colorH ?: "orange"
-        cleaned = msg.replace("[H]", "").trim()
+        cleaned = msg.replaceFirst(/\[H\]/, '').trim()
     } else if (msg.startsWith("[L]")) {
-        icon = "🔋"
         color = settings.colorL ?: "goldenrod"
-        cleaned = msg.replace("[L]", "").trim()
+        cleaned = msg.replaceFirst(/\[L\]/, '').trim()
     } else if (msg.startsWith("[N]")) {
-        icon = "ℹ️"
         color = settings.colorN ?: "green"
-        cleaned = msg.replace("[N]", "").trim()
+        cleaned = msg.replaceFirst(/\[N\]/, '').trim()
     } else {
-        icon = ""
         color = existingTileFontColor ?: "white"
     }
 
