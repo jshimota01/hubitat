@@ -69,7 +69,7 @@ preferences {
     input name: "autoUpdate", type: "bool", title: "<b>Enable automatic update at 6am</b>", defaultValue: true, description:\
 	"<i>On (Recommended) to enable automatic update.  Disable for testing or to have tile static for other purposes</i>"  
     input name: "iconPathOvr", type: "string", title: "<b>Alternate path to season icons</b>", description:\
-	"<i>Use this if you have a different set of images. Should end with /.  eg; http://192.168.1.12/icons/moon_phase/</i>"  
+	"<i>Use this if you have a different set of images. Should end with /.  eg; http://192.168.1.12/icons/seasons/</i>"  
     input name: "isNorthern", type: "bool", title: "<b>Hemisphere (On=Northern / Off=Southern)</b>", defaultValue: true, description:\
 	"<i>For our friends in the south - Seasons are reversed, and this accounts for their needs.</i>"  
     input name: "useAutumn", type: "bool", title: "<b>Season Naming (On=Autumn / Off=Fall)</b>", defaultValue: false, description:\
