@@ -1,11 +1,11 @@
 {
-  "packageName": "Astro-Meteor_Seasons",
+  "packageName": "Astro-Meteor Seasons",
   "author": "James Shimota",
   "version": "0.3.1",
   "minimumHEVersion": "2.4.1",
   "dateReleased": "2026-05-12",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_meteor_seasons/README.md",
-  "communityLink": "https://community.hubitat.com/t/astro-seasons-driver/80450",
+  "communityLink": "",
   "licenseFile": "",
   "drivers": [
     {
