@@ -15,13 +15,14 @@
  *      2026-05-04    Gemini        0.3.0       Added Astronomical Seasons & Dual-Tracking
  *      2026-05-12    jshimota      0.3.1       Cleanup of preferences info
  *      2026-05-12    jshimota      0.3.2       Typo fixed.
+ *      2026-05-12    jshimota      0.3.3       Trying to fix HPM stuck
  *
  */
 
 
 import java.text.SimpleDateFormat
 
-static String version() { return '0.3.2' }
+static String version() { return '0.3.3' }
 
 metadata {
     definition(
