@@ -27,7 +27,7 @@ metadata {
         name: "Meteorological & Astronomical Seasons",
         namespace: "jshimota",
         author: "James Shimota",
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/meteorSeasons.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_meteor_seasons/astroMeteorSeasons.groovy"
     ) {
         capability "Actuator"
         capability "Refresh"
@@ -184,7 +184,7 @@ def processSeasonUpdate(String sName, String meteoName, String astroName) {
         end = isNorthern ? data.meteoNEnd : data.meteoSEnd
     }
 
-    String iconBase = iconPathOvr ?: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/season_icons/"
+    String iconBase = iconPathOvr ?: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_meteor_seasons/season_icons/"
     String imgUrl = "${iconBase}${data.img}.svg"
     
     // Build Tile HTML
