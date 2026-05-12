@@ -1,7 +1,9 @@
-Astronomical Seasons
+Astro-Meteor Seasons
 Previously - Astronomical Seasons of the Northern Hemisphere
 
 Why?
+After using my Atronomical Season Tile for a few years, I had always been bothered that it was based on the 3 month period which is static.  The farmers almanac shows that each year the exact date can change, and I wanted that higher level of accuracy.
+Along comes AI, and took much of the pain away and this is the new result.  ca
 
 A need developed for me to be able to set Rules and automations within my Hubitat environment that would allow me to gain control seasonally.  Originally, with community help I was able to build a Rule that would keep a Global Variable up to date.  However this wasn't as smooth of a method.  So I wrote this.
 
@@ -16,8 +18,10 @@ I have not tested this on any platforms besides my Hubitat c7 currently running 
 
 New Features
 1.x		Initial release
-2.x		Added support for BOTH hemispheres TBD
-2.15    Added ability to select Fall/Autumn as season name TBD
+2.x		Added support for BOTH hemispheres 
+2.15    Added ability to select Fall/Autumn as season name
+3.0     Gemini optimized it nicely
+3.1     Cleaned up the descripotions and preference checks
 
 Installation and Configuration
 
@@ -75,18 +79,13 @@ Use the driver in RM rules
     Press enter to complete the text line entry
     Click Done with this Condition.
 
-Future updates
+Implemented features
 
       When I wrote this driver, I was reminded of some basics about this topic.  
 
-      First, there are two main forms of seasons - Astronomical and Astronomical.  Astronomical seasons are calculated using the equinoxes (which are not static dates each year!), and therefore varies.
+      First, there are two main forms of seasons - Astronomical and Meteorlogical.  Meteorlogical seasons are calculated using the equinoxes (which are not static dates each year!), and therefore varies.
       
       Example for Fall
       Astronomical = September 1 through November 30
-      Astronomical = September 22 through December 21
-      
-      The ability for a user to choose between these 2 forms of Seasons was intended, but my programming skills couldn't yet deal with the implementation.
-      
-      The ability for users to be able to create a start/stop for each season was also intended, but never implemented.
-      
-      The ability for a user to enter any date to get the correct value was intended and implement but then removed as the date field entry was complicated and I didn't want the support hassle.
+      Meteorlogical = September 22 through December 21
+     
