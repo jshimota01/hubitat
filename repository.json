@@ -3,6 +3,13 @@
 	"gitHubUrl": "https://github.com/jshimota01",
 	"packages": [
 		  {
+			"name": "Astro-Meteor Seasons",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Timers", "Weather" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro-meteor_seasons/packageManifest.json",
+			"description": "I used the meteorolgical seasons but wanted higher accuracy like Farmers Almanac.  Along came Ai and got me there. Now the user can choose which Seasons type. Hemisphere and and selectable autumn/fall.  It creates a useable tile, variables for Rules and other nice features as well."
+		  },
+		  {
 			"name": "Meteorological Seasons",
 			"category": "Convenience",
 			"tags": [ "Dashboards", "Monitoring", "Timers", "Weather" ],
