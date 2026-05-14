@@ -48,9 +48,10 @@
  *		2023-08-02	  jshimota 		0.1.1.5			 Set Default Init State to Off
  *      2024-01-23    jshimota      0.1.1.6          Set Null check for Auto values
  *      2026-01-6     jshimota      0.1.1.7          cleaned typo in filename
+ *      2026-05-14    jshimota      0.1.1.8          fix package json to required true
  **/
 
-static String version() { return '0.1.1.7' }
+static String version() { return '0.1.1.8' }
 
 metadata {
     definition (name: "Virtual Presence Contact and Switch", namespace: "jshimota", author: "James Shimota", importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presence_openclose_switch/virtual_presence__openclose_switche_openclose_switch/virtual_presence__openclose_switch.groovy") {
