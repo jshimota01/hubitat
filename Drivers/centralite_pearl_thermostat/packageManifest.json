@@ -5,7 +5,7 @@
   "minimumHEVersion": "2.4.0",
   "dateReleased": "2026-06-03",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/README.md",
-  "communityLink": "https://community.hubitat.com/t/alpha-release-date-time-parser-driver/87756/9",
+  "communityLink": "https://community.hubitat.com/t/release-centralite-pearl-aka-model-3157100-zigbee-thermostat/164420",
   "licenseFile": "",
   "releaseNotes": "0.4.3 Initial Release\nSee internal notes for development versioning information",
   "drivers": [
