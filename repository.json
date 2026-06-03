@@ -47,7 +47,7 @@
 		  {
 			"name": "Centralite Pearl Zigbee Thermostat",
 			"category": "Control",
-			"tags": [ "Dashboards", "Monitoring", "Thermostat", "Zigbee", "Driver", "Temperature & Humidity" ],
+			"tags": [ "Dashboards", "Monitoring", "Thermostat", "Zigbee", "Driver", "Temperature & Humidity", "Climate Control" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/packageManifest.json",
 			"description": "A Zigbee Thermostat driver specific to the Centralite Pearl Thermostat device, (aka Centralite model 3157100). Driver includes FanCirculate feature and accounts for thermostat hardware lack of Auto mode "
 		  },
