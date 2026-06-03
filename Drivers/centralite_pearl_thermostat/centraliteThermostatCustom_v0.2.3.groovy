@@ -1,0 +1,339 @@
+/*
+ * CentraLite Pearl Thermostat Custom
+ *
+ *
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Change History:
+ *
+ *      Date          Source        Version     What                                                URL
+ *      ----          ------        -------     ----                                                ---
+ *      2021-09-30    dagrider      0.1.0       Starting version
+ *      2026-06-02    jshimota      0.1.1       Initial edit, cleanup GNU, basics, remove excess comments
+ * 		2026-06-03	  jshimota      0.2.0		Gemnini Modernization and optimization
+ * 		2026-06-03	  jshimota      0.2.1		Adding in log and debug control
+ *		2026-06-03	  jshimota		0.2.2		Gemini improvements and bug hunt
+ *
+ */
+
+/*
+ * CentraLite Pearl Thermostat Custom - Combined Fan Dropdown Selector
+ * Version: 0.2.3
+ */
+
+static String version() { return '0.2.3' }
+
+metadata {
+    definition(
+        name: "CentraLite Pearl Thermostat Custom",
+        namespace: "jshimota",
+        author: "James Shimota",
+        filename: "centraliteThermostatCustom.groovy",
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_thermostat_custom/centraliteThermostatCustom.groovy"
+    ) {
+        capability "Actuator"
+        capability "Temperature Measurement"
+        capability "Thermostat"
+        capability "Configuration"
+        capability "Refresh"
+        capability "Sensor"
+        capability "Battery" [cite: 9]
+                                
+        command "raiseHeatLevel" [cite: 10]
+        command "lowerHeatLevel" [cite: 10]
+        command "raiseCoolLevel" [cite: 10]
+        command "lowerCoolLevel" [cite: 10]
+        command "toggleHoldMode" 
+
+        attribute "thermostatHoldMode", "string" [cite: 10]
+        attribute "powerSource", "string" [cite: 10]
+        
+        // This attribute tells Hubitat's UI to render a dropdown list selector for fan modes
+        attribute "thermostatFanModes", "JSON_OBJECT"
+                               
+        fingerprint profileId: "0104", inClusters: "0000,0001,0003,0020,0201,0202,0204,0B05", outClusters: "000A, 0019" [cite: 11]
+    }
+
+    preferences {
+        input name: "dbgEnable", type: "bool", title: "Enable debug logging", defaultValue: false
+        input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", defaultValue: true 
+    }
+}
+
+def installed() {
+    if (txtEnable) log.info "Installing CentraLite Pearl Thermostat Custom..."
+    initialize()
+}
+
+def updated() {
+    if (txtEnable) log.info "Updating settings..."
+    initialize()
+}
+
+def initialize() {
+    if (dbgEnable) runIn(1800, logsOff)
+    
+    // Populate the dropdown operational value array for the UI layout
+    sendEvent(name: "thermostatFanModes", value: groovy.json.JsonOutput.toJson(["fanOn", "fanAuto"]))
+    
+    configure()
+}
+
+def logsOff() {
+    log.warn "Debug logging automatically disabled."
+    device.updateSetting("dbgEnable", [value: "false", type: "bool"])
+}
+ 
+def configure() {
+    if (dbgEnable) log.debug "Configuring reporting and bindings..."
+    
+    def cmds = zigbee.batteryConfig() +
+               zigbee.thermostatConfig() +
+               zigbee.configureReporting(0x0201, 0x001C, 0x30, 5, 300, 1) + 
+               zigbee.configureReporting(0x0201, 0x0029, 0x19, 5, 300, 1) + 
+               zigbee.configureReporting(0x0201, 0x0023, 0x30, 5, 300, 1) + 
+               zigbee.configureReporting(0x0202, 0x0000, 0x30, 5, 300, 1) [cite: 15]
+
+    return cmds
+}
+ 
+def refresh() {
+    if (dbgEnable) log.debug "Refresh requested" [cite: 16]
+ 
+    return zigbee.readAttribute(0x0000, 0x0007) + [cite: 16]
+           zigbee.readAttribute(0x0201, 0x0000) + [cite: 17]
+           zigbee.readAttribute(0x0201, 0x0011) + [cite: 17]
+           zigbee.readAttribute(0x0201, 0x0012) + [cite: 17]
+           zigbee.readAttribute(0x0201, 0x001C) + [cite: 17]
+           zigbee.readAttribute(0x0201, 0x001E) + [cite: 17]
+           zigbee.readAttribute(0x0201, 0x0023) + [cite: 17]
+           zigbee.readAttribute(0x0201, 0x0029) + [cite: 18]
+           zigbee.readAttribute(0x0001, 0x0020) + [cite: 18]
+           zigbee.readAttribute(0x0202, 0x0000) [cite: 18]
+}
+ 
+def raiseHeatLevel() { changeSetpoint("heatingSetpoint", 1) } [cite: 18]
+def lowerHeatLevel() { changeSetpoint("heatingSetpoint", -1) } [cite: 19]
+def raiseCoolLevel() { changeSetpoint("coolingSetpoint", 1) } [cite: 19]
+def lowerCoolLevel() { changeSetpoint("coolingSetpoint", -1) } [cite: 19]
+
+private def changeSetpoint(String attributeName, int delta) {
+    if (isHoldOn()) return [cite: 18, 19]
+    def currentVal = device.currentValue(attributeName) ?: (attributeName.contains("Heat") ? 68 : 74) [cite: 18, 19]
+    int nextLevel = currentVal.toInteger() + delta [cite: 18, 19]
+    
+    if (attributeName == "heatingSetpoint") {
+        setHeatingSetpoint(nextLevel) [cite: 18, 19]
+    } else {
+        setCoolingSetpoint(nextLevel) [cite: 19, 20]
+    }
+}
+ 
+def parse(String description) {
+    if (dbgEnable) log.debug "Parsing: $description" [cite: 20]
+    def map = [:]
+ 
+    if (description?.startsWith("read attr -") || description?.startsWith("catchall:")) { [cite: 20]
+        def descMap = zigbee.parseDescriptionAsMap(description) [cite: 20]
+        def clusterInt = descMap.cluster ? zigbee.hexStringToInt(descMap.cluster) : null
+        def attrInt = descMap.attrId ? zigbee.hexStringToInt(descMap.attrId) : null
+        
+        switch(clusterInt) {
+            case 0x0201: // Thermostat Cluster
+                if (attrInt == 0x0000) {
+                    map.name = "temperature" [cite: 20]
+                    map.value = getTemperature(descMap.value) [cite: 21]
+                    map.unit = getTemperatureScale()
+                } else if (attrInt == 0x0011) {
+                    map.name = "coolingSetpoint" [cite: 21]
+                    map.value = getTemperature(descMap.value) [cite: 21]
+                    map.unit = getTemperatureScale()
+                } else if (attrInt == 0x0012) {
+                    map.name = "heatingSetpoint" [cite: 22]
+                    map.value = getTemperature(descMap.value) [cite: 22]
+                    map.unit = getTemperatureScale()
+                } else if (attrInt == 0x001C) {
+                    map.name = "thermostatMode" [cite: 22]
+                    map.value = getModeMap()[descMap.value] ?: "off" [cite: 22]
+                } else if (attrInt == 0x001E) {
+                    map.name = "thermostatRunMode" [cite: 24]
+                    map.value = getModeMap()[descMap.value] ?: "off" [cite: 24]
+                } else if (attrInt == 0x0023) {
+                    map.name = "thermostatHoldMode" [cite: 25]
+                    map.value = getHoldModeMap()[descMap.value] ?: "holdOff" [cite: 25]
+                } else if (attrInt == 0x0029) {
+                    map.name = "thermostatOperatingState" [cite: 25]
+                    map.value = getThermostatOperatingStateMap()[descMap.value] ?: "idle" [cite: 25]
+                }
+                break
+                
+            case 0x0202: // Fan Control
+                if (attrInt == 0x0000) {
+                    map.name = "thermostatFanMode" [cite: 23]
+                    map.value = getFanModeMap()[descMap.value] ?: "fanAuto" [cite: 23]
+                }
+                break
+                
+            case 0x0001: // Power Configuration
+                if (attrInt == 0x0020) {
+                    map.name = "battery" [cite: 23]
+                    map.value = getBatteryLevel(descMap.value) [cite: 24]
+                    map.unit = "%"
+                }
+                break
+                
+            case 0x0000: // Basic
+                if (attrInt == 0x0007) {
+                    map.name = "powerSource" [cite: 26]
+                    map.value = getPowerSource()[descMap.value] ?: "unknown" [cite: 26]
+                }
+                break
+        }
+    }
+ 
+    if (map) {
+        map.descriptionText = "${device.displayName} ${map.name} is ${map.value}${map.unit ?: ''}"
+        if (txtEnable) log.info map.descriptionText
+        return createEvent(map)
+    }
+    return null
+}
+ 
+def getModeMap() { ["00":"off", "01":"auto", "03":"cool", "04":"heat", "05":"emergency heat", "06":"precooling", "07":"fan only", "08":"dry", "09":"sleep"] } [cite: 27, 28]
+def modes() { ["off", "cool", "heat", "emergencyHeat"] } [cite: 28]
+def getHoldModeMap() { ["00":"holdOff", "01":"holdOn"] } [cite: 28]
+def getPowerSource() { ["01":"24VAC", "03":"Battery", "81":"24VAC"] } [cite: 28]
+def getFanModeMap() { ["04":"fanOn", "05":"fanAuto"] } [cite: 29]
+def getThermostatOperatingStateMap() {
+    ["0000":"idle", "0001":"heating", "0002":"cooling", "0004":"fan only", "0005":"heating", "0006":"cooling", "0008":"heating", "0009":"heating", "000A":"heating", "000D":"heating", "0010":"cooling", "0012":"cooling", "0014":"cooling", "0015":"cooling"] [cite: 30, 31]
+}
+ 
+def getTemperature(value) {
+    if (value == null) return null [cite: 31]
+    def celsius = zigbee.hexStringToInt(value) / 100.0 [cite: 31]
+    return (getTemperatureScale() == "C") ? celsius : Math.round(celsiusToFahrenheit(celsius)) [cite: 31, 32]
+}
+ 
+def toggleHoldMode() {
+    String currentHoldMode = device.currentValue("thermostatHoldMode") ?: "holdOff" [cite: 32]
+    return (currentHoldMode == "holdOn") ? holdOff() : holdOn() [cite: 33, 34]
+}
+ 
+def setThermostatMode(String value) {
+    String normalizedValue = value.toLowerCase().replaceAll(/\s+(.)/) { match, group -> group.toUpperCase() } [cite: 34]
+    if (normalizedValue == "emergencyHeat") normalizedValue = "emergencyHeat"
+    if (this.hasProperty(normalizedValue) || this.respondsTo(normalizedValue)) {
+        "$normalizedValue"() [cite: 34]
+    } else {
+        log.error "Unsupported thermostat mode string requested: $value"
+    }
+}
+
+// Redirects the single standard string input payload selector to the exact downstream target actions
+def setThermostatFanMode(String value) { 
+    if (value == "fanOn" || value == "on") {
+        fanOn()
+    } else if (value == "fanAuto" || value == "auto") {
+        fanAuto()
+    } else {
+        log.error "Unsupported fan mode target selector: $value"
+    }
+}
+
+def setThermostatHoldMode(String value) { "$value"() } [cite: 34]
+ 
+def off() {
+    sendEvent(name: "thermostatMode", value: "off", descriptionText: "${device.displayName} mode is set to off") [cite: 34]
+    zigbee.writeAttribute(0x0201, 0x1C, 0x30, 0) [cite: 34]
+}
+ 
+def cool() {
+    sendEvent(name: "thermostatMode", value: "cool", descriptionText: "${device.displayName} mode is set to cool") [cite: 35]
+    zigbee.writeAttribute(0x0201, 0x1C, 0x30, 3) [cite: 35]
+}
+ 
+def heat() {
+    sendEvent(name: "thermostatMode", value: "heat", descriptionText: "${device.displayName} mode is set to heat") [cite: 35]
+    zigbee.writeAttribute(0x0201, 0x1C, 0x30, 4) [cite: 35]
+}
+ 
+def emergencyHeat() {
+    sendEvent(name: "thermostatMode", value: "emergencyHeat", descriptionText: "${device.displayName} mode is set to emergency heat") [cite: 35]
+    zigbee.writeAttribute(0x0201, 0x1C, 0x30, 5) [cite: 35]
+}
+ 
+def on() { fanOn() } [cite: 35]
+ 
+def fanOn() {
+    sendEvent(name: "thermostatFanMode", value: "fanOn", descriptionText: "${device.displayName} fan mode is set to fanOn") [cite: 35]
+    zigbee.writeAttribute(0x0202, 0x00, 0x30, 4) [cite: 35]
+}
+ 
+def auto() { /* Not supported directly by the Pearl heating profiles */ } [cite: 35]
+ 
+def fanAuto() {
+    sendEvent(name: "thermostatFanMode", value: "fanAuto", descriptionText: "${device.displayName} fan mode is set to fanAuto") [cite: 36]
+    zigbee.writeAttribute(0x0202, 0x00, 0x30, 5) [cite: 36]
+}
+ 
+def holdOn() {
+    sendEvent(name: "thermostatHoldMode", value: "holdOn", descriptionText: "${device.displayName} hold mode is set to holdOn") [cite: 36]
+    zigbee.writeAttribute(0x0201, 0x23, 0x30, 1) [cite: 36]
+}
+ 
+def holdOff() {
+    sendEvent(name: "thermostatHoldMode", value: "holdOff", descriptionText: "${device.displayName} hold mode is set to holdOff") [cite: 36]
+    zigbee.writeAttribute(0x0201, 0x23, 0x30, 0) [cite: 36]
+}
+ 
+private getBatteryLevel(rawValue) {
+    def intValue = zigbee.hexStringToInt(rawValue) [cite: 37]
+    def min = 21 [cite: 37]
+    def max = 30 [cite: 37]
+    def pct = ((intValue - min) / (max - min) * 100) as int [cite: 37]
+    return Math.max(0, Math.min(pct, 100))
+}
+
+private isHoldOn() {
+    return (device.currentValue("thermostatHoldMode") == "holdOn") [cite: 37]
+}
+ 
+def setHeatingSetpoint(degrees) {
+    processSetpoint(degrees, 0x12) [cite: 38]
+}
+ 
+def setCoolingSetpoint(degrees) {
+    processSetpoint(degrees, 0x11) [cite: 41]
+}
+
+private def processSetpoint(degrees, int attributeId) {
+    if (isHoldOn() || degrees == null) return [cite: 38, 41]
+    
+    def isC = (getTemperatureScale() == "C") [cite: 38, 41]
+    int maxTemp = isC ? 44 : 86 [cite: 38, 39, 41, 42]
+    int minTemp = isC ? 7 : 30 [cite: 39, 42]
+    
+    int degreesInteger = Math.round(degrees).toInteger() [cite: 38, 41]
+    degreesInteger = Math.max(minTemp, Math.min(degreesInteger, maxTemp))
+    
+    double celsius = isC ? degreesInteger : fahrenheitToCelsius(degreesInteger) [cite: 40, 43]
+    int finalValue = Math.round(celsius * 100).toInteger() [cite: 41, 44]
+    
+    String attrName = (attributeId == 0x12) ? "heatingSetpoint" : "coolingSetpoint" [cite: 41, 44]
+    sendEvent(name: attrName, value: degreesInteger, unit: getTemperatureScale(), descriptionText: "${device.displayName} ${attrName} set to ${degreesInteger}°${getTemperatureScale()}")
+    return zigbee.writeAttribute(0x0201, attributeId, 0x29, finalValue) [cite: 41, 44]
+}

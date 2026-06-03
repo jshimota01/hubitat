@@ -45,6 +45,13 @@
 			"description": "A virtual device driver that ties Presence, Sensor and Switch (Present/Open/On) capabilities.  Useful for connecting to Alexa, or having Presence give an on/off state "
 		  },
 		  {
+			"name": "Centralite Pearl Zigbee Thermostat",
+			"category": "Control",
+			"tags": [ "Dashboards", "Monitoring", "Thermostat", "Zigbee", "Driver" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/packageManifest.json",
+			"description": "A Zigbee Thermostat driver specific to the Centralite Pearl Thermostat device, (aka Centralite model 3157100). Driver includes FanCirculate feature and accounts for thermostat hardware lack of Auto mode "
+		  },
+		  {
 			"name": "Inverse Link Two Switches",
 			"category": "Convenience",
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],

@@ -1,0 +1,27 @@
+        // Custom commands 
+        //command "setTemperature"
+        //command "getPowerSource"
+ 
+        // thermostat capability commands
+        // setHeatingSetpoint(number)
+        // setCoolingSetpoint(number)
+        // off()
+        // heat()
+        // emergencyHeat()
+        // cool()
+        // setThermostatMode(enum)
+        // fanOn()
+        // fanAuto()
+        // fanCirculate()
+        // setThermostatFanMode(enum)
+        // auto()
+ 
+        // thermostat capability attributes
+        // temperature
+        // heatingSetpoint
+        // coolingSetpoint
+        // thermostatSetpoint
+        // thermostatMode (auto, emergency heat, heat, off, cool)
+        // thermostatFanMode (auto, on, circulate)
+        // thermostatOperatingState (heating, idle, pending cool, vent economizer, cooling, pending heat, fan only)
+ 

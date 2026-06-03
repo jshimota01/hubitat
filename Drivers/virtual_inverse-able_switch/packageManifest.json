@@ -13,7 +13,7 @@
       "name": "Virtual Inverse-able Switch w-autoOff and Toggle",
       "namespace": "jshimota",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/virtualInverse-ableSwitch.groovy",
-      "required": false,
+      "required": true,
       "oauth": false,
       "version": "0.2.3"
     }

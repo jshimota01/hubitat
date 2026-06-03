@@ -23,7 +23,6 @@
  * 2024-01-24 thanhl94 - prevent log warn when 0x0510 is received and will only log when debug is enabled
  * 2024-01-26 fix add of preference option for warnings
  * 2026-05-21 jshimota - v1.05 Performance Optimizations: Fixed isDelta zero-watt bug, removed scheduler thrashing, fixed race conditions, and event deduplication.
- * 2026-05-22 jshimota - v1.06 fix bug Null Pointer Exception due to reversed result/currentValue
  */
 
 import groovy.transform.Field
@@ -416,13 +415,11 @@ void handlePowerFactorValue(final long value) {
 void handleRmsCurrentValue(final long value) {
     final Integer multiplier = state.attributes[AC_CURRENT_MULTIPLIER_ID as String] as Integer
     final Integer divisor = state.attributes[AC_CURRENT_DIVISOR_ID as String] as Integer
-    
-    // FIXED: Added multiplier > 0 and divisor > 0 to prevent ArithmeticException
-    if (multiplier != null && divisor != null && multiplier > 0 && divisor > 0) {
+    if (multiplier != null && divisor != null) {
         final BigDecimal currentValue = state.values[RMS_CURRENT_ID as String] as BigDecimal
         BigDecimal result = value * multiplier / divisor
         result = result.setScale(1, RoundingMode.HALF_UP)
-        if (isDelta(result, currentValue, settings.amperageDelta as BigDecimal)) {
+        if (isDelta(currentValue, result, settings.amperageDelta as BigDecimal)) {
             state.values[RMS_CURRENT_ID as String] = result
             updateAttribute('amperage', result, 'A', 'physical')
             updatePowerFactor() // Optimized: Eliminated background scheduler write loop
@@ -437,16 +434,14 @@ void handleRmsCurrentValue(final long value) {
 void handleActivePowerValue(final long value) {
     final Integer multiplier = state.attributes[AC_POWER_MULTIPLIER_ID as String] as Integer
     final Integer divisor = state.attributes[AC_POWER_DIVISOR_ID as String] as Integer
-    
-    // FIXED: Added null checks before checking > 0
-    if (multiplier != null && divisor != null && multiplier > 0 && divisor > 0) {
+    if (multiplier > 0 && divisor > 0) {
         final BigDecimal currentValue = state.values[ACTIVE_POWER_ID as String] as BigDecimal
         BigDecimal result = (int)value * multiplier / divisor
         result = result.setScale(1, RoundingMode.HALF_UP)
-        if (isDelta(result, currentValue, settings.powerDelta as BigDecimal)) {
+        if (isDelta(currentValue, result, settings.powerDelta as BigDecimal)) {
             state.values[ACTIVE_POWER_ID as String] = result
             updateAttribute('power', result, 'W', 'physical')
-            updatePowerFactor()
+            updatePowerFactor() // Optimized: Eliminated background scheduler write loop
         }
     }
 }
@@ -458,13 +453,11 @@ void handleActivePowerValue(final long value) {
 void handleRmsVoltageValue(final long value) {
     final Integer multiplier = state.attributes[AC_VOLTAGE_MULTIPLIER_ID as String] as Integer
     final Integer divisor = state.attributes[AC_VOLTAGE_DIVISOR_ID as String] as Integer
-    
-    // FIXED: Added null checks before checking > 0
-    if (multiplier != null && divisor != null && multiplier > 0 && divisor > 0) {
+    if (multiplier > 0 && divisor > 0) {
         final BigDecimal currentValue = state.values[RMS_VOLTAGE_ID as String] as BigDecimal
         BigDecimal result = value * multiplier / divisor
         result = result.setScale(0, RoundingMode.HALF_UP)
-        if (isDelta(result, currentValue, settings.voltageDelta as BigDecimal)) {
+        if (isDelta(currentValue, result, settings.voltageDelta as BigDecimal)) {
             state.values[RMS_VOLTAGE_ID as String] = result
             updateAttribute('voltage', result, 'V', 'physical')
             updatePowerFactor()
@@ -543,16 +536,14 @@ void parseMeteringCluster(final Map descMap) {
     if (descMap.value == null || descMap.value == 'FFFF') { return } // invalid or unknown value
     final long value = hexStrToUnsignedInt(descMap.value)
     switch (descMap.attrInt as Integer) {
-	case ATTRIBUTE_READING_INFO_SET:
+        case ATTRIBUTE_READING_INFO_SET:
             final Long divisor = state.attributes[METERING_DIVISOR_ID as String] as Long
             final BigDecimal currentValue = state.values[ATTRIBUTE_READING_INFO_SET as String] as BigDecimal
-            
-            // FIXED: Added null check before checking > 0
-            if (divisor != null && divisor > 0) {
+            if (divisor > 0) {
                 BigDecimal result = value / divisor
                 result = result.setScale(1, RoundingMode.HALF_UP)
                 final String unit = state.attributes[METERING_UNIT_OF_MEASURE_ID as String] == 0 ? 'kWh' : ''
-                if (isDelta(result, currentValue, settings.energyDelta as BigDecimal)) {
+                if (isDelta(currentValue, result, settings.energyDelta as BigDecimal)) {
                     state.values[ATTRIBUTE_READING_INFO_SET as String] = result
                     updateAttribute('energy', result, unit, 'physical')
                 }
@@ -728,10 +719,9 @@ private static BigDecimal calculatePowerFactor(final BigDecimal rmsVoltage, fina
  * @return true if the value is over the minimum change, otherwise false
  */
 private boolean isDelta(final BigDecimal value, final BigDecimal previousValue, final BigDecimal minimumChange) {
-    // FIXED: Added 'minimumChange == null'
-    if (previousValue == null || minimumChange == null || minimumChange <= 0) return true
-    
+    if (previousValue == null || minimumChange <= 0) return true
     boolean result = (value - previousValue).abs() >= minimumChange
+    
     if (settings.logEnable) {
         log.debug "isDelta(value: ${value}, prev: ${previousValue}, min: ${minimumChange}) = ${result}"
     }
@@ -891,3 +881,4 @@ private void updatePowerFactor() {
     0x15: 'Discover Attributes Extended',
     0x16: 'Discover Attributes Extended Response'
 ]
+}
