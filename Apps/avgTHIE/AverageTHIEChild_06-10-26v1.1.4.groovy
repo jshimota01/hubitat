@@ -152,7 +152,7 @@ def mainPage() {
             input "powerSensors", "capability.powerMeter", title: "Power Sensors", multiple: true, required: false
         }
         section("Filtering Settings") {
-            input (name: "numberOption", type: "number", defaultValue: 10, range: "2..200", title: "Quantity of samples", description: "Lower is more responsive, higher is smoother.")
+            input (name: "numberOption", type: "number", defaultValue: 10, range: "1..200", title: "Quantity of samples (Qty 1 is total of all sensors)", description: "Lower is more responsive, higher is smoother.")
         }
         section("Logging Settings") {
             label title: "Child App Name", required: false
