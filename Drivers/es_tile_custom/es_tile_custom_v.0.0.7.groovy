@@ -18,7 +18,7 @@
  * 18Sep2023    thebearmay               Add Debug Logging option
  * 23Oct2023    thebearmay               Add serverIp as an atttribute
  * 18Nov2024    thebearmay    0.0.6      HE 2.4.0.x changes
- * 20Jun2026    jshimota      0.0.8      Resource Optimization Fixes
+ * 20Jun2026    jshimota      0.0.7      Gemini Fixes
  */
 
 import java.text.SimpleDateFormat
@@ -32,7 +32,7 @@ import groovy.transform.Field
 @Field static String minFwVersion = "2.3.6.121"
 
 @SuppressWarnings('unused')
-static String version() { return "0.0.8" } 
+static String version() { return "0.0.7" } 
 
 metadata {
     definition (
@@ -244,66 +244,106 @@ void refreshHTML(){
     def jSlurp = new JsonSlurper()
     def serverData = jSlurp.parseText(serverDataRaw)
     
-    // Pass the parsed serverData map down directly to minimize slurper overhead
-    nextCookieRefreshDur(serverData, tNow)
+    nextCookieRefreshDur()
     
-    def isCsrf = device.currentValue("csrf", true) == "true"
-    def isCookie = device.currentValue("cookieData", true) == "true"
-    def authSymbol = (isCsrf && isCookie) ? okSymFLD : notOkSymFLD
-    def cookieSymbol = isCookie ? okSymFLD : notOkSymFLD
-    def csrfSymbol = isCsrf ? okSymFLD : notOkSymFLD
+    def wkStr = "<table style='color:mediumblue;font-size:small'><tr><th>Auth Status: "
+    if(device.currentValue("csrf", true) == "true" && device.currentValue("cookieData", true) == "true") {
+       wkStr += okSymFLD
+    } else {
+        wkStr += notOkSymFLD
+    }
+    wkStr += "</th></tr><tr><td>&nbsp;&nbsp;Cookie: "
+    if(device.currentValue("cookieData", true) == "true") {
+       wkStr += okSymFLD
+    } else {
+        wkStr += notOkSymFLD
+    }
+    wkStr += "</td></tr><tr><td>&nbsp;&nbsp;CSRF: "
+    if(device.currentValue("csrf", true) == "true") {
+       wkStr += okSymFLD
+    } else {
+        wkStr += notOkSymFLD
+    }
+    wkStr += "</td></tr><tr><th>Cookie Data</th></tr>"
     
-    def baseTable = "<table style='color:mediumblue;font-size:small'><tr><th>Auth Status: ${authSymbol}</th></tr>" +
-                    "<tr><td>&nbsp;&nbsp;Cookie: ${cookieSymbol}</td></tr>" +
-                    "<tr><td>&nbsp;&nbsp;CSRF: ${csrfSymbol}</td></tr>" +
-                    "<tr><th>Cookie Data</th></tr>"
+    def wkStr2 = wkStr
+    wkStr += "<tr><td>Last Refresh: ${serverData.lastCookieRrshDt}</td></tr>"
     
-    def refreshDays = device.currentValue("cookieRefreshDays") ? device.currentValue("cookieRefreshDays").toInteger() : 0
     def startDate = Date.parse("E MMM dd HH:mm:ss z yyyy", serverData.lastCookieRrshDt).getTime()
+    def refreshDays = device.currentValue("cookieRefreshDays") ? device.currentValue("cookieRefreshDays").toInteger() : 0
     def nextDate = startDate + (86400000L * refreshDays)
     
     SimpleDateFormat sdf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-    def dateStr = sdf.format(nextDate)
-    def refreshRow = (nextDate > tNow) ? "<tr><td>Next Refresh: ${dateStr}</td></tr>" : "<tr><td style='color:red;font-weight:bold'>Missed Refresh: ${dateStr}</td></tr>"
-    
-    def isHeroku = (serverData.onHeroku == "true" || serverData.onHeroku)
-    updateAttr("serverLocation", isHeroku ? "Heroku" : "Local")
-    def herokuSymbol = isHeroku ? okSymFLD : notOkSymFLD
-    
-    def localSymbol = (serverData.isLocal == "true" || serverData.isLocal) ? okSymFLD : notOkSymFLD
-    def hostIp = serverData.serverHost ?: ""
-    def domainVal = device.currentValue("amazonDomain", true) ?: ""
-    
-    if(hostIp.length() > 7) {
-        updateAttr("serverIp", hostIp.substring(7))
+    if(nextDate > tNow){
+        wkStr += "<tr><td>Next Refresh: ${sdf.format(nextDate)}</td></tr>"
+    } else {
+        wkStr += "<tr><td style='color:red;font-weight:bold'>Missed Refresh: ${sdf.format(nextDate)}</td></tr>"
     }
+    wkStr += "</td></tr><tr><th>Server Data</th></tr>"
+    wkStr += "<tr><td>Heroku: "
+    if(serverData.onHeroku == "true" || serverData.onHeroku){
+        wkStr += okSymFLD
+        updateAttr("serverLocation", "Heroku")
+    } else {
+        wkStr += notOkSymFLD
+        updateAttr("serverLocation", "Local")
+    }
+    wkStr += "</td></tr><tr><td>Local Server: "
+    if(serverData.isLocal == "true" || serverData.isLocal) {
+       wkStr += okSymFLD
+    } else {
+        wkStr += notOkSymFLD
+    }
+    wkStr += "</td></tr><tr><td>Server IP: ${serverData.serverHost}</td></tr>"
     
-    // Build HTML 1
-    def wkStr = baseTable + "<tr><td>Last Refresh: ${serverData.lastCookieRrshDt}</td></tr>" + refreshRow +
-                "</td></tr><tr><th>Server Data</th></tr><tr><td>Heroku: ${herokuSymbol}</td></tr>" +
-                "<tr><td>Local Server: ${localSymbol}</td></tr><tr><td>Server IP: ${hostIp}</td></tr>" +
-                "<tr><td>Domain: ${domainVal}</td></tr></table>"
+    if(serverData.serverHost && serverData.serverHost.length() > 7) {
+        updateAttr("serverIp", "${serverData.serverHost}".substring(7))
+    }
+    wkStr += "<tr><td>Domain: ${device.currentValue("amazonDomain", true)}</td></tr>"
+    wkStr += "</table>"
     updateAttr("html", wkStr)
     
-    // Build HTML Alt
-    def wkStr2 = baseTable + "<tr><td>Last Refresh: ${device.currentValue("tmFromAtRrsh", true)} ago</td></tr>" +
-                 ((nextDate > tNow) ? "<tr><td>Next Refresh: ${device.currentValue("tm2NewAtRfrsh", true)}</td></tr>" : "<tr><td style='color:red;font-weight:bold'>Missed Refresh: ${dateStr}</td></tr>") +
-                 "</td></tr><tr><th>Server Data</th></tr><tr><td>Heroku: ${herokuSymbol}</td></tr>" +
-                 "<tr><td>Local Server: ${localSymbol}</td></tr><tr><td>Server IP: ${hostIp}</td></tr>" +
-                 "<tr><td>Domain: ${domainVal}</td></tr></table>"
+    wkStr2 += "<tr><td>Last Refresh: ${device.currentValue("tmFromAtRrsh", true)} ago</td></tr>"
+    if(nextDate > tNow){
+        wkStr2 += "<tr><td>Next Refresh: ${device.currentValue("tm2NewAtRfrsh", true)}</td></tr>"
+    } else {
+        wkStr2 += "<tr><td style='color:red;font-weight:bold'>Missed Refresh: ${sdf.format(nextDate)}</td></tr>"
+    }
+    wkStr2 += "</td></tr><tr><th>Server Data</th></tr>"
+    wkStr2 += "<tr><td>Heroku: "
+    if(serverData.onHeroku == "true" || serverData.onHeroku) {
+       wkStr2 += okSymFLD
+    } else {
+        wkStr2 += notOkSymFLD
+    }
+    wkStr2 += "</td></tr><tr><td>Local Server: "
+    if(serverData.isLocal == "true" || serverData.isLocal) {
+       wkStr2 += okSymFLD
+    } else {
+        wkStr2 += notOkSymFLD
+    }
+    wkStr2 += "</td></tr><tr><td>Server IP: ${serverData.serverHost}</td></tr>"
+    wkStr2 += "<tr><td>Domain: ${device.currentValue("amazonDomain", true)}</td></tr>"
+    wkStr2 += "</table>"
     updateAttr("htmlAlt", wkStr2)
-    
     if(debugEnabled) log.debug "HTML Refresh complete"    
 }
 
-String nextCookieRefreshDur(Map serverData, Long tNow) {
+String nextCookieRefreshDur() {
+    Long tNow = new Date().getTime()
+    def serverDataRaw = device.currentValue("serverData", true)
+    if(!serverDataRaw) return "Not Sure"
+    
+    def jSlurp = new JsonSlurper()
+    def serverData = jSlurp.parseText(serverDataRaw)
+    
     def refreshDaysVal = device.currentValue("cookieRefreshDays")
     Integer days = refreshDaysVal ? refreshDaysVal.toInteger() : 0
     String lastCookieRfsh = serverData.lastCookieRrshDt
     if(!lastCookieRfsh) { return "Not Sure" }
     
     Date lastDt = Date.parse("E MMM dd HH:mm:ss z yyyy", lastCookieRfsh)   
-    String dMinus = seconds2Duration(((tNow - lastDt.getTime()) / 1000) as Integer, false, 3)
+    String dMinus = seconds2Duration(((tNow - lastDt.getTime()) / 1000).toInteger(), false, 3)
     updateAttr("tmFromAtRrsh", dMinus)                                                                        
                                                                              
     Date nextDt = lastDt + days
@@ -319,25 +359,25 @@ String formatDt(Date dt, Boolean tzChg=true) {
     return (String)tf.format(dt)
 }
 
+private Long wnow(){ return (Long)now() }
+
 @SuppressWarnings('GroovyAssignabilityCheck')
 static String seconds2Duration(Integer itimeSec, Boolean postfix=true, Integer tk=2) {
-    Integer timeSec = itimeSec < 0 ? 0 : itimeSec
-    
-    // Efficient native integer division instead of forcing double parsing math operations
-    Integer years = timeSec / 31536000; timeSec -= years * 31536000
-    Integer months = timeSec / 2592000; timeSec -= months * 2592000
-    Integer days = timeSec / 86400; timeSec -= days * 86400
-    Integer hours = timeSec / 3600; timeSec -= hours * 3600
-    Integer minutes = timeSec / 60; timeSec -= minutes * 60
-    Integer seconds = timeSec % 60
-    
+    Integer timeSec = itimeSec
+    if(timeSec < 0) timeSec = 0
+    Integer years = Math.floor(timeSec / 31536000); timeSec -= years * 31536000
+    Integer months = Math.floor(timeSec / 2592000); timeSec -= months * 2592000
+    Integer days = Math.floor(timeSec / 86400); timeSec -= days * 86400
+    Integer hours = Math.floor(timeSec / 3600); timeSec -= hours * 3600
+    Integer minutes = Math.floor(timeSec / 60); timeSec -= minutes * 60
+    Integer seconds = Integer.parseInt((timeSec % 60) as String, 10)
+    Map d = [y: years, mn: months, d: days, h: hours, m: minutes, s: seconds]
     List l = []
-    if(days > 0) { l.push("${days} ${pluralize(days, "day")}") }
-    if(hours > 0) { l.push("${hours} ${pluralize(hours, "hour")}") }
-    if(minutes > 0) { l.push("${minutes} ${pluralize(minutes, "min")}") }
-    if(seconds > 0) { l.push("${seconds} ${pluralize(seconds, "sec")}") }
-    
-    return l.size() ? "${l.take(tk ?: 2)?.join(", ")}${postfix ? " ago" : sBLANK}" : "0 sec"
+    if(d.d > 0) { l.push("${d.d} ${pluralize(d.d, "day")}") }
+    if(d.h > 0) { l.push("${d.h} ${pluralize(d.h, "hour")}") }
+    if(d.m > 0) { l.push("${d.m} ${pluralize(d.m, "min")}") }
+    if(d.s > 0) { l.push("${d.s} ${pluralize(d.s, "sec")}") }
+    return l.size() ? "${l.take(tk ?: 2)?.join(", ")}${postfix ? " ago" : sBLANK}".toString() : "0 sec"
 }
 
 static String pluralize(Integer itemVal, String str) { return (itemVal > 1) ? str+"s" : str }
