@@ -21,11 +21,10 @@
  * 2021-12-24    jshimota      0.2.1       Clean up of name and manifest package
  * 2023-09-22    jshimota      0.2.2       Cleanup log/debug checks
  * 2024-01-26    jshimota      0.2.3       Optimized auto-toggle branches and tracking states
- * 2026-06-22    jshimota      0.2.4       Gemini check - Fixed reversed autoOffOnFired bug, preference type null pointer crash protection, and optimized out state.device
- * 2026-06-22    jshimota      0.2.5       Gemini error check Fixed parent signature to 'this', removed isStateChange loop vectors, fixed 1 hour typo
+ * 2026-06-22    jshimota      0.2.4       Gemini - Fixed reversed autoOffOnFired bug, preference type null pointer crash protection, and optimized out state.device
  */
  
-static String version() { return '0.2.5' }
+static String version() { return '0.2.4' }
  
 metadata {
     definition(
@@ -52,7 +51,7 @@ metadata {
                   ["10":"10 seconds"],["15":"15 seconds"],["20":"20 seconds"],["30":"30 seconds"],
                   ["45":"45 seconds"],["60":"1 minute"],["120":"2 minutes"],["300":"5 minutes"],
                   ["600":"10 minutes"],["900":"15 minutes"],["1200":"20 minutes"],["1800":"30 minutes"],
-                  ["2700":"45 minutes"],["3600":"1 hour"] // Fixed: Typo fixed from 3200 to 3600
+                  ["2700":"45 minutes"],["3200":"1 hour"]
               ], defaultValue: "0"
     }
 }
@@ -66,14 +65,14 @@ void logsOff() {
  
 void on() {
     unschedule('toggle')
-    sendEvent(name: "switch", value: "on") // Fixed: Removed loop-vulnerable isStateChange: true
+    sendEvent(name: "switch", value: "on", isStateChange: true)
     state.autoOffOnFired = false
     
     if (reversed) {
-        parent?.componentOff(this) // Fixed: Changed 'device' to 'this' for correct parent handling
+        parent?.componentOff(device)
         if (txtEnable) log.info "${device.displayName} turned ON (reversed) → physical device OFF"
     } else {
-        parent?.componentOn(this)  // Fixed: Changed 'device' to 'this' for correct parent handling
+        parent?.componentOn(device)
         if (txtEnable) log.info "${device.displayName} turned ON → physical device ON"
     }
     autotoggle()
@@ -81,14 +80,14 @@ void on() {
  
 void off() {
     unschedule('toggle')
-    sendEvent(name: "switch", value: "off") // Fixed: Removed loop-vulnerable isStateChange: true
+    sendEvent(name: "switch", value: "off", isStateChange: true)
     state.autoOffOnFired = false
     
     if (reversed) {
-        parent?.componentOn(this)  // Fixed: Changed 'device' to 'this' for correct parent handling
+        parent?.componentOn(device)
         if (txtEnable) log.info "${device.displayName} turned OFF (reversed) → physical device ON"
     } else {
-        parent?.componentOff(this) // Fixed: Changed 'device' to 'this' for correct parent handling
+        parent?.componentOff(device)
         if (txtEnable) log.info "${device.displayName} turned OFF → physical device OFF"
     }
     autotoggle()
@@ -136,7 +135,7 @@ void initialize() {
     final String switchVal  = reversed ? "on" : "off"
     final String reversedMsg = reversed ? "REVERSED (switch=on → device off)" : "normal (switch=off → device off)"
  
-    sendEvent(name: "switch", value: switchVal)
+    sendEvent(name: "switch", value: switchVal, isStateChange: true)
  
     if (txtEnable) {
         log.info "${device.displayName} initialized: mode is ${reversedMsg}"

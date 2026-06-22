@@ -32,11 +32,10 @@
  * 2026-06-22   jshimota    0.2.2   Gemini recommendations for modernization and bug fixes
  * 2026-06-22   jshimota    0.2.3   Optimized schedule updates and fixed Quartz cron format
  * 2026-06-22   jshimota    0.2.4   Fixed UI text alignment and info/trace logging check bugs
- * 2026-06-22   jshimota    0.2.5   Added live current date fallback logic if override date is blank or old
  *
  */
 
-static String version() { return '0.2.5' }
+static String version() { return '0.2.4' }
 import java.text.SimpleDateFormat
 import java.time.*
 
@@ -189,7 +188,7 @@ def pollSunRiseSet() {
     }
 
     def targetDate
-    if (useCDate || !usedDate) { // Fixed: Safely fallback to today if useCDate is true OR override input is empty
+    if (useCDate) {
         def sdf = new SimpleDateFormat("yyyy-MM-dd")  
         sdf.setTimeZone(location.timeZone)
         targetDate = sdf.format(new Date(now()))
@@ -198,7 +197,7 @@ def pollSunRiseSet() {
     }
 
     def requestParams = [ uri: "https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&tzid=${tz}&date=${targetDate}&formatted=0" ]
-    if (logEnable) log.info "SunRiseSet execution targeting API request date: ${targetDate}"
+    if (logEnable) log.info "SunRiseSet execution targeting API request date: ${targetDate}" // Fixed: Flipped from traceEnable check to logEnable check
     
     asynchttpGet("sunRiseSetHandler", requestParams)
 }
@@ -255,7 +254,7 @@ def sunRiseSetHandler(resp, data) {
         state.usedTwilightBegin = usedTwilightBegin
         state.usedTwilightEnd = usedTwilightEnd
 
-        if (useCDate || !usedDate) { // Fixed: Safely enforce state.usedDate sync with actual API execution target
+        if (useCDate) {
             def sdf = new SimpleDateFormat("yyyy-MM-dd")  
             sdf.setTimeZone(location.timeZone)
             state.usedDate = sdf.format(new Date(now()))

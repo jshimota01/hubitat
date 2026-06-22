@@ -1,6 +1,6 @@
 /*
  *
- * Original Code Model - Copyright 2024 C Steele
+ *	Original Code Model - Copyright 2024 C Steele
  *
  * Twilight Parser
  *
@@ -27,16 +27,14 @@
  * 2024-04-10   jshimota    0.1.7   added functions to connect to HE Global Variables
  * 2024-04-28   jshimota    0.1.8   implemented epoch - later proved unnecessary  - left it for now
  * 2024-04-28   jshimota    0.1.9   implemented hard connection to HE Globals and fixed logging
- * 2024-11-10   jshimota    0.2.0   Added formatted values to be used in custom tiles
- * 2024-12-01   jshimota    0.2.1   Changed SDF to lowercase for formatted dates
+ * 2024-11-10   jshimota	0.2.0   Added formatted values to be used in custom tiles
+ * 2024-12-01   jshimota	0.2.1	Changed SDF to lowercase for formatted dates
  * 2026-06-22   jshimota    0.2.2   Gemini recommendations for modernization and bug fixes
  * 2026-06-22   jshimota    0.2.3   Optimized schedule updates and fixed Quartz cron format
- * 2026-06-22   jshimota    0.2.4   Fixed UI text alignment and info/trace logging check bugs
- * 2026-06-22   jshimota    0.2.5   Added live current date fallback logic if override date is blank or old
  *
  */
 
-static String version() { return '0.2.5' }
+static String version() { return '0.2.3' }
 import java.text.SimpleDateFormat
 import java.time.*
 
@@ -93,9 +91,9 @@ metadata {
         input name: "autoUpdate", type: "bool", title: "Enable automatic update?", defaultValue: true, required: true
         input name: "autoUpdateInterval", type: "enum", multiple: false, options: [["1":"Every Minute"],["60":"Hourly"],["720":"12 Hours (Noon & Midnight)"],["1440":"Nightly (Every day at 1am)"]], title: "Auto Update Interval", description: "Time between automatic updates", defaultValue: "1440", required: true
         
-        input name: "logEnable", type: "bool", title: "Enable descriptionText logging", description: "Log normal device process operations (Info)", defaultValue: true
-        input name: "debugEnable", type: "bool", title: "<b>Enable debug logging</b>", description: "Turn on temporary debug logs", defaultValue: false
-        input name: "traceEnable", type: "bool", title: "<b>Enable trace logging</b>", description: "Turn on deep driver execution step logging", defaultValue: false
+        input name: "logEnable", type: "bool", title: "Enable description text logging", description: "Enable normal Logging", defaultValue: true
+        input name: "debugEnable", type: "bool", title: "<b>Enable debug logging</b>", description: "Enable Debug Logging", defaultValue: false
+        input name: "traceEnable", type: "bool", title: "<b>Enable trace logging?</b>", description: "Enable Trace Logging", defaultValue: false
     }
 }
 
@@ -189,7 +187,7 @@ def pollSunRiseSet() {
     }
 
     def targetDate
-    if (useCDate || !usedDate) { // Fixed: Safely fallback to today if useCDate is true OR override input is empty
+    if (useCDate) {
         def sdf = new SimpleDateFormat("yyyy-MM-dd")  
         sdf.setTimeZone(location.timeZone)
         targetDate = sdf.format(new Date(now()))
@@ -198,7 +196,7 @@ def pollSunRiseSet() {
     }
 
     def requestParams = [ uri: "https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&tzid=${tz}&date=${targetDate}&formatted=0" ]
-    if (logEnable) log.info "SunRiseSet execution targeting API request date: ${targetDate}"
+    if (traceEnable) log.info "SunRiseSet execution targeting API request date: ${targetDate}"
     
     asynchttpGet("sunRiseSetHandler", requestParams)
 }
@@ -255,7 +253,7 @@ def sunRiseSetHandler(resp, data) {
         state.usedTwilightBegin = usedTwilightBegin
         state.usedTwilightEnd = usedTwilightEnd
 
-        if (useCDate || !usedDate) { // Fixed: Safely enforce state.usedDate sync with actual API execution target
+        if (useCDate) {
             def sdf = new SimpleDateFormat("yyyy-MM-dd")  
             sdf.setTimeZone(location.timeZone)
             state.usedDate = sdf.format(new Date(now()))
