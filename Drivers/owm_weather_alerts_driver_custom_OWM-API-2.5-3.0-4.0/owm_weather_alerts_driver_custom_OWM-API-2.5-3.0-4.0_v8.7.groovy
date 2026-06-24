@@ -47,20 +47,20 @@
 /*
     Last Update 06/24/2026
   
-    V0.8.7  06/24/2026  JAS     Cleaned missing routing ifreInstalled, fixed pollOWM and pollData
-	V0.8.6  06/24/2026  JAS     Added status and lastChecked attributes to track API health.
-    V0.8.5  06/24/2026  JAS     Began - OWM icons placed into Git
-    V0.8.4  06/24/2026  JAS     Split to 3rd branch to include all API's 2.5/3.0 and 4.0
-    V0.7.3d 06/23/2026  JAS         Made old version cuz my new one is broken on 4.0 api
-    V0.7.3c 06/24/2026  JAS         updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
-    V0.7.3b    06/10/2026    JAS        updating to match Orig Auth version + bug found on rainTodayPublish.
-    V0.7.3     03/19/2026    JAS     Clear NWS alerts after they expire (@rschumaker).
-    V0.7.2     01/17/2026    JAS        Replaced small icons with unicode characters in dashboard tiles.
-    V0.7.1b 10/26/2024    JAS        Custom HTML tile
-    V0.7.1     07/29/2024    JAS     Added attribute 'alertDescrFull' that contain the full text of up to 10 current alerts.
-    V0.7.0     05/13/2024    JAS        Corrected moon_phase.
-    V0.6.9     04/17/2024    JAS        Added moonrise, moonset and moon_phase attributes.
-    V0.6.8b    09/2/2023    JAS     1st jas custom html tile
+    V0.8.7  	06/24/2026    JAS     Cleaned missing routing ifreInstalled, fixed pollOWM and pollData
+	V0.8.6 		06/24/2026    JAS     Added status and lastChecked attributes to track API health.
+    V0.8.5  	06/24/2026    JAS     Began - OWM icons placed into Git
+    V0.8.4  	06/24/2026    JAS     Split to 3rd branch to include all API's 2.5/3.0 and 4.0
+    V0.7.3d 	06/23/2026    JAS     Made old version cuz my new one is broken on 4.0 api
+    V0.7.3c 	06/24/2026	  JAS     updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
+    V0.7.3b		06/10/2026    JAS     updating to match Orig Auth version + bug found on rainTodayPublish.
+    V0.7.3		03/19/2026    JAS     Clear NWS alerts after they expire (@rschumaker).
+    V0.7.2		01/17/2026    JAS     Replaced small icons with unicode characters in dashboard tiles.
+    V0.7.1b		10/26/2024    JAS     Custom HTML tile
+    V0.7.1		07/29/2024    JAS     Added attribute 'alertDescrFull' that contain the full text of up to 10 current alerts.
+    V0.7.0		05/13/2024    JAS     Corrected moon_phase.
+    V0.6.9		04/17/2024    JAS     Added moonrise, moonset and moon_phase attributes.
+    V0.6.8b		09/02/2023    JAS     1st jas custom html tile
 */
 
 static String version()    {  return '0.8.7'  }
@@ -226,7 +226,9 @@ metadata {
             input 'city', 'text', required: true, defaultValue: 'City or Location name forecast area', title: 'City name'
             input 'pollIntervalForecast', 'enum', title: 'External Source Poll Interval (daytime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
             input 'pollIntervalForecastnight', 'enum', title: 'External Source Poll Interval (nighttime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
-            input 'txtEnable', 'bool', title: 'Enable Extended Logging', description: '<i>Extended logging will turn off automatically after 30 minutes.</i>', required: true, defaultValue: false
+            input 'dbgEnable', 'bool', title: 'Enable Debug Logging', description: '<i>Debug logging will turn off automatically after 30 minutes. CURRENTLY UNUSED</i>', required: true, defaultValue: false
+            input 'txtEnable', 'bool', title: 'Enable Description Text Logging', description: '<i>Info and Description Text logging - Enabled by default</i>', required: true, defaultValue: true
+            input 'wrnEnable', 'bool', title: 'Enable Warning Logging', description: '<i>Warning logging is generally useful but can be turned off. It is on by default</i>', required: true, defaultValue: true
             input 'alertSource', 'enum', required: true, defaultValue: sONE, title: 'Weather Alert Source<br>0=None 1=OWM or 2=Weather.gov (US only)', options: [0:sZERO, 1:sONE, 2:sTWO]
             input 'tempFormat', 'enum', required: true, defaultValue: 'Fahrenheit (°F)', title: 'Display Unit - Temperature: Fahrenheit (°F) or Celsius (°C)',  options: ['Fahrenheit (°F)', 'Celsius (°C)']
             input 'TWDDecimals', 'enum', required: true, defaultValue: sZERO, title: 'Display decimals for Temperature & Wind Speed', options: [0:sZERO, 1:sONE, 2:sTWO, 3:'3', 4:'4']
@@ -304,7 +306,7 @@ void pollSunRiseSet() {
 // <<<<<<<<<< Begin OWM Poll Routines >>>>>>>>>>
 void pollOWMData() {
     if( apiKey == null ) {
-        LOGWARN('OpenWeatherMap API Key not found.  Please configure in preferences.')
+    if (wrnEnable) log.warn ('OpenWeatherMap API Key not found.  Please configure in preferences.')
         return
     }
 
@@ -314,12 +316,12 @@ void pollOWMData() {
 
     Map ParamsOWM
     ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
-    LOGINFO('Poll OpenWeatherMap.org: ' + ParamsOWM)
+    if (txtEnable) log.info ('Poll OpenWeatherMap.org: ' + ParamsOWM)
     asynchttpGet('pollOWMHandler', ParamsOWM)
 }
 
 void pollOWMHandler(resp, data) {
-    LOGINFO('Polling OpenWeatherMap.org')
+    if (txtEnable) log.info ('Polling OpenWeatherMap.org')
     
     // Capture execution timestamp contextually
     TimeZone tZ = TimeZone.getDefault()
@@ -327,15 +329,15 @@ void pollOWMHandler(resp, data) {
     sendEvent(name: "lastChecked", value: timestamp)
 
     if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-        LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
-        LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
+    if (wrnEnable) log.warn ('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
+    if (wrnEnable) log.warn (resp.getStatus() + sCOLON + resp.getErrorMessage())
         
         sendEvent(name: "status", value: "Error: ${resp.getStatus()}")
     }else{
         sendEvent(name: "status", value: "Success")
         
         Map owm = parseJson(resp.data)
-        LOGINFO('OpenWeatherMap Data: ' + owm.toString())
+    if (txtEnable) log.info ('OpenWeatherMap Data: ' + owm.toString())
         if(owm.toString()==sNULL) {
             pauseExecution(1000)
             pollOWMData()
@@ -361,9 +363,9 @@ void pollOWMHandler(resp, data) {
         }
         if(myGetData('is_light') != myGetData('is_lightOld')) {
             if(myGetData('is_light')==sTRU) {
-                LOGINFO(' Switching to Daytime schedule.')
+     if (txtEnable) log.info (' Switching to Daytime schedule.')
             }else{
-                LOGINFO(' Switching to Nighttime schedule.')
+    if (txtEnable) log.info (' Switching to Nighttime schedule.')
             }
             initialize_poll()
             myUpdData('is_lightOld', myGetData('is_light'))
