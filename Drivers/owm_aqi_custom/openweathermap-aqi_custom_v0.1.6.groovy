@@ -1,8 +1,7 @@
 /*
-    OpenWeatherMap-Air Quality - Custom
+	OpenWeatherMap-Air Quality - Detailed
     Modified from Byrin's original
 
-0.1.7 - Integrated AirNowCity via OWM Geo API and stabilized null/empty checks JAS
 0.1.6 - cleaned debug and text logging JAS
 0.1.5 - Added user editable lat/long, user editable tile width
 0.1.4 - Added AQI tile
@@ -10,7 +9,7 @@
 0.1.2 - Fixed "then" statement. (I'm getting too old for this.") 2022-10-03
 0.1.1 - Changed Hex value returned to have # in front. Easier to assign to a light. 2022-10-01
 */
-static String version()    {  return '0.1.7'  }
+static String version()	{  return '0.1.6'  }
 import groovy.transform.Field
 
 
@@ -29,7 +28,6 @@ metadata {
         attribute "AQIColorCode", "string"
         attribute "PrimaryFactor", "string"
         attribute "AlertTile", "string"
-        attribute "AirNowCity", "string"
 
         command 'pollData'
     }
@@ -58,21 +56,17 @@ void pollAQI() {
 void pollAQIHandler(resp, data) {
     if(resp.getStatus() == 200 || resp.getStatus() == 207) {
         Map aqi = parseJson(resp.data)
-        
-        // Bulletproof check for null payload, empty maps, or missing 'list' entries
-        if(!aqi || !aqi.list || !aqi.list[0]) {
-            if (dbgEnable) log.debug "AQI payload was null or empty. Retrying in 30 seconds..."
-            pauseExecution(30000) 
+        if(aqi.toString()==sNULL) {
+            pauseExecution(30000) //5 minute pause
             pollAQI()
             return
         }
-        
         def name = 'airQualityIndex'
         def value = aqi.list[0].main.aqi
 
         def descriptionText = "${device.displayName} ${name} is ${value}"
-//        if (txtEnable) log.info "${descriptionText}"
-//        sendEvent(name: name,value: value,descriptionText: descriptionText,unit: unit)
+//		if (txtEnable) log.info "${descriptionText}"
+//		sendEvent(name: name,value: value,descriptionText: descriptionText,unit: unit)
 
         // Here begins my modification (SJ)
         def int aQItemp =0
@@ -234,12 +228,12 @@ void pollAQIHandler(resp, data) {
         sendEvent(name: name,value: value,descriptionText: descriptionText,unit: "mg/m^3")
 
         name = 'airQualityIndex'
-//        def value = aqi.list[0].main.aqi
+//		def value = aqi.list[0].main.aqi
 
-//        def descriptionText = "${device.displayName} ${name} is ${value}"
-//        if (txtEnable) log.info "${descriptionText}"
-//        sendEvent(name: name,value: value,descriptionText: descriptionText,unit: unit)
-//        name = 'AQI'
+//		def descriptionText = "${device.displayName} ${name} is ${value}"
+//		if (txtEnable) log.info "${descriptionText}"
+//		sendEvent(name: name,value: value,descriptionText: descriptionText,unit: unit)
+//		name = 'AQI'
         descriptionText = "${device.displayName} ${name} using ${aQIfactor}, AQI is ${aQI}"
         if (txtEnable) log.info "${descriptionText}"
         descriptionText = "${device.displayName} ${name} is ${aQI} Condition is ${aQIfactor}"
@@ -298,38 +292,12 @@ void refresh() {
 
 void installed() {
     schedule("0 0/30 * 1/1 * ? *", pollAQI) //every half hour
-    schedule("5 0/30 * 1/1 * ? *", pollCityName) 
-}
-
-void pollData() {
-    pollAQI()
-    pollCityName()
 }
 
 void uninstalled() {
     unschedule()
 }
 
-void pollCityName() {
-    if( apiKey == null ) return
-    
-    Map paramsGeo = [ 
-        uri: "https://api.openweathermap.org/geo/1.0/reverse?lat=${locLat}&lon=${locLon}&limit=1&appid=${apiKey}", 
-        timeout: 20 
-    ]
-    if (dbgEnable) log.debug "Polling City Name Params: ${paramsGeo}"
-    asynchttpGet('pollCityNameHandler', paramsGeo)
-}
-
-void pollCityNameHandler(resp, data) {
-    if(resp.getStatus() == 200 || resp.getStatus() == 207) {
-        def geoData = parseJson(resp.data)
-        if(geoData && geoData[0]?.name) {
-            String cityName = geoData[0].name
-            if (txtEnable) log.info "${device.displayName} city is ${cityName}"
-            sendEvent(name: "AirNowCity", value: cityName, descriptionText: "City resolved to ${cityName}")
-        }
-    } else if (dbgEnable) {
-        log.debug "Geo API failed with status ${resp.getStatus()}"
-    }
+void pollData() {
+    pollAQI()
 }
