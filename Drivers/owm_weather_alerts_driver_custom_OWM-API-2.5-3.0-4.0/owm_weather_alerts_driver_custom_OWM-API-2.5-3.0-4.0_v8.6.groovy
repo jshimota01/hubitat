@@ -46,9 +46,8 @@
 */
 /*
     Last Update 06/24/2026
-  
-    V0.8.7  06/24/2026  JAS     Cleaned missing routing ifreInstalled, fixed pollOWM and pollData
-	V0.8.6  06/24/2026  JAS     Added status and lastChecked attributes to track API health.
+    
+    V0.8.6  06/24/2026  JAS     Added status and lastChecked attributes to track API health.
     V0.8.5  06/24/2026  JAS     Began - OWM icons placed into Git
     V0.8.4  06/24/2026  JAS     Split to 3rd branch to include all API's 2.5/3.0 and 4.0
     V0.7.3d 06/23/2026  JAS         Made old version cuz my new one is broken on 4.0 api
@@ -63,7 +62,7 @@
     V0.6.8b    09/2/2023    JAS     1st jas custom html tile
 */
 
-static String version()    {  return '0.8.7'  }
+static String version()    {  return '0.8.6'  }
 import groovy.transform.Field
 
 iconLocation = (!iconLocation || iconLocation == null) ? 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4/owm-icons/' : iconLocation
@@ -264,6 +263,7 @@ metadata {
 
 // <<<<<<<<<< Begin Sunrise-Sunset Poll Routines >>>>>>>>>>
 void pollSunRiseSet() {
+    if(ifreInstalled()) { updated(); return }
     TimeZone tZ= TimeZone.getDefault()
 
     Date dnow= new Date()
@@ -303,6 +303,7 @@ void pollSunRiseSet() {
 
 // <<<<<<<<<< Begin OWM Poll Routines >>>>>>>>>>
 void pollOWMData() {
+    if(ifreInstalled()) { updated(); return }
     if( apiKey == null ) {
         LOGWARN('OpenWeatherMap API Key not found.  Please configure in preferences.')
         return
@@ -336,6 +337,7 @@ void pollOWMHandler(resp, data) {
         
         Map owm = parseJson(resp.data)
         LOGINFO('OpenWeatherMap Data: ' + owm.toString())
+        if(ifreInstalled()) { updated(); return }
         if(owm.toString()==sNULL) {
             pauseExecution(1000)
             pollOWMData()
