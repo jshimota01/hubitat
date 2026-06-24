@@ -45,105 +45,15 @@
 	Last Update 06/09/2026
 	{ Left room below to document version changes...}
 
-    V0.7.3c 06/24/2026  updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
-    V0.7.3b	06/10/2026	updating to match Orig Auth version + bug found on rainTodayPublish.
-    V0.7.3	03/19/2026	Clear NWS alerts after they expire (@rschumaker).
-	V0.7.2	01/17/2026	Replaced small icons with unicode charactersin dashboard tiles.
-	V0.7.1b 10/26/2024	JAS - Custom HTML tile
-    V0.7.1	07/29/2024	Added attribute 'alertDescrFull' that contain the full text of up to 10 current alerts.
-    V0.7.0	05/13/2024	Corrected moon_phase.
-    V0.6.9	04/17/2024	Added moonrise, moonset and moon_phase attributes.
-    V0.6.8b	09/2/2023	(jas custom html tile)
-    V0.6.8	08/31/2023	Added pull request from @nh.schottfam to display sun 'altitude' & 'azimuth' as stand-alone optional attributes. Code cleanups.
-    V0.6.7	06/07/2023	Added pull request from @nh.schottfam to display 'City' as a stand-alone optional attribute.
-    V0.6.6	06/03/2023	Code clean-up & corrections from @nh.schottfam (Thanks!).
-    V0.6.5	05/30/2023	Changes to prevent errors and better report in situations where there is no sunrise or sunset.
-    V0.6.4	01/23/2023	Bug fix for wind_cardinal that is creating a "No Data" response w/ 3rd party tile apps.
-    V0.6.3	01/05/2023	Bug fix for myTile not showing icon when neither the 'Three day Forecast Tile' nor the 'Forecast High/Low Temperatures' Optional attributes are selected.
-    V0.6.2	08/23/2022	Added user selection of 2.5 or 3.5 OWM API Key; Moved Schedule Change notice to Extended Logging.
-    V0.6.1	08/22/2022	Removed the sunrise-sunset.org poll.
-    V0.6.0	08/20/2022	More corrections to sunrise/sunset data when when there is a Sunrise-Sunset.org failure.
-    V0.5.9	07/28/2022	Code clean-up and optimization (Thanks @nh.schottfam).
-    V0.5.8	07/26/2022	Fallback to hub location defaults and estimates for Sunrise-Sunset.org failure.
-    V0.5.7  06/12/2022  Both MyTile and the Three day Forecast Tile use the Icon and Text selected in the 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile' option.
-    V0.5.6	06/11/2022	Corrected 3 day tile icon to honor user's selection of Current or Forecast icon.
-    V0.5.5	06/10/2022	Corrected PoP1 & PoP2 from not displaying when extended precipitation forcast was selected.
-    V0.5.4	04/17/2022	Fallback for Sunrise-Sunset.org failure.
-	V0.5.3	08/11/2021	Exposed cloud coverage forecasts.
-	V0.5.2	01/26/2021	Corrected a display issue on Alerts.
-	V0.5.1	12/12/2020	Changes to dahboard tile logo/hyperlinks when using weather.gov for alerts and there is an alert.
-	V0.5.0	12/08/2020	Bug fix for 'forecast_textn' optional attributes.
-	V0.4.9	12/03/2020	New tinyurl for icons.  Added tinyurl for weather.gov alert poll.
-	V0.4.8	12/01/2020	Added ability to select Weather Alert source (none/OWM/Weather.gov {US Only}).
-	V0.4.7	11/26/2020	Bug fixes.  Fix timeouts on http calls (by @nh.schottfam).
-	V0.4.6	11/06/2020	Refactored the dashboard tiles.
-	V0.4.5	10/31/2020	Tweaked threedayfcstTile for small screens.
-	V0.4.4	10/30/2020	More code cleanups/reductions/optimizations by @nh.schottfam.
-	V0.4.3	10/29/2020	Bug fixes and the usual code cleanup/reduction/optimizations by @nh.schottfam.
-	V0.4.2	10/29/2020	Yet another Precip bux fix.
-	V0.4.1	10/29/2020	Move today's precip back to 'Daily'.  More bux fixes.
-	V0.4.0	10/28/2020	More Bux fixes for new Probability of Precipitation (PoP) from OWM.
-	V0.3.9	10/28/2020	Bux fixes for new Probability of Precipitation (PoP) from OWM.
-	V0.3.8	10/28/2020	Added Probability of Precipitation (PoP) from OWM.  Bug fixes and code and string reductions by @nh.schottfam).
-	V0.3.7	10/27/2020	Bug fixes.
-	V0.3.6	10/27/2020	Removed '+' from attribute names.  Three Day Tile now has optional 'Low/High' or 'High/Low' setting.
-	V0.3.5	10/25/2020	Bug fixes for null JSON returns.
-	V0.3.4	10/24/2020	Added indicator of multiple alerts in tiles. Minor bug fixes (by @nh.schottfam).
-	V0.3.3	10/23/2020	Code optimizations and minor bug fixes (by @nh.schottfam).
-	V0.3.2	10/22/2020	Removed 'NWS' from driver name, minor bug fixes.
-	V0.3.1	10/21/2020	Improved OWM URLs in the dashboard tiles to pull in location's city code (if available).
-	V0.3.0	10/21/2020	Better OWM URLs in the dashboard tiles.
-	V0.2.9	10/20/2020	Correcting some Tile displays from the last update.
-	V0.2.8	10/20/2020	Pulling Alerts from OWM instead of NWS.
-	V0.2.7	10/19/2020	Added forecast 'Morn', 'Day', 'Eve' and 'Night' temperatures for current day and tomorrow.
-	V0.2.6	10/07/2020	Change to use asynchttp for NWS alerts (by @nh.schottfam).
-	V0.2.5	10/02/2020	More string constant optimizations (by @nh.schottfam)
-	V0.2.4	09/27/2020	Fix to allow for use of multiple virtual devices, More string constant optimizations (by @nh.schottfam)
-	V0.2.3	09/24/2020	More string constant optimizations, and removal of white space characters (by @nh.schottfam)
-	V0.2.2	09/23/2020	Removing 'urgency' restrictions from alerts poll
-	V0.2.1	09/22/2020	Added forecast icon url attributes for tomorrow and day-after-tomorrow
-	V0.2.0	09/21/2020	Added forecast High/Low temp attributes for tomorrow and day-after-tomorrow
-	V0.1.9	09/16/2020	Removing 'severity' and 'certainty' restrictions from alerts poll
-	V0.1.8	09/13/2020	Re-worked Alerts to not be dependent on api.weather.gov returning a valid response code
-	V0.1.7	09/12/2020	Remove most DB accesses and string cleanup (by @nh.schottfam)
-	V0.1.6	09/08/2020	Restoring 'certainty' to weather.gov alert poll
-	V0.1.5	09/08/2020	Removed 'certainty' from weather.gov alert poll
-	V0.1.4	09/07/2020	Bug fix for NullPointerException on line 580
-	V0.1.3	09/05/2020	Improved Alert handling for dashboard tiles, again, various bug fixes
-	V0.1.2	07/02/2020	Bug fix sync MyTile and weatherSummary tiles upon alert update
-	V0.1.1	06/06/2020	Bug fix to exclude minutely and hourly data in poll
-	V0.1.0	05/07/2020	Improved Alert handling for dashboard tiles, various bug fixes
-	V0.0.9	04/24/2020	Continue to work on improving null handling, various bug fixes
-	V0.0.8	4/23/2020-2	Numerous bug fixes, better handling where alerts are not available, handling nulls
-	V0.0.7	04/23/2020	Numerous bug fixes, better handling where alerts are not available
-	V0.0.6	04/20/2020	Refactored much of the code, added Hubitat Package Manager compatibility
-	V0.0.5	04/19/2020	More code cleanup and optimizations (Thanks @nh.schottfam!)
-	V0.0.4	04/18/2020	Corrected forecast icon to always be 'day' instead of current time
-	V0.0.3	04/18/2020	More fixes on Alerts, mapped condition_code, weatherIcon(s)
-	V0.0.2	04/17/2020	Fixed Alerts on myTile and alertTile, Capitalized condition_text
-	V0.0.1	04/17/2020	Initial conversion from Dark Sky to OWM
-=========================================================================================================
-**ATTRIBUTES CAUTION**
-The way the 'optional' attributes work:
- - Initially, only the optional attributes selected will show under 'Current States' and will be available
-	in dashboard.
- - Once an attribute has been selected it too will show under 'Current States' and be available in dashboard.
-	<*** HOWEVER ***> If you ever de-select the optional attribute, it will still show under 'Current States'
-	and will still show as an attribute for dashboards **BUT IT'S DATA WILL NO LONGER BE REFRESHED WITH DATA
-	POLLS**.  This means what is shown on the 'Current States' and dashboard tiles for de-selected attributes
-	may not be current valid data.
- - To my knowledge, the only way to remove the de-selected attribute from 'Current States' and not show it as
-	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
-	attribute you do not want to show.
+	V1.0.1		06/24/2026		JAS		Rebuild from functional 2.5/3.0 version
+    V0.7.3c		06/24/2026		JAS		Updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
+    V0.7.3b		06/10/2026		JAS		Updating to match Orig Auth version + bug found on rainTodayPublish.
+    V0.7.3		03/19/2026		JAS		Clear NWS alerts after they expire (@rschumaker).
+	V0.7.2		01/17/2026		JAS		Replaced small icons with unicode charactersin dashboard tiles.
+	V0.7.1b		10/26/2024		JAS		Custom HTML tile
 */
 
-//file:noinspection GroovyUnusedAssignment
-//file:noinspection SpellCheckingInspection
-//file:noinspection unused
-//file:noinspection GroovyAssignabilityCheck
-//file:noinspection GrDeprecatedAPIUsage
-
-static String version()    {  return '0.9.6'  }
+static String version()    {  return '1.0.1'  }
 import groovy.transform.Field
 
 iconLocation = (!iconLocation || iconLocation == null) ? 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4/owm-icons/' : iconLocation
@@ -229,10 +139,9 @@ metadata {
         attribute 'moonrise', sSTR
         attribute 'moonset', sSTR
         attribute 'moon_phase', sSTR
-
         
 //	The attributes below are sub-groups of optional attributes.  They need to be listed here to be available
-//alert
+//alerts
 		attribute 'alert', sSTR
 		attribute 'alertTile', sSTR
 		attribute 'alertDescr', sSTR
@@ -313,7 +222,7 @@ metadata {
 			input 'pressureFormat', 'enum', required: true, defaultValue: 'Inches', title: 'Display Unit - Pressure: Inches or Millibar/Hectopascal',  options: ['Inches', 'Millibar', 'Hectopascal']
 			input 'rainFormat', 'enum', required: true, defaultValue: 'Inches', title: 'Display Unit - Precipitation: Inches or Millimeters',  options: ['Inches', 'Millimeters']
 			input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
-			//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
 			input 'iconLocation', 'text', required: false, defaultValue: '', title: 'Alternative Icon Location:<br><i>blank for default location</i>'
 			input 'iconType', 'bool', title: 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile: On=Current or Off=Forecast', required: true, defaultValue: false
 			input 'altCoord', 'bool', required: true, defaultValue: false, title: "Override Hub's location coordinates"
@@ -322,7 +231,7 @@ metadata {
 				input 'altLon', sSTR, title: 'Override location Longitude', required: false, defaultValue: location.longitude.toString(), description: '<br>Enter location Longitude<br>'
 			}
 			input 'settingEnable', 'bool', title: '<b>Display All Optional Attributes</b>', description: settingDescr, defaultValue: true
-	//build a Selector for each mapped Attribute or group of attributes
+//build a Selector for each mapped Attribute or group of attributes
 			attributesMap.each {
 				keyname, attribute ->
 				if (settingEnable) {
@@ -337,7 +246,6 @@ metadata {
 		}
 	}
 }
-
 
 // <<<<<<<<<< Begin Sunrise-Sunset Poll Routines >>>>>>>>>>
 void pollSunRiseSet() {

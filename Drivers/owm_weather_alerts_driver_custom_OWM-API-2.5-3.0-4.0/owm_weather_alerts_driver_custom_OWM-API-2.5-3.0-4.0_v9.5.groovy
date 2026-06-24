@@ -46,7 +46,7 @@
 */
 /*
     Last Update 06/24/2026
-	
+	v0.9.1-5	06/24/2026	  JAS     Trying to fix missing illuminated attribute
 	v0.9.0		06/24/2026	  JAS	  Fixed some more logging and put device name in log strings to debug
 	V0.8.9		06/24/2026	  JAS	  Added missing routines Gemini Found
     V0.8.8  	06/24/2026    JAS     Redid logging a bunch
@@ -66,7 +66,7 @@
     V0.6.8b		09/02/2023    JAS     1st jas custom html tile
 */
 
-static String version()    {  return '0.8.9'  }
+static String version()    {  return '0.9.5'  }
 import groovy.transform.Field
 
 iconLocation = (!iconLocation || iconLocation == null) ? 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4/owm-icons/' : iconLocation
@@ -498,26 +498,10 @@ void pollOWMHandler(resp, data) {
         myUpdData('wind_string', w_string_bft + ' from the ' + myGetData('wind_direction') + (myGetDataBD('wind') < 1.0 ? sBLK: ' at ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + myGetData(sDMETR)))
 
 		// JAS Live Illuminance & Illuminated Tile Calculation (NOT a provided value by OWM - used to be from sunrise/sunset tool which was removed
-        Integer luxValue = 5 // Default night baseline
-        if (myGetData('is_day') == 'true') {
-            // Standard clear sky solar lux baseline maximum (~10,000 lx)
-            Integer maxLux = 10000 
-            
-            // Factor down max potential light based on cloud cover percentage
-            Integer clouds = cloudCover != null ? cloudCover : 10
-            BigDecimal cloudFactor = (100 - (clouds * 0.75)) / 100
-            luxValue = Math.round(maxLux * cloudFactor).toInteger()
-            
-            // Jitter/Rounding control toggle check
-            if (luxjitter == true) {
-                luxValue = (Math.round(luxValue / 50) * 50).toInteger()
-            }
-        }
-        
-        // Push both the native number metric and your custom text tile attribute
-        myUpdData('illuminance', luxValue)
-        sendEvent(name: "illuminated", value: "${luxValue} lx")
-		
+// >>>>>>>>>> Begin Lux Processing <<<<<<<<<<
+		updateLux()
+// >>>>>>>>>> End Lux Processing <<<<<<<<<<
+
 		
 // >>>>>>>>>> End Process Standard Weather-Station Variables (Regardless of Forecast Selection)  <<<<<<<<<<
 
@@ -628,4 +612,165 @@ void initialize_poll() {
 void refresh() {
     if (dbgEnable) log.debug "${device.displayName} - refresh() called, redirecting to pollOWMData()"
     pollOWMData()
+}
+
+void updateLux(Boolean pollAgain=true) {
+if (dbgEnable) log.debug "${device.displayName} - Calling UpdateLux('${pollAgain}')"
+	if(pollAgain) {
+		String curTime = new Date().format('HH:mm', TimeZone.getDefault())
+		String newLight
+		if(curTime < myGetData('tw_begin') || curTime > myGetData('tw_end')) {
+			newLight =  sFLS
+		}else{
+			newLight =  sTRU
+		}
+		if(newLight != myGetData('is_lightOld') || myGetData('condition_id')==sNULL || myGetData('cloud')==sNULL) {
+			pollOWM()
+			return
+		}
+	}
+	def (Long lux, String bwn) = estimateLux(myGetData('condition_id').toInteger(), myGetData('cloud').toInteger())
+	myUpdData('illuminance', (!lux) ? sZERO : lux.toString())
+	myUpdData('illuminated', String.format('%,4d', (!lux) ? 0 : lux).toString())
+	myUpdData('bwn', bwn)
+	if(pollAgain) PostPoll()
+}
+
+def estimateLux(Integer condition_id, Integer cloud) {
+	Long lux
+	Boolean aFCC
+	aFCC = true
+	Double l
+	String bwn
+	TimeZone tZ					= TimeZone.getDefault() //TimeZone.getTimeZone(tz_id)
+	String lT					= new Date().format('yyyy-MM-dd\'T\'HH:mm:ssXXX', tZ)
+	Long localeMillis			= getEpoch(lT)
+	Long twilight_beginMillis
+	Long sunriseTimeMillis
+	Long noonTimeMillis
+	Long sunsetTimeMillis
+	Long twilight_endMillis
+
+	Date dnow= new Date()
+	String currDate = dnow.format('yyyy-MM-dd', tZ)
+	Date tSunrise, tSunset
+	tSunrise = (Date)todaysSunrise
+	tSunrise = (!tSunrise || tSunrise == null) ? Date.parse("yyyy-MM-dd hh:mm:ss", currDate + " 00:00:00") : tSunrise
+
+	tSunset = (Date)todaysSunset
+	if(!tSunset || tSunset == null){
+		String currYear = dnow.format('yyyy', tZ)
+		Date mar21= Date.parse("yyyy-MM-dd", currYear + '-03-21')
+		Date sep21= Date.parse("yyyy-MM-dd", currYear + '-09-21')
+		Boolean isBtwn= (dnow >= mar21 && dnow < sep21)
+		Date twelve59= Date.parse("yyyy-MM-dd hh:mm:ss", currDate + " 23:59:59")
+		Date mid01= Date.parse("yyyy-MM-dd hh:mm:ss", currDate + " 00:00:01")
+		if(altLat.toDouble() > 0.0D) {
+			tSunset = isBtwn ? twelve59 : mid01
+		} else {
+			tSunset = !isBtwn ? twelve59 : mid01
+		}
+	}
+
+	twilight_beginMillis	= tSunrise.getTime() - 1773000L // (29.55*60*1000) // 29.55 minutes before sunrise
+	sunriseTimeMillis	= tSunrise.getTime()
+	noonTimeMillis		= tSunrise.getTime() + (tSunset.getTime() - tSunrise.getTime()).intdiv(2)
+	sunsetTimeMillis	= tSunset.getTime()
+	twilight_endMillis	= tSunset.getTime() + 1733000L // (29.55*60*1000) // 29.55 minutes after sunset
+
+	Long twiStartNextMillis		= twilight_beginMillis + 86400000L // = 24*60*60*1000 --> one day in milliseconds
+	Long sunriseNextMillis		= sunriseTimeMillis + 86400000L
+	Long noonTimeNextMillis		= noonTimeMillis + 86400000L
+	Long sunsetNextMillis		= sunsetTimeMillis + 86400000L
+	Long twiEndNextMillis		= twilight_endMillis + 86400000L
+
+	switch(localeMillis) {
+		case { it < twilight_beginMillis}:
+			bwn = 'Fully Night Time'
+			lux = 5l
+			aFCC = false
+			break
+		case { it < sunriseTimeMillis}:
+			bwn = 'between twilight and sunrise'
+			l = (((localeMillis - twilight_beginMillis) * 50f) / (sunriseTimeMillis - twilight_beginMillis))
+			lux = (l < 10f ? 10l : l.trunc(0) as Long)
+			break
+		case { it < noonTimeMillis}:
+			bwn = 'between sunrise and noon'
+			l = (((localeMillis - sunriseTimeMillis) * 10000f) / (noonTimeMillis - sunriseTimeMillis))
+			lux = (l < 50f ? 50l : l.trunc(0) as Long)
+			break
+		case { it < sunsetTimeMillis}:
+			bwn = 'between noon and sunset'
+			l = (((sunsetTimeMillis - localeMillis) * 10000f) / (sunsetTimeMillis - noonTimeMillis))
+			lux = (l < 50f ? 50l : l.trunc(0) as Long)
+			break
+		case { it < twilight_endMillis}:
+			bwn = 'between sunset and twilight'
+			l = (((twilight_endMillis - localeMillis) * 50f) / (twilight_endMillis - sunsetTimeMillis))
+			lux = (l < 10f ? 10l : l.trunc(0) as Long)
+			break
+		case { it < twiStartNextMillis}:
+			bwn = 'Fully Night Time'
+			lux = 5l
+			aFCC = false
+			break
+		case { it < sunriseNextMillis}:
+			bwn = 'between twilight and sunrise'
+			l = (((localeMillis - twiStartNextMillis) * 50f) / (sunriseNextMillis - twiStartNextMillis))
+			lux = (l < 10f ? 10l : l.trunc(0) as Long)
+			break
+		case { it < noonTimeNextMillis}:
+			bwn = 'between sunrise and noon'
+			l = (((localeMillis - sunriseNextMillis) * 10000f) / (noonTimeNextMillis - sunriseNextMillis))
+			lux = (l < 50f ? 50l : l.trunc(0) as Long)
+			break
+		case { it < sunsetNextMillis}:
+			bwn = 'between noon and sunset'
+			l = (((sunsetNextMillis - localeMillis) * 10000f) / (sunsetNextMillis - noonTimeNextMillis))
+			lux = (l < 50f ? 50l : l.trunc(0) as Long)
+			break
+		case { it < twiEndNextMillis}:
+			bwn = 'between sunset and twilight'
+			l = (((twiEndNextMillis - localeMillis) * 50f) / (twiEndNextMillis - sunsetNextMillis))
+			lux = (l < 10f ? 10l : l.trunc(0) as Long)
+			break
+		default:
+			bwn = 'Fully Night Time'
+			lux = 5l
+			aFCC = false
+			break
+	}
+	String cC = condition_id.toString()
+	String cCT; cCT = ' using cloud cover from API'
+	Double cCF; cCF = (!cloud || cloud==sBLK) ? 0.998d : (1 - (cloud/100 / 3d))
+	if(aFCC){
+		if(!cloud){
+			Map LUitem = LUTable.find{ Map it -> (Integer)it.id == condition_id }
+			if (LUitem)	{
+				cCF = LUitem.luxp
+				cCT = ' using estimated cloud cover based on condition.'
+			}else{
+				cCF = 1.0
+				cCT = ' cloud coverage not available now.'
+			}
+		}
+	}
+	lux = (lux * cCF) as Long
+	Boolean t_jitter = (!settings.luxjitter) ? false : settings.luxjitter
+	if(t_jitter){
+		// reduce event variability  code from @nh.schottfam
+		if(lux > 1100) {
+			Long t0 = Math.round(lux/800)
+			lux = t0 * 800
+		} else if(lux <= 1100 && lux > 400) {
+			Long t0 = Math.round(lux/400)
+			lux = t0 * 400
+		}else{
+			lux = 5
+		}
+	}
+	lux = Math.max(lux, 5)
+	if(dbgEnable) log.dbg ('estimateLux results: condition: ' + cC + ' | condition factor: ' + cCF + ' | condition text: ' + cCT + '| lux: ' + lux)
+	return [lux, bwn]
 }

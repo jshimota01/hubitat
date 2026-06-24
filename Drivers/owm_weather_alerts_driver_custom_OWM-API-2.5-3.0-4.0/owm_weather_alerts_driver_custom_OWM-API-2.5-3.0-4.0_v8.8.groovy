@@ -46,10 +46,8 @@
 */
 /*
     Last Update 06/24/2026
-	
-	v0.9.0		06/24/2026	  JAS	  Fixed some more logging and put device name in log strings to debug
-	V0.8.9		06/24/2026	  JAS	  Added missing routines Gemini Found
-    V0.8.8  	06/24/2026    JAS     Redid logging a bunch
+
+    V0.8.8  	06/24/2026    JAS     Cleaned missing routing ifreInstalled, fixed pollOWM and pollData
     V0.8.7  	06/24/2026    JAS     Cleaned missing routing ifreInstalled, fixed pollOWM and pollData
 	V0.8.6 		06/24/2026    JAS     Added status and lastChecked attributes to track API health.
     V0.8.5  	06/24/2026    JAS     Began - OWM icons placed into Git
@@ -66,7 +64,7 @@
     V0.6.8b		09/02/2023    JAS     1st jas custom html tile
 */
 
-static String version()    {  return '0.8.9'  }
+static String version()    {  return '0.8.8'  }
 import groovy.transform.Field
 
 iconLocation = (!iconLocation || iconLocation == null) ? 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4/owm-icons/' : iconLocation
@@ -136,11 +134,9 @@ metadata {
 
 //    The following attributes may be needed for dashboards that require these attributes,
 //    so they are alway available and shown by default.
-
         attribute 'city', sSTR            //Hubitat  OpenWeather  SharpTool.io  SmartTiles
         attribute 'feelsLike', sNUM        //SharpTool.io  SmartTiles
         attribute 'forecastIcon', sSTR    //SharpTool.io
-		attribute 'illuminated', sSTR //Added for Illumance with concat of LX text on tiles
         attribute 'localSunrise', sSTR    //SharpTool.io  SmartTiles
         attribute 'localSunset', sSTR    //SharpTool.io  SmartTiles
         attribute 'percentPrecip', sNUM    //SharpTool.io  SmartTiles
@@ -311,7 +307,7 @@ void pollSunRiseSet() {
 // <<<<<<<<<< Begin OWM Poll Routines >>>>>>>>>>
 void pollOWMData() {
     if( apiKey == null ) {
-    if (wrnEnable) log.warn ("${device.displayName} OpenWeatherMap API Key not found.  Please configure in preferences.")
+    if (wrnEnable) log.warn ('${device.displayName} OpenWeatherMap API Key not found.  Please configure in preferences.')
         return
     }
 
@@ -321,12 +317,12 @@ void pollOWMData() {
 
     Map ParamsOWM
     ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
-    if (dbgEnable) log.debug ("${device.displayName} Polling OpenWeatherMap.org with this string: " + ParamsOWM)
+    if (txtEnable) log.info ('${device.displayName} Poll OpenWeatherMap.org: ' + ParamsOWM)
     asynchttpGet('pollOWMHandler', ParamsOWM)
 }
 
 void pollOWMHandler(resp, data) {
-    if (txtEnable) log.info ("${device.displayName} - Polling OpenWeatherMap.org")
+    if (txtEnable) log.info ('${device.displayName} - Polling OpenWeatherMap.org')
     
     // Capture execution timestamp contextually
     TimeZone tZ = TimeZone.getDefault()
@@ -334,21 +330,20 @@ void pollOWMHandler(resp, data) {
     sendEvent(name: "lastChecked", value: timestamp)
 
     if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-	if (wrnEnable) log.warn ("${device.displayName} - Calling https://api.openweathermap.org/data/${apiVer == true ? '3.0' : '2.5'}/onecall?lat=${altLat}&lon=${altLon}&exclude=minutely,hourly&mode=json&units=imperial&appid=${apiKey}")
-    if (wrnEnable) log.warn ("${device.displayName} - resp.getStatus() + sCOLON + resp.getErrorMessage()")
+    if (wrnEnable) log.warn ('${device.displayName} - Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
+    if (wrnEnable) log.warn (${device.displayName} - resp.getStatus() + sCOLON + resp.getErrorMessage())
         
         sendEvent(name: "status", value: "Error: ${resp.getStatus()}")
     }else{
         sendEvent(name: "status", value: "Success")
         
         Map owm = parseJson(resp.data)
-    if (dbgEnable) log.debug ("${device.displayName} - OpenWeatherMap Data: " + owm.toString())
+    if (dbgEnable) log.debug ('${device.displayName} - OpenWeatherMap Data: ' + owm.toString())
         if(owm.toString()==sNULL) {
             pauseExecution(1000)
             pollOWMData()
             return
         }
-	
         Date fotime = (owm?.current?.dt==null) ? new Date() : new Date((Long)owm.current.dt * 1000L)
         myUpdData('fotime', fotime.toString())
         Date futime = new Date()
@@ -369,9 +364,9 @@ void pollOWMHandler(resp, data) {
         }
         if(myGetData('is_light') != myGetData('is_lightOld')) {
             if(myGetData('is_light')==sTRU) {
-     if (txtEnable) log.info ("${device.displayName}-Switching to Daytime schedule.")
+     if (txtEnable) log.info ('${device.displayName}-Switching to Daytime schedule.')
             }else{
-    if (txtEnable) log.info ("${device.displayName}-Switching to Nighttime schedule.")
+    if (txtEnable) log.info ('${device.displayName}-Switching to Nighttime schedule.')
             }
             initialize_poll()
             myUpdData('is_lightOld', myGetData('is_light'))
@@ -496,29 +491,6 @@ void pollOWMHandler(resp, data) {
         myUpdData('wind_direction', w_direction)
         myUpdData('wind_cardinal', w_cardinal)
         myUpdData('wind_string', w_string_bft + ' from the ' + myGetData('wind_direction') + (myGetDataBD('wind') < 1.0 ? sBLK: ' at ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + myGetData(sDMETR)))
-
-		// JAS Live Illuminance & Illuminated Tile Calculation (NOT a provided value by OWM - used to be from sunrise/sunset tool which was removed
-        Integer luxValue = 5 // Default night baseline
-        if (myGetData('is_day') == 'true') {
-            // Standard clear sky solar lux baseline maximum (~10,000 lx)
-            Integer maxLux = 10000 
-            
-            // Factor down max potential light based on cloud cover percentage
-            Integer clouds = cloudCover != null ? cloudCover : 10
-            BigDecimal cloudFactor = (100 - (clouds * 0.75)) / 100
-            luxValue = Math.round(maxLux * cloudFactor).toInteger()
-            
-            // Jitter/Rounding control toggle check
-            if (luxjitter == true) {
-                luxValue = (Math.round(luxValue / 50) * 50).toInteger()
-            }
-        }
-        
-        // Push both the native number metric and your custom text tile attribute
-        myUpdData('illuminance', luxValue)
-        sendEvent(name: "illuminated", value: "${luxValue} lx")
-		
-		
 // >>>>>>>>>> End Process Standard Weather-Station Variables (Regardless of Forecast Selection)  <<<<<<<<<<
 
         Integer cloudCover = owm?.current?.clouds==null ? 1 : owm.current.clouds <= 1 ? 1 : owm.current.clouds
@@ -571,61 +543,4 @@ void pollOWMHandler(resp, data) {
             myUpdData('PoP1', (!owmDaily[1].pop ? 0 : Math.round(owmDaily[1].pop.toBigDecimal() * 100.toInteger())).toString())
         }
     }
-}
-
-// =======================================================================
-// --- MISSING HOOKS, LOGGING, AND STATE MANAGEMENT UTILITIES ---
-// =======================================================================
-
-void myUpdData(String key, Object value) {
-    String valStr = value != null ? value.toString() : ""
-    state."${key}" = valStr
-    
-    // Natively publish foundational attributes to the Hubitat Device Details UI
-    if (['temperature', 'humidity', 'pressure', 'wind', 'windDirection', 'windSpeed', 'illuminance', 'moon_phase', 'moonrise', 'moonset', 'localSunrise', 'localSunset'].contains(key)) {
-        sendEvent(name: key, value: value)
-    }
-}
-
-String myGetData(String key) {
-    if (key == 'timeFormat') return (datetimeFormat && datetimeFormat.toInteger() % 2 == 0) ? "HH:mm" : "h:mm a"
-    if (key == 'dateFormat') return "yyyy-MM-dd"
-    if (key == 'iconType') return (iconType == true) ? "true" : "false"
-    
-    // Fallback defaults for numeric multiplier keys if they are empty
-    if (state."${key}" == null || state."${key}".toString() == "") {
-        if (['mult_twd', 'mult_p', 'mult_r'].contains(key)) return "1"
-        if (key == 'ddisp_twd') return "%3.0f"
-        return ""
-    }
-    return state."${key}".toString()
-}
-
-BigDecimal myGetDataBD(String key) {
-    String val = myGetData(key)
-    if (!val || val == "" || val == "null") return 0.0D
-    return val.isBigDecimal() ? val.toBigDecimal() : 0.0D
-}
-
-String adjTemp(BigDecimal temp, Boolean isF, Integer multiplier) {
-    if (temp == null) return "0"
-    BigDecimal t = temp
-    if (!isF) {
-        t = (t - 32) * 5 / 9
-    }
-    return (Math.round(t * multiplier) / multiplier).toString()
-}
-
-String getCondCode(Integer conditionId, String isDay) {
-    if (conditionId == 999) return "na"
-    return conditionId.toString()
-}
-
-void initialize_poll() {
-    if (txtEnable) log.info "${device.displayName} - Re-initializing poll cycle criteria..."
-}
-
-void refresh() {
-    if (dbgEnable) log.debug "${device.displayName} - refresh() called, redirecting to pollOWMData()"
-    pollOWMData()
 }

@@ -497,7 +497,7 @@ void pollOWMHandler(resp, data) {
         myUpdData('wind_cardinal', w_cardinal)
         myUpdData('wind_string', w_string_bft + ' from the ' + myGetData('wind_direction') + (myGetDataBD('wind') < 1.0 ? sBLK: ' at ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + myGetData(sDMETR)))
 
-		// JAS Live Illuminance & Illuminated Tile Calculation (NOT a provided value by OWM - used to be from sunrise/sunset tool which was removed
+	// JAS Live Illuminance & Illuminated Tile Calculation (NOT a provided value by OWM - used to be from sunrise/sunset tool which was removed
         Integer luxValue = 5 // Default night baseline
         if (myGetData('is_day') == 'true') {
             // Standard clear sky solar lux baseline maximum (~10,000 lx)
@@ -517,8 +517,6 @@ void pollOWMHandler(resp, data) {
         // Push both the native number metric and your custom text tile attribute
         myUpdData('illuminance', luxValue)
         sendEvent(name: "illuminated", value: "${luxValue} lx")
-		
-		
 // >>>>>>>>>> End Process Standard Weather-Station Variables (Regardless of Forecast Selection)  <<<<<<<<<<
 
         Integer cloudCover = owm?.current?.clouds==null ? 1 : owm.current.clouds <= 1 ? 1 : owm.current.clouds

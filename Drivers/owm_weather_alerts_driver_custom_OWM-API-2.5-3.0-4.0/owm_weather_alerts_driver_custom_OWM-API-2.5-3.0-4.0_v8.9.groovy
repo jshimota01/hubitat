@@ -47,7 +47,6 @@
 /*
     Last Update 06/24/2026
 	
-	v0.9.0		06/24/2026	  JAS	  Fixed some more logging and put device name in log strings to debug
 	V0.8.9		06/24/2026	  JAS	  Added missing routines Gemini Found
     V0.8.8  	06/24/2026    JAS     Redid logging a bunch
     V0.8.7  	06/24/2026    JAS     Cleaned missing routing ifreInstalled, fixed pollOWM and pollData
@@ -136,11 +135,9 @@ metadata {
 
 //    The following attributes may be needed for dashboards that require these attributes,
 //    so they are alway available and shown by default.
-
         attribute 'city', sSTR            //Hubitat  OpenWeather  SharpTool.io  SmartTiles
         attribute 'feelsLike', sNUM        //SharpTool.io  SmartTiles
         attribute 'forecastIcon', sSTR    //SharpTool.io
-		attribute 'illuminated', sSTR //Added for Illumance with concat of LX text on tiles
         attribute 'localSunrise', sSTR    //SharpTool.io  SmartTiles
         attribute 'localSunset', sSTR    //SharpTool.io  SmartTiles
         attribute 'percentPrecip', sNUM    //SharpTool.io  SmartTiles
@@ -321,7 +318,7 @@ void pollOWMData() {
 
     Map ParamsOWM
     ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
-    if (dbgEnable) log.debug ("${device.displayName} Polling OpenWeatherMap.org with this string: " + ParamsOWM)
+    if (txtEnable) log.info ("${device.displayName} Poll OpenWeatherMap.org: " + ParamsOWM)
     asynchttpGet('pollOWMHandler', ParamsOWM)
 }
 
@@ -348,7 +345,6 @@ void pollOWMHandler(resp, data) {
             pollOWMData()
             return
         }
-	
         Date fotime = (owm?.current?.dt==null) ? new Date() : new Date((Long)owm.current.dt * 1000L)
         myUpdData('fotime', fotime.toString())
         Date futime = new Date()
@@ -496,29 +492,6 @@ void pollOWMHandler(resp, data) {
         myUpdData('wind_direction', w_direction)
         myUpdData('wind_cardinal', w_cardinal)
         myUpdData('wind_string', w_string_bft + ' from the ' + myGetData('wind_direction') + (myGetDataBD('wind') < 1.0 ? sBLK: ' at ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + myGetData(sDMETR)))
-
-		// JAS Live Illuminance & Illuminated Tile Calculation (NOT a provided value by OWM - used to be from sunrise/sunset tool which was removed
-        Integer luxValue = 5 // Default night baseline
-        if (myGetData('is_day') == 'true') {
-            // Standard clear sky solar lux baseline maximum (~10,000 lx)
-            Integer maxLux = 10000 
-            
-            // Factor down max potential light based on cloud cover percentage
-            Integer clouds = cloudCover != null ? cloudCover : 10
-            BigDecimal cloudFactor = (100 - (clouds * 0.75)) / 100
-            luxValue = Math.round(maxLux * cloudFactor).toInteger()
-            
-            // Jitter/Rounding control toggle check
-            if (luxjitter == true) {
-                luxValue = (Math.round(luxValue / 50) * 50).toInteger()
-            }
-        }
-        
-        // Push both the native number metric and your custom text tile attribute
-        myUpdData('illuminance', luxValue)
-        sendEvent(name: "illuminated", value: "${luxValue} lx")
-		
-		
 // >>>>>>>>>> End Process Standard Weather-Station Variables (Regardless of Forecast Selection)  <<<<<<<<<<
 
         Integer cloudCover = owm?.current?.clouds==null ? 1 : owm.current.clouds <= 1 ? 1 : owm.current.clouds
@@ -623,9 +596,4 @@ String getCondCode(Integer conditionId, String isDay) {
 
 void initialize_poll() {
     if (txtEnable) log.info "${device.displayName} - Re-initializing poll cycle criteria..."
-}
-
-void refresh() {
-    if (dbgEnable) log.debug "${device.displayName} - refresh() called, redirecting to pollOWMData()"
-    pollOWMData()
 }

@@ -337,7 +337,7 @@ void pollOWMHandler(resp, data) {
         sendEvent(name: "status", value: "Success")
         
         Map owm = parseJson(resp.data)
-    if (txtEnable) log.info ('OpenWeatherMap Data: ' + owm.toString())
+    if (dbgEnable) log.debug ('OpenWeatherMap Data: ' + owm.toString())
         if(owm.toString()==sNULL) {
             pauseExecution(1000)
             pollOWMData()

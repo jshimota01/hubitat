@@ -46,7 +46,7 @@
 */
 /*
     Last Update 06/24/2026
-	
+	v0.9.1-3	06/24/2026	  JAS     Trying to fix missing illuminated attribute
 	v0.9.0		06/24/2026	  JAS	  Fixed some more logging and put device name in log strings to debug
 	V0.8.9		06/24/2026	  JAS	  Added missing routines Gemini Found
     V0.8.8  	06/24/2026    JAS     Redid logging a bunch
@@ -66,7 +66,7 @@
     V0.6.8b		09/02/2023    JAS     1st jas custom html tile
 */
 
-static String version()    {  return '0.8.9'  }
+static String version()    {  return '0.9.3'  }
 import groovy.transform.Field
 
 iconLocation = (!iconLocation || iconLocation == null) ? 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4/owm-icons/' : iconLocation
@@ -498,25 +498,62 @@ void pollOWMHandler(resp, data) {
         myUpdData('wind_string', w_string_bft + ' from the ' + myGetData('wind_direction') + (myGetDataBD('wind') < 1.0 ? sBLK: ' at ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + myGetData(sDMETR)))
 
 		// JAS Live Illuminance & Illuminated Tile Calculation (NOT a provided value by OWM - used to be from sunrise/sunset tool which was removed
-        Integer luxValue = 5 // Default night baseline
+
+// >>>>>>>>>> Begin Lux Processing <<<<<<<<<<
+void updateLux(Boolean pollAgain=true) {
+    if (txtEnable) log.info "${device.displayName} - Calling UpdateLux('${pollAgain}')"
+    
+    String curTime = new Date().format('HH:mm', TimeZone.getDefault())
+    String newLight
+    if(curTime < myGetData('tw_begin') || curTime > myGetData('tw_end')) {
+        newLight = sFLS
+    } else {
+        newLight = sTRU
+    }
+    
+    if(newLight != myGetData('is_lightOld') || myGetData('condition_id')==sNULL || myGetData('cloud')==sNULL || pollAgain==false) {
+        // Forces calculation when called from OWM handler
+        BigDecimal azimuth = myGetDataBD('azimuth')
+        BigDecimal altitude = myGetDataBD('altitude')
+        
+        Integer luxValue = 5
         if (myGetData('is_day') == 'true') {
-            // Standard clear sky solar lux baseline maximum (~10,000 lx)
             Integer maxLux = 10000 
-            
-            // Factor down max potential light based on cloud cover percentage
-            Integer clouds = cloudCover != null ? cloudCover : 10
+            Integer clouds = (myGetData('cloud') != "") ? myGetData('cloud').toInteger() : 10
             BigDecimal cloudFactor = (100 - (clouds * 0.75)) / 100
             luxValue = Math.round(maxLux * cloudFactor).toInteger()
             
-            // Jitter/Rounding control toggle check
             if (luxjitter == true) {
                 luxValue = (Math.round(luxValue / 50) * 50).toInteger()
             }
         }
         
-        // Push both the native number metric and your custom text tile attribute
+        // Update both capabilities smoothly
         myUpdData('illuminance', luxValue)
         sendEvent(name: "illuminated", value: "${luxValue} lx")
+    }
+}
+// >>>>>>>>>> End Lux Processing <<<<<<<<<<
+
+			//Integer luxValue = 5 // Default night baseline
+			//if (myGetData('is_day') == 'true') {
+            // Standard clear sky solar lux baseline maximum (~10,000 lx)
+            //Integer maxLux = 10000 
+            
+            // Factor down max potential light based on cloud cover percentage
+            // Integer clouds = cloudCover != null ? cloudCover : 10
+            // BigDecimal cloudFactor = (100 - (clouds * 0.75)) / 100
+            //luxValue = Math.round(maxLux * cloudFactor).toInteger()
+            
+            // Jitter/Rounding control toggle check
+            // if (luxjitter == true) {
+            //    luxValue = (Math.round(luxValue / 50) * 50).toInteger()
+            }
+        }
+        
+        // Push both the native number metric and your custom text tile attribute
+        // myUpdData('illuminance', luxValue)
+        // sendEvent(name: "illuminated", value: "${luxValue} lx")
 		
 		
 // >>>>>>>>>> End Process Standard Weather-Station Variables (Regardless of Forecast Selection)  <<<<<<<<<<
