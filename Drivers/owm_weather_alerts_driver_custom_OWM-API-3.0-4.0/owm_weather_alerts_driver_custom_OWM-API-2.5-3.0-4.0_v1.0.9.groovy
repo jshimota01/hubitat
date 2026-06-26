@@ -1,5 +1,5 @@
-/* OpenWeatherMap Weather-Alerts Driver (Custom 3.0/4.0 OWM API)                    
-    Import URL: https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0.groovy.
+/* OpenWeatherMap Weather-Alerts Driver (Custom 2.5/3.0/4.0 OWM API)                    
+    Import URL: https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4.0/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4.0.groovy.
 
 	This driver has morphed many, many times, so the genesis is very blurry now.  It stated as a WeatherUnderground
 	driver, then when they restricted their API it morphed into an APIXU driver.  When APIXU ceased it became a
@@ -44,8 +44,7 @@
 
 	Last Update 06/09/2026
 	{ Left room below to document version changes...}
-
-    V1.0.10		06/24/2026		JAS		Updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
+	
 	V1.0.9		06/26/2026		JAS		Add Last checked and status attributes	
 	V1.0.8		06/26/2026		JAS		Fixing Alerts bug
 	V1.0.7		06/26/2026		JAS		FIxed refresh method
@@ -55,6 +54,7 @@
 	V1.0.3		06/25/2026		JAS		Fixed set default for lat / long when initialized
 	V1.0.2		06/25/2026		JAS		Fixed alerts loop, typo in 3r's of tomorrrow
 	V1.0.1		06/24/2026		JAS		Rebuild from functional 2.5/3.0 version
+    V0.7.3c		06/24/2026		JAS		Updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
     V0.7.3b		06/10/2026		JAS		Updating to match Orig Auth version + bug found on rainTodayPublish.
     V0.7.3		03/19/2026		JAS		Clear NWS alerts after they expire (@rschumaker).
 	V0.7.2		01/17/2026		JAS		Replaced small icons with unicode charactersin dashboard tiles.
@@ -64,7 +64,7 @@
 static String version()    {  return '1.0.9'  }
 import groovy.transform.Field
 
-@Field static final String DEFAULT_ICON_LOCATION = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm-icons/"
+@Field static final String DEFAULT_ICON_LOCATION = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4.0/owm-icons/"
 @Field static final String sNULL=(String)null
 @Field static final String sAB='<a>'
 @Field static final String sACB='</a>'
@@ -214,7 +214,7 @@ metadata {
 	definition (name: 'OpenWeatherMap-Alerts Weather Driver (Custom)',
 		namespace: 'jshimota',
 		author: 'ManyHandsInvolved',
-		importUrl: 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0.groovy') {
+		importUrl: 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4.0/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4.0.groovy') {
 
 		capability 'Sensor'
 		capability 'Temperature Measurement'
@@ -320,7 +320,7 @@ metadata {
 		String loc = settings.iconLocation ?: DEFAULT_ICON_LOCATION
 		section('Query Inputs'){
 			input 'apiKey', 'text', required: true, title: 'Type OpenWeatherMap.org API Key Here', defaultValue: null
-			input 'apiVer', 'bool', required: true, title: 'API Key Version (3.0 = OFF;  4.0 = ON)', defaultValue: false
+			input 'apiVer', 'bool', required: true, title: 'API Key Version (2.5 = OFF;  3.0 = ON)', defaultValue: false
 			input 'city', 'text', required: true, defaultValue: 'City or Location name forecast area', title: 'City name'
 			input 'pollIntervalForecast', 'enum', title: 'External Source Poll Interval (daytime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
 			input 'pollIntervalForecastnight', 'enum', title: 'External Source Poll Interval (nighttime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
@@ -413,7 +413,7 @@ void pollOWM() {
 //	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
 
 	Map ParamsOWM
-	ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '4.0' : '3.0') + '/onecall?lat=' + (String)settings.altLat + '&lon=' + (String)settings.altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
+	ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)settings.altLat + '&lon=' + (String)settings.altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
 	LOGINFO('Poll OpenWeatherMap.org: ' + ParamsOWM)
 	asynchttpGet('pollOWMHandler', ParamsOWM)
 }
@@ -424,7 +424,7 @@ void pollOWMHandler(resp, data) {
 	String timestamp = new Date().format(myGetData('timeFormat') ?: 'h:mm a', tZ)
     
 	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '4.0' : '3.0') + '/onecall?lat=' + (String)settings.altLat + '&lon=' + (String)settings.altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
+		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)settings.altLat + '&lon=' + (String)settings.altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
 		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
         
         // Update state attributes on connection failure
@@ -1558,7 +1558,7 @@ void pollOWMl() {
 /*  for testing a different Lat/Lon location uncommnent the two lines below */
 //	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
 //	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-	Map ParamsOWMl = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '4.0' : '3.0') + '/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey, timeout: 20 ]
+	Map ParamsOWMl = [ uri: 'https://api.openweathermap.org/data/2.5/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey, timeout: 20 ]
 	LOGINFO('Poll OpenWeatherMap.org Location: ' + ParamsOWMl)
 	asynchttpGet('pollOWMlHandler', ParamsOWMl)
 }
@@ -1566,7 +1566,7 @@ void pollOWMl() {
 void pollOWMlHandler(resp, data) {
 	LOGINFO('Polling OpenWeatherMap.org Location')
 	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '4.0' : '3.0') + '/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey)
+		LOGWARN('Calling https://api.openweathermap.org/data/2.5/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey)
 		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
 		myUpdData('OWML',sSPC)
 	} else {
