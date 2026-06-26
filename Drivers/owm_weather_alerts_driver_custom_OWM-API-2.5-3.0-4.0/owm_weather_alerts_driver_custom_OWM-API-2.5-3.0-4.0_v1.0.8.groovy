@@ -45,6 +45,7 @@
 	Last Update 06/09/2026
 	{ Left room below to document version changes...}
 	
+	V1.0.8		06/26/2026		JAS		Fixing Alerts bug
 	V1.0.7		06/26/2026		JAS		FIxed refresh method
 	V1.0.6		06/26/2026		JAS		Beginning more Gemini clean suggestions
 	V1.0.5		06/25/2026		JAS		Cleaned alert block again, fixed safe nav issue - 
@@ -59,7 +60,7 @@
 	V0.7.1b		10/26/2024		JAS		Custom HTML tile
 */
 
-static String version()    {  return '1.0.7'  }
+static String version()    {  return '1.0.8'  }
 import groovy.transform.Field
 
 @Field static final String DEFAULT_ICON_LOCATION = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4.0/owm-icons/"
@@ -319,7 +320,7 @@ metadata {
 			input 'pollIntervalForecast', 'enum', title: 'External Source Poll Interval (daytime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
 			input 'pollIntervalForecastnight', 'enum', title: 'External Source Poll Interval (nighttime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
 			input 'txtEnable', 'bool', title: 'Enable Extended Logging', description: '<i>Extended logging will turn off automatically after 30 minutes.</i>', required: true, defaultValue: false
-			input 'alertSource', 'enum', required: true, defaultValue: sONE, title: 'Weather Alert Source<br>0=None 1=OWM or 2=Weather.gov (US only)', options: [0:sZERO, 1:sONE, 2:sTWO]
+			input 'alertSource', 'enum', required: true, defaultValue: sONE, title: 'Weather Alert Source<br>0=None 1=OWM', options: [0:sZERO, 1:sONE]
 			input 'tempFormat', 'enum', required: true, defaultValue: 'Fahrenheit (°F)', title: 'Display Unit - Temperature: Fahrenheit (°F) or Celsius (°C)',  options: ['Fahrenheit (°F)', 'Celsius (°C)']
 			input 'TWDDecimals', 'enum', required: true, defaultValue: sZERO, title: 'Display decimals for Temperature & Wind Speed', options: [0:sZERO, 1:sONE, 2:sTWO, 3:'3', 4:'4']
 			input 'RDecimals', 'enum', required: true, defaultValue: sZERO, title: 'Display decimals for Precipitation', options: [0:sZERO, 1:sONE, 2:sTWO, 3:'3', 4:'4']
@@ -407,7 +408,7 @@ void pollOWM() {
 //	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
 
 	Map ParamsOWM
-	ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
+	ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)settings.altLat + '&lon=' + (String)settings.altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
 	LOGINFO('Poll OpenWeatherMap.org: ' + ParamsOWM)
 	asynchttpGet('pollOWMHandler', ParamsOWM)
 }
@@ -415,7 +416,7 @@ void pollOWM() {
 void pollOWMHandler(resp, data) {
 	LOGINFO('Polling OpenWeatherMap.org')
 	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
+		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)settings.altLat + '&lon=' + (String)settings.altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
 		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
 	} else {
 		Map owm = parseJson(resp.data)
@@ -712,7 +713,6 @@ if(alertPublish) {
 /*  for testing a different Lat/Lon location uncommnent the two lines below */
 //	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
 //	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-				pollWDG()
 			}
 			if((alertSource==sZERO) || (!owm.alerts && alertSource==sONE) || (myGetData('curAl')==sNCWA && alertSource==sTWO)) {
 				clearAlerts()
@@ -828,7 +828,6 @@ void pollWDGHandler(resp, data) {
 		LOGINFO('weather.gov Data: ' + wdg.toString())
 		if(wdg.toString()==sNULL) {
 			pauseExecution(1000)
-			pollWDG()
 			return
 		}
 		myUpdData('curAl', wdg?.features[0]?.properties?.event == null ? sNCWA : wdg.features[0].properties.event.replaceAll('\n', sSPC).replaceAll('[{}\\[\\]]', sBLK))
@@ -1531,7 +1530,6 @@ void initMe() {
 	String RDecimals = (settings.RDecimals ?: sZERO)
 	setDisplayDecimals(TWDDecimals, PDecimals, RDecimals)
 	pollOWMl()
-	if(settings.alertSource==sTWO) {pollWDG()}
 }
 
 void pollOWMl() {
