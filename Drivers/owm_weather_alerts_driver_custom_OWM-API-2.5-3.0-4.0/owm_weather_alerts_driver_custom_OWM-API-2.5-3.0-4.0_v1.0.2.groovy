@@ -44,7 +44,8 @@
 
 	Last Update 06/09/2026
 	{ Left room below to document version changes...}
-
+	
+	V1.0.2		06/25/2026		JAS		Fixed alerts loop, typo in 3r's of tomorrrow
 	V1.0.1		06/24/2026		JAS		Rebuild from functional 2.5/3.0 version
     V0.7.3c		06/24/2026		JAS		Updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
     V0.7.3b		06/10/2026		JAS		Updating to match Orig Auth version + bug found on rainTodayPublish.
@@ -53,7 +54,7 @@
 	V0.7.1b		10/26/2024		JAS		Custom HTML tile
 */
 
-static String version()    {  return '1.0.1'  }
+static String version()    {  return '1.0.2'  }
 import groovy.transform.Field
 
 iconLocation = (!iconLocation || iconLocation == null) ? 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-2.5-3.0-4/owm-icons/' : iconLocation
@@ -227,8 +228,8 @@ metadata {
 			input 'iconType', 'bool', title: 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile: On=Current or Off=Forecast', required: true, defaultValue: false
 			input 'altCoord', 'bool', required: true, defaultValue: false, title: "Override Hub's location coordinates"
 			if (altCoord) {
-				input 'altLat', sSTR, title: 'Override location Latitude', required: false, defaultValue: location.latitude.toString(), description: '<br>Enter location Latitude<br>'
-				input 'altLon', sSTR, title: 'Override location Longitude', required: false, defaultValue: location.longitude.toString(), description: '<br>Enter location Longitude<br>'
+				input 'altLat', sSTR, title: 'Override location Latitude', required: false, defaultValue: location?.latitude ? location.latitude.toString() : "0.0", description: '<br>Enter location Latitude<br>'
+				input 'altLon', sSTR, title: 'Override location Longitude', required: false, defaultValue: location?.longitude ? location.longitude.toString() : "0.0", description: '<br>Enter location Longitude<br>'
 			}
 			input 'settingEnable', 'bool', title: '<b>Display All Optional Attributes</b>', description: settingDescr, defaultValue: true
 //build a Selector for each mapped Attribute or group of attributes
@@ -344,6 +345,8 @@ metadata {
 		'wind_string':				[t: 'Wind string', d: 'Display the wind string?', ty: sSTR, defa: sFLS],
 ]
 
+@Field static Map<String,String> verFLD=[:]
+
 // <<<<<<<<<< Begin Sunrise-Sunset Poll Routines >>>>>>>>>>
 void pollSunRiseSet() {
 	if(ifreInstalled()) { updated(); return }
@@ -409,7 +412,7 @@ void pollOWMHandler(resp, data) {
 	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
 		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
 		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
-	}else{
+	} else {
 		Map owm = parseJson(resp.data)
 		LOGINFO('OpenWeatherMap Data: ' + owm.toString())
 		if(ifreInstalled()) { updated(); return }
@@ -429,18 +432,18 @@ void pollOWMHandler(resp, data) {
 		myUpdData('currTime', new Date().format('HH:mm', tZ))
 		if(myGetData('riseTime') <= myGetData('currTime') && myGetData('setTime') >= myGetData('currTime')) {
 			myUpdData('is_day', sTRU)
-		}else{
+		} else {
 			myUpdData('is_day', sFLS)
 		}
 		if(myGetData('currTime') < myGetData('tw_begin') || myGetData('currTime') > myGetData('tw_end')) {
 			myUpdData('is_light', sFLS)
-		}else{
+		} else {
 			myUpdData('is_light', sTRU)
 		}
 		if(myGetData('is_light') != myGetData('is_lightOld')) {
 			if(myGetData('is_light')==sTRU) {
 				LOGINFO(' Switching to Daytime schedule.')
-			}else{
+			} else {
 				LOGINFO(' Switching to Nighttime schedule.')
 			}
 			initialize_poll()
@@ -463,7 +466,7 @@ void pollOWMHandler(resp, data) {
 		BigDecimal t_press; t_press = owm?.current?.pressure==null ? 0.00 : owm.current.pressure.toBigDecimal()
 		if(myGetData(sPMETR) == 'inHg') {
 			t_press = Math.round(t_press * 0.029529983071445 * mult_p) / mult_p
-		}else{
+		} else {
 			t_press = Math.round(t_press * mult_p) / mult_p
 		}
 		myUpdData('pressure', t_press.toString())
@@ -516,7 +519,7 @@ void pollOWMHandler(resp, data) {
 		} else if(myGetData(sDMETR) == 'knots') {
 			t_wd = Math.round(t_wd * 0.868976 * mult_twd) / mult_twd
 			t_wg = Math.round(t_wg * 0.868976 * mult_twd) / mult_twd
-		}else{  //  this leave only m/s
+		} else {  //  this leave only m/s
 			t_wd = Math.round(t_wd * 0.44704 * mult_twd) / mult_twd
 			t_wg = Math.round(t_wg * 0.44704 * mult_twd) / mult_twd
 		}
@@ -668,7 +671,7 @@ void pollOWMHandler(resp, data) {
 			if(condition_icon_urlPublish) {
 				sendEvent(name: 'condition_icon_url1', value: tmpImg1)
 				sendEvent(name: 'condition_icon_url2', value: tmpImg2)
-			}else{
+			} else {
 				device.deleteCurrentState('condition_icon_url1')
 				device.deleteCurrentState('condition_icon_url2')
 			}
@@ -679,7 +682,7 @@ void pollOWMHandler(resp, data) {
 		if(precipExtendedPublish){
 			myUpdData('rainTomorrow', myGetData('Precip1'))
 			myUpdData('rainDayAfterTomorrow', myGetData('Precip2'))
-		}else{
+		} else {
 			device.deleteCurrentState('rainTomorrow')
 			device.deleteCurrentState('rainDayAfterTomorrow')
 		}
@@ -688,10 +691,10 @@ void pollOWMHandler(resp, data) {
 			myUpdData('cloudToday', myGetData('Cloud0'))
 			myUpdData('cloudTomorrow', myGetData('Cloud1'))
 			myUpdData('cloudDayAfterTomorrow', myGetData('Cloud2'))
-		}else{
+		} else {
 			device.deleteCurrentState('cloudToday')
 			device.deleteCurrentState('cloudTomorrow')
-			device.deleteCurrentState('cloudDayAfterTomorrrow')
+			device.deleteCurrentState('cloudDayAfterTomorrow')
 		}
 
 		updateLux(false)
@@ -708,7 +711,7 @@ void pollOWMHandler(resp, data) {
 			}
 			if((alertSource==sZERO) || (!owm.alerts && alertSource==sONE) || (myGetData('curAl')==sNCWA && alertSource==sTWO)) {
 				clearAlerts()
-			}else{
+			} else {
 				if(alertSource==sONE) {
 					String curAl = owm?.alerts[0]?.event==null ? sNCWA : owm?.alerts[0]?.event.replaceAll('\n', sSPC).replaceAll('[{}\\[\\]]', sBLK)
 					String curAlSender = owm?.alerts[0]?.sender_name==null ? sNULL : owm?.alerts[0]?.sender_name.replaceAll('\n',sSPC).replaceAll('[{}\\[\\]]', sBLK)
@@ -716,15 +719,18 @@ void pollOWMHandler(resp, data) {
                     String alertDescrFull = owm?.alerts[0]?.description==null ? sNCWA : owm?.alerts[0]?.description.replaceAll('\n',sSPC).replaceAll('[{}\\[\\]]', sBLK)
                     if(curAl==sNCWA) {
 						clearAlerts()
-					}else{
+					} else {
 						Integer alertCnt; alertCnt = 0
 						Integer i
-						for(i = 1;i<10;i++) {
-							if(owm?.alerts[i]?.event!=null) {
-                                alertDescrFull = alertDescrFull + owm?.alerts[i]?.description.replaceAll('\n',sSPC).replaceAll('[{}\\[\\]]', sBLK)
-                                alertCnt++
+						if (owm?.alerts) {
+							int maxAlerts = owm.alerts.size()
+							for (int i = 0; i < maxAlerts; i++) {
+							if (owm.alerts[i]?.event != null) {
+								alertDescrFull = alertDescrFull + owm.alerts[i].description.replaceAll('\n', sSPC).replaceAll('[{}\\[\\]]', sBLK)
+								alertCnt++
 							}
 						}
+					}
                         myUpdData('alertCnt', alertCnt.toString())
 // ADD: If NWS confirms no active alerts, clear immediately rather than
 // waiting for the next OWM poll to evaluate the now-updated curAl.
@@ -745,7 +751,7 @@ void pollOWMHandler(resp, data) {
 					LOGINFO('OWM Weather Alert: curAlDescr Length: '+ curAlDescr.length() + '; Description: ' + curAlDescr)
 					myUpdData('alertTileLink', '<a style="font-style:italic;color:red" href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">'+myGetData('alert')+sACB)
 					myUpdData('alertLink',  '<a style="font-style:italic;color:red">'+myGetData('alert')+sACB)
-				}else{
+				} else {
 					myUpdData('alert', myGetData('curAl') + (myGetData('alertCnt') != sZERO ? ' +' + myGetData('alertCnt') : sBLK))
 					myUpdData('alertTileLink', '<a style="font-style:italic;color:red" href="https://forecast.weather.gov/MapClick.php?lat=' + altLat + '&lon=' + altLon +'" target=\'_blank\'>'+myGetData('alert')+sACB)
 					myUpdData('alertLink',  '<a style="font-style:italic;color:red">'+myGetData('alert')+sACB)
@@ -764,7 +770,7 @@ void pollOWMHandler(resp, data) {
 			alertTile+= myGetData('alertTileLink') + sBR
 			if(alertSource==sONE) {
 				alertTile+= '<a href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
-			}else{
+			} else {
 				if(alertSource==sTWO) {
 					alertTile+= '<a href=https://forecast.weather.gov/MapClick.php?lat=' + altLat + '&lon=' + altLon + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'NWS_240px.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
 				}
@@ -806,11 +812,12 @@ void pollWDG() {
 }
 
 void pollWDGHandler(resp, data) {
+	if(ifreInstalled()) { updated(); return }
 	LOGINFO('Polling weather.gov')
 	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
 		LOGWARN('Calling https://api.weather.gov/alerts/active?status=actual&message_type=alert,update&point=' + altLat + ',' + altLon)
 		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
-	}else{
+	} else {
 		Map wdg = parseJson(resp.data)
 		myUpdData('wdg', wdg.toString())
 		LOGINFO('weather.gov Data: ' + wdg.toString())
@@ -853,11 +860,10 @@ void clearAlerts(){
 	myUpdData('possAlert', sFLS)
     if(alertPublish) {
         myUpdData('alertDescrFull', sNCWA)
-    }else{
+    } else {
         device.deleteCurrentState('alertDescrFull')
     }    
 }
-
 
 @Field static Map<String,Map> dataStoreFLD=[:]
 
@@ -909,7 +915,7 @@ static String dumpListDesc(data, Integer level, List<Boolean> lastLevel, String 
 			Boolean t1= cnt==sz
 			newLevel[level]=t1
 			str += dumpMapDesc(newmap, level, newLevel, !t1, html)
-		}else{
+		} else {
 			String lineStrt; lineStrt='\n'
 			Integer i
 			for(i=0; i<level; i++){
@@ -942,7 +948,7 @@ static String dumpMapDesc(data, Integer level, List<Boolean> lastLevel, Boolean 
 		theLast=thisIsLast
 		if(level==0){
 			lineStrt='\n\n • '
-		}else{
+		} else {
 			theLast= theLast && thisIsLast
 			lineStrt='\n'
 			Integer i
@@ -1021,7 +1027,7 @@ void updateLux(Boolean pollAgain=true) {
 		String newLight
 		if(curTime < myGetData('tw_begin') || curTime > myGetData('tw_end')) {
 			newLight =  sFLS
-		}else{
+		} else {
 			newLight =  sTRU
 		}
 		if(newLight != myGetData('is_lightOld') || myGetData('condition_id')==sNULL || myGetData('cloud')==sNULL) {
@@ -1047,7 +1053,7 @@ void PostPoll() {
 
     if(alertPublish) {
         sendEvent(name: 'alertDescrFull', value: myGetData('alertDescrFull'))
-    }else{
+    } else {
         device.deleteCurrentState('alertDescrFull')
     }
 
@@ -1059,7 +1065,7 @@ void PostPoll() {
 		sendEvent(name: 'noonTime', value: myGetData('noonTime'))
 		sendEvent(name: 'sunsetTime', value: myGetData('setTime'))
 		sendEvent(name: 'tw_end', value: myGetData('tw_end'))
-	}else{
+	} else {
 		device.deleteCurrentState('tw_begin')
 		device.deleteCurrentState('sunriseTime')
 		device.deleteCurrentState('noonTime')
@@ -1069,7 +1075,7 @@ void PostPoll() {
 	if(dashSharpToolsPublish || dashSmartTilesPublish || localSunrisePublish) {
 		sendEvent(name: 'localSunset', value: myGetData('localSunset')) // only needed for certain dashboards
 		sendEvent(name: 'localSunrise', value: myGetData('localSunrise')) // only needed for certain dashboards
-	}else{
+	} else {
 		device.deleteCurrentState('localSunset')
 		device.deleteCurrentState('localSunrise')
 	}
@@ -1080,7 +1086,7 @@ void PostPoll() {
 	sendEvent(name: 'pressure', value: myGetDataBD('pressure'), unit: myGetData(sPMETR))
 	if(dashSharpToolsPublish || dashSmartTilesPublish){
 		sendEvent(name: 'pressured', value: String.format(ddisp_p, myGetDataBD('pressure')), unit: myGetData(sPMETR))
-	}else{
+	} else {
 		device.deleteCurrentState('pressured')
 	}
 	String tmetr= myGetData(sTMETR)
@@ -1091,12 +1097,12 @@ void PostPoll() {
 /*  'Required for Dashboards' Data Elements */
 	if(dashHubitatOWMPublish || dashSharpToolsPublish || dashSmartTilesPublish || cityPublish) {
 		sendEvent(name: 'city', value: myGetData('city'))
-	}else{
+	} else {
 		device.deleteCurrentState('city')
 	}
 	if(dashSharpToolsPublish) {
 		sendEvent(name: 'forecastIcon', value: getCondCode(myGetData('condition_id').toInteger(), myGetData('is_day')))
-	}else{
+	} else {
 		device.deleteCurrentState('forecastIcon')
 	}
     
@@ -1105,42 +1111,42 @@ void PostPoll() {
     
 	if(dashSharpToolsPublish || dashSmartTilesPublish || rainTodayPublish) {
 		sendEvent(name: 'rainToday', value: myGetDataBD('rainToday'), unit: myGetData(sRMETR))
-	}else{
+	} else {
 		device.deleteCurrentState('rainToday')
 	}
 	if(dashSharpToolsPublish || dashSmartTilesPublish || percentPrecipPublish) {
 		sendEvent(name: 'percentPrecip', value: myGetData('percentPrecip').toInteger())
-	}else{
+	} else {
 		device.deleteCurrentState('percentPrecip')
 	}
 	if(dashSharpToolsPublish || dashSmartTilesPublish) {
 		sendEvent(name: 'weather', value: myGetData('condition_text'))
-	}else{
+	} else {
 		device.deleteCurrentState('weather')
 	}
 	if(dashSharpToolsPublish || dashSmartTilesPublish) {
 		sendEvent(name: 'weatherIcon', value: getCondCode(myGetData('condition_id').toInteger(), myGetData('is_day')))
-	}else{
+	} else {
 		device.deleteCurrentState('weatherIcon')
 	}
 	if(dashHubitatOWMPublish) {
 		sendEvent(name: "weatherIcons", value: myGetData('OWN_icon'))
-	}else{
+	} else {
 		device.deleteCurrentState('weatherIcons')
 	}
 	if(dashHubitatOWMPublish || dashSharpToolsPublish || windPublish) {
 		sendEvent(name: 'wind', value: myGetDataBD('wind'), unit: myGetData(sDMETR))
-	}else{
+	} else {
 		device.deleteCurrentState('wind')
 	}
 	if(dashHubitatOWMPublish) {
 		sendEvent(name: 'windSpeed', value: myGetDataBD('wind'), unit: myGetData(sDMETR))
-	}else{
+	} else {
 		device.deleteCurrentState('windSpeed')
 	}
 	if(dashHubitatOWMPublish) {
 		sendEvent(name: 'windDirection', value: myGetData('wind_degree').toInteger(), unit: 'DEGREE')
-	}else{
+	} else {
 		device.deleteCurrentState('windDirection')
 	}
 
@@ -1150,13 +1156,12 @@ void PostPoll() {
 	sendEventPublish(name: 'condition_code', value: myGetData('condition_code'))
 	sendEventPublish(name: 'condition_text', value: myGetData('condition_text'))
 	sendEventPublish(name: 'dewpoint', value: myGetDataBD('dewpoint'), unit: tmetr)
-
 	sendEventPublish(name: 'forecast_code', value: myGetData('forecast_code'))
 	if(forecast_textPublish) {
 		sendEventPublish(name: 'forecast_text', value: myGetData('forecast_text'))
 		sendEvent(name: 'forecast_text1', value: myGetData('forecast_text1'))
 		sendEvent(name: 'forecast_text2', value: myGetData('forecast_text2'))
-	}else{
+	} else {
 		device.deleteCurrentState('forecast_text1')
 		device.deleteCurrentState('forecast_text2')
 	}
@@ -1175,7 +1180,7 @@ void PostPoll() {
 		sendEvent(name: 'forecastDay1', value: myGetDataBD('forecastDay1'), unit: tmetr)
 		sendEvent(name: 'forecastEve1', value: myGetDataBD('forecastEve1'), unit: tmetr)
 		sendEvent(name: 'forecastNight1', value: myGetDataBD('forecastNight1'), unit: tmetr)
-	}else{
+	} else {
 		device.deleteCurrentState('forecastHigh')
 		device.deleteCurrentState('forecastHigh1')
 		device.deleteCurrentState('forecastHigh2')
@@ -1199,7 +1204,7 @@ void PostPoll() {
 		LinkedHashMap<String,Double> coords = getPosition()
 		sendEvent(name: 'altitude', value: coords.altitude)
 		sendEvent(name: 'azimuth', value: coords.azimuth)
-	}else{
+	} else {
 		device.deleteCurrentState('altitude')
 		device.deleteCurrentState('azimuth')
 	}
@@ -1212,7 +1217,7 @@ void PostPoll() {
 		TimeZone tZ= TimeZone.getDefault()
 		sendEvent(name: 'last_poll_Forecast', value: new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('futime')).format(myGetData('dateFormat'), tZ) + ', ' + new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('futime')).format(tfmt1, tZ))
 		sendEvent(name: 'last_observation_Forecast', value: new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('fotime')).format(myGetData('dateFormat'), tZ) + ', ' + new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('fotime')).format(tfmt1, tZ))
-	}else{
+	} else {
 		device.deleteCurrentState('last_poll_Forecast')
 		device.deleteCurrentState('last_observation_Forecast')
 	}
@@ -1222,7 +1227,7 @@ void PostPoll() {
 		sendEvent(name: 'rainDayAfterTomorrow', value: myGetDataBD('rainDayAfterTomorrow'), unit: myGetData(sRMETR))
 		sendEvent(name: 'PoP1', value: myGetData('PoP1').toInteger())
 		sendEvent(name: 'PoP2', value: myGetData('PoP2').toInteger())
-	}else{
+	} else {
 		device.deleteCurrentState('rainTomorrow')
 		device.deleteCurrentState('rainDayAfterTomorrow')
 		device.deleteCurrentState('PoP1')
@@ -1232,10 +1237,10 @@ void PostPoll() {
 		sendEvent(name: 'cloudToday', value: myGetData('cloudToday').toInteger(), unit: '%')
 		sendEvent(name: 'cloudTomorrow', value: myGetData('cloudTomorrow').toInteger(), unit: '%')
 		sendEvent(name: 'cloudDayAfterTomorrow', value: myGetData('cloudDayAfterTomorrow').toInteger(), unit: '%')
-	}else{
+	} else {
 		device.deleteCurrentState('cloudToday')
 		device.deleteCurrentState('cloudTomorrow')
-		device.deleteCurrentState('cloudDayAfterTomorrrow')
+		device.deleteCurrentState('cloudDayAfterTomorrow')
 	}
 
 	sendEventPublish(name: 'vis', value: Math.round(myGetDataBD('vis') * mult_twd) / mult_twd, unit: (myGetData(sDMETR)=='MPH' ? 'miles' : 'kilometers'))
@@ -1252,7 +1257,7 @@ void PostPoll() {
 	if((alertSource==sZERO) || (alertSource==sONE) || (myGetData('curAl')==sNCWA && alertSource==sTWO)) {
 		OWMIcon = '<a href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
 		OWMText = '<a href="https://openweathermap.org" target="_blank">OpenWeatherMap.org</a> @ ' + myGetData(sSUMLST)
-	}else{
+	} else {
 		OWMIcon = '<a href="https://forecast.weather.gov/MapClick.php?lat=' + altLat + '&lon=' + altLon + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'NWS_240px.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
 		OWMText = '<a href="https://forecast.weather.gov/MapClick.php?lat=' + altLat + '&lon=' + altLon + '" target="_blank">Weather.gov</a> @ ' + myGetData(sSUMLST)
 	}
@@ -1288,7 +1293,7 @@ void PostPoll() {
 			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh')) + tmetr
 			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow1')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh1')) + tmetr
 			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow2')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh2')) + tmetr
-		}else{
+		} else {
 			my3day += 'High Low'
 			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow')) + tmetr
 			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh1')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow1')) + tmetr
@@ -1313,7 +1318,7 @@ void PostPoll() {
 		// orig 	my3day += OWMIcon
 		// orig }else if((my3day.length() + OWMText.length()+8) < 1025) {
 		// orig 	my3day += OWMText
-		// orig }else{// orig 
+		// orig } else {// orig 
 		// orig 	my3day += 'OpenWeatherMap.org'
 		// orig }
 		my3day += '</td></tr></table>'
@@ -1321,13 +1326,13 @@ void PostPoll() {
 			LOGWARN('Too much data to display.</br></br>Current threedayfcstTile length (' + my3day.length() + ') exceeds maximum tile length by ' + (my3day.length() - 1024).toString()  + ' characters.')
 		}
 		sendEvent(name: 'threedayfcstTile', value: my3day.take(1024))
-	}else{
+	} else {
 		device.deleteCurrentState('threedayfcstTile')
 	}
-//  >>>>>>>>>> End Built 3dayfcstTile <<<<<<<<<<
 	buildMyText()
 }
-
+//  >>>>>>>>>> End Build 3dayfcstTile <<<<<<<<<<
+//  >>>>>>>>>> Start Build Weather Summary text <<<<<<<<<<
 void buildweatherSummary() {
 	//  <<<<<<<<<< Begin Built Weather Summary text >>>>>>>>>>
 	String ddisp_twd = myGetData('ddisp_twd')==sNULL ? '%3.0f' : myGetData('ddisp_twd')
@@ -1339,8 +1344,9 @@ void buildweatherSummary() {
 		String Summary_vis = 'Visibility is around ' + String.format(ddisp_twd, myGetDataBD('vis')) + (myGetData(sDMETR)=='MPH' ? ' miles.' : ' kilometers.')
 		SummaryMessage((Boolean)settings.summaryType, myGetData('Summary_last_poll_date'), myGetData(sSUMLST), Summary_forecastTemp, Summary_precip, Summary_vis)
 	}
-//  >>>>>>>>>> End Built Weather Summary text <<<<<<<<<<
 }
+//  >>>>>>>>>> End Build Weather Summary text <<<<<<<<<<
+
 // >>>>>>>>>> End Post-Poll Routines <<<<<<<<<<
 void buildMyText() {
 	String ddisp_twd = myGetData('ddisp_twd')==sNULL ? '%3.0f' : myGetData('ddisp_twd')
@@ -1352,7 +1358,7 @@ void buildMyText() {
 	if((alertSource==sZERO) || (alertSource==sONE) || (myGetData('curAl')==sNCWA && alertSource==sTWO)) {
 		OWMIcon = '<a href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
 		OWMText = '<a href="https://openweathermap.org" target="_blank">OpenWeatherMap.org</a> @ ' + myGetData(sSUMLST)
-	}else{
+	} else {
 		OWMIcon = '<a href="https://forecast.weather.gov/MapClick.php?lat=' + altLat + '&lon=' + altLon + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'NWS_240px.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
 		OWMText = '<a href="https://forecast.weather.gov/MapClick.php?lat=' + altLat + '&lon=' + altLon + '" target="_blank">Weather.gov</a> @ ' + myGetData(sSUMLST)
 	}
@@ -1408,7 +1414,7 @@ void buildMyText() {
 			LOGWARN('Too much data to display.</br></br>Current myTile length (' + mytext.length() + ') exceeds maximum tile length by ' + (mytext.length() - 1024).toString() + ' characters.')
 		}
 		sendEvent(name: 'myTile', value: mytext.take(1024))
-	}else{
+	} else {
 		device.deleteCurrentState('myTile')
 	}
 //  >>>>>>>>>> End Built mytext <<<<<<<<<<
@@ -1420,8 +1426,6 @@ void refresh() {
 
 void installed() {
 }
-
-@Field static Map<String,String> verFLD=[:]
 
 Boolean ifreInstalled(){
 	String mc=device.id.toString()
@@ -1476,27 +1480,27 @@ void initMe() {
 		if (altLat == null || altLon == null) {
 			if ((valtLat == null) || (valtLat = sBLK)) {
 				LOGERR('The Override Coordinates feature is selected but Both Hub & the Override Latitude are null.')
-			}else{
+			} else {
 				device.updateSetting('altLat', [value:valtLat,type:'text'])
 			}
 			if ((valtLon == null) || (valtLon = sBLK)) {
 				LOGERR('The Override Coordinates feature is selected but Both Hub & the Override Longitude are null.')
-			}else{
+			} else {
 				device.updateSetting('altLon', [value:valtLon,type:'text'])
 			}
 		}
-	}else{
+	} else {
 		device.updateSetting('altLat', [value:valtLat,type:'text'])
 		device.updateSetting('altLon', [value:valtLon,type:'text'])
 		if (altLat == null || altLon == null) {
 			if ((valtLat == null) || (valtLat = sBLK)) {
 				LOGERR('The Hub\'s latitude is not set. Please set it, or use the Override Coordinates feature.')
-			}else{
+			} else {
 				device.updateSetting('altLat', [value:valtLat,type:'text'])
 			}
 			if ((valtLon == null) || (valtLon = sBLK)) {
 				LOGERR('The Hub\'s longitude is not set. Please set it, or use the Override Coordinates feature.')
-			}else{
+			} else {
 				device.updateSetting('altLon', [value:valtLon,type:'text'])
 			}
 		}
@@ -1534,7 +1538,7 @@ void pollOWMlHandler(resp, data) {
 		LOGWARN('Calling https://api.openweathermap.org/data/2.5/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey)
 		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
 		myUpdData('OWML',sSPC)
-	}else{
+	} else {
 		Map owml = parseJson(resp.data)
 		if(owml.toString()==sNULL) {
 			pauseExecution(1000)
@@ -1561,19 +1565,19 @@ void initialize_poll() {
 	Integer dsseconds
 	if(ssseconds < 56 ){
 		dsseconds = ssseconds + 4
-	}else{
+	} else {
 		dsseconds = ssseconds - 60 + 4
 	}
 	String pollIntervalFcst = (settings.pollIntervalForecast ?: '3 Hours')
 	String pollIntervalFcstnight = (settings.pollIntervalForecastnight ?: '3 Hours')
 	if(myGetData('is_light')==sTRU) {
 		myPoll = pollIntervalFcst
-	}else{
+	} else {
 		myPoll = pollIntervalFcstnight
 	}
 	if(myPoll == 'Manual Poll Only'){
 		LOGINFO('MANUAL FORECAST POLLING ONLY')
-	}else{
+	} else {
 		myPoll = myPoll.replace(sSPC,sBLK)
 		String mySched
 		LOGINFO('pollInterval: ' + myPoll)
@@ -1643,7 +1647,7 @@ void setMeasurementMetrics(String distFormat, String pressFormat, String precipF
 		dMetric = 'knots'
 	} else if(distFormat == 'Kilometers (kph)') {
 		dMetric = 'KPH'
-	}else{
+	} else {
 		dMetric = 'm/s'
 	}
 	myUpdData(sDMETR, dMetric)
@@ -1652,21 +1656,21 @@ void setMeasurementMetrics(String distFormat, String pressFormat, String precipF
 		pMetric = 'MBAR'
 	} else if(pressFormat == 'Inches') {
 		pMetric = 'inHg'
-	}else{
+	} else {
 		pMetric = 'hPa'
 	}
 	myUpdData(sPMETR, pMetric)
 
 	if(precipFormat == 'Millimeters') {
 		rMetric = 'mm'
-	}else{
+	} else {
 		rMetric = 'in'
 	}
 	myUpdData(sRMETR, rMetric)
 
 	if(temptFormat == 'Fahrenheit (°F)') {
 		tMetric = sDF
-	}else{
+	} else {
 		tMetric = '°C'
 	}
 	myUpdData(sTMETR, tMetric)
@@ -1825,7 +1829,7 @@ def estimateLux(Integer condition_id, Integer cloud) {
 			if (LUitem)	{
 				cCF = LUitem.luxp
 				cCT = ' using estimated cloud cover based on condition.'
-			}else{
+			} else {
 				cCF = 1.0
 				cCT = ' cloud coverage not available now.'
 			}
@@ -1841,7 +1845,7 @@ def estimateLux(Integer condition_id, Integer cloud) {
 		} else if(lux <= 1100 && lux > 400) {
 			Long t0 = Math.round(lux/400)
 			lux = t0 * 400
-		}else{
+		} else {
 			lux = 5
 		}
 	}
@@ -1861,7 +1865,7 @@ void SummaryMessage(Boolean SType, String Slast_poll_date, String Slast_poll_tim
 	BigDecimal windgust
 	if(myGetData('wind_gust') == sBLK || myGetDataBD('wind_gust') < 1.0 || myGetData('wind_gust')==sNULL) {
 		windgust = 0.00g
-	}else{
+	} else {
 		windgust = myGetDataBD('wind_gust')
 	}
 	String wSum // = (String)null
@@ -1875,7 +1879,7 @@ void SummaryMessage(Boolean SType, String Slast_poll_date, String Slast_poll_tim
 		wSum+= Sprecip
 		wSum+= Svis
 		wSum+= alertPublish ? ((!myGetData('alert') || myGetData('alert')==sNULL) ? sBLK : sSPC + myGetData('alert') + sDOT) : sBLK
-	}else{
+	} else {
 		wSum = myGetData('condition_text') + sSPC
 		wSum+= ((!SforecastTemp || SforecastTemp==sBLK) ? '. ' : SforecastTemp)
 		wSum+= ' Humidity: ' + myGetData('humidity') + '%. Temperature: ' + String.format(myGetData('ddisp_twd'), myGetDataBD(sTEMP)) + myGetData(sTMETR) + '. '
@@ -1900,7 +1904,7 @@ String getCondCode(Integer cid, String iconTOD){
 void logCheck(){
 	if(settings.txtEnable){
 		log.info 'OpenWeatherMap.org Weather Driver - INFO:  All Logging Enabled'
-	}else{
+	} else {
 		log.info 'OpenWeatherMap.org Weather Driver - INFO:  Further Logging Disabled'
 	}
 }
@@ -1951,15 +1955,10 @@ void sendEventPublish(evt)	{
 
 // date/time constants and conversions
 static Integer dayMs() { return 1000 * 60 * 60 * 24 }
-
 static Long J1970() { return 2440588L }
-
 static Long J2000() { return 2451545L }
-
 static Double rad() { return  Math.PI / 180.0D }
-
 static Double e() { return  rad() * 23.4397D } // obliquity of the Earth
-
 static Double toJulian() {
 	Date date = new Date()
 	Double l = date.getTime() / dayMs() - 0.5D + J1970()
@@ -1970,55 +1969,39 @@ static Date fromJulian(Double j)  { return new Date(Math.round((j + 0.5D - J1970
 static Integer toDays(){ return toJulian() - J2000() }
 
 // general calculations for position
-
 static Double rightAscension(Double l, Double b) { return Math.atan2(Math.sin(l) * Math.cos(e()) - Math.tan(b) * Math.sin(e()), Math.cos(l)) }
 static Double declination(Double l, Double b)    { return Math.asin(Math.sin(b) * Math.cos(e()) + Math.cos(b) * Math.sin(e()) * Math.sin(l)) }
-
 static Double azimuth(Double H, Double phi, Double dec)  { return Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi)) }
 static Double altitude(Double H, Double phi, Double dec) { return Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H)) }
-
 static Double siderealTime(Double d, Double lw) { return rad() * (280.16D + 360.9856235D * d) - lw }
 
 // general sun calculations
-
 static Double solarMeanAnomaly(Double d) { return rad() * (357.5291D + 0.98560028D * d) }
-
 static Double eclipticLongitude(Double M) {
-
 	Double C = rad() * (1.9148D * Math.sin(M) + 0.02D * Math.sin(2.0D * M) + 0.0003D * Math.sin(3.0D * M)) // equation of center
 	Double P = rad() * 102.9372D // perihelion of the Earth
-
 	return M + C + P + Math.PI
 }
 
-
 static LinkedHashMap<String,Double> sunCoords(Double d) {
-
 	Double M = solarMeanAnomaly(d)
 	Double L = eclipticLongitude(M)
-
 	return [dec: declination(L, 0D), ra: rightAscension(L, 0D)]
 }
 
 // calculates sun position for a given date and latitude/longitude
-
 LinkedHashMap<String,Double> getPosition() {
-
 	Double lng = ((String)altLon).toDouble()
 	Double lat = ((String)altLat).toDouble()
-
 	Double lw  = rad() * -lng
 	Double phi = rad() * lat
 	Double d   = toDays()
 	LinkedHashMap<String,Double> c  = sunCoords(d)
 	Double H  = siderealTime(d, lw) - c.ra
-
 	Double az; az = azimuth(H, phi, c.dec)
 	az = (az * 180.0D / Math.PI) + 180.0D
-
 	Double al; al = altitude(H, phi, c.dec)
 	al = al * 180.0D / Math.PI
-
 	return [
 			azimuth: az,
 			altitude: al,
@@ -2026,8 +2009,7 @@ LinkedHashMap<String,Double> getPosition() {
 }
 
 // Check Version   ***** with great thanks and acknowledgment to Cobra (CobraVmax) for his original code ****
-void updateCheck()
-{
+void updateCheck() {
 	Map paramsUD = [uri: 'https://raw.githubusercontent.com/Scottma61/Hubitat/master/docs/version2.json'] //https://hubitatcommunity.github.io/???/version2.json"]
 	asynchttpGet('updateCheckHandler', paramsUD)
 }
@@ -2064,15 +2046,15 @@ void updateCheckHandler(resp, data) {
 				if (descTextEnable) log.info 'You are using the current version of this driver'
 				break
 		}
-	}else{
+	} else {
 		log.error 'Something went wrong: CHECK THE JSON FILE AND IT\'S URI'
 	}
 }
 
-/*
-	padVer
+/*	padVer
 	Version progression of 1.4.9 to 1.4.10 would mis-compare unless each duple is padded first.
 */
+
 static String padVer(String ver) {
 	String pad
 	pad = sBLK
