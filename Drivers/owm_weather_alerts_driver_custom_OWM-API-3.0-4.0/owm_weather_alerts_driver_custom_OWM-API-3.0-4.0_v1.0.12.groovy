@@ -45,7 +45,8 @@
 	Last Update 06/09/2026
 	{ Left room below to document version changes...}
 
-    V1.0.10		06/24/2026		JAS		Updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
+	V1.0.11		06/26/2026		JAS		Added Hub location for default long / lat
+    V1.0.10		06/26/2026		JAS		Updated versioning on split of code between 2.5/3.0 and 3.0/4.0 
 	V1.0.9		06/26/2026		JAS		Add Last checked and status attributes	
 	V1.0.8		06/26/2026		JAS		Fixing Alerts bug
 	V1.0.7		06/26/2026		JAS		FIxed refresh method
@@ -61,7 +62,7 @@
 	V0.7.1b		10/26/2024		JAS		Custom HTML tile
 */
 
-static String version()    {  return '1.0.9'  }
+static String version()    {  return '1.0.11'  }
 import groovy.transform.Field
 
 @Field static final String DEFAULT_ICON_LOCATION = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm-icons/"
@@ -402,6 +403,20 @@ void pollSunRiseSet() {
 // >>>>>>>>>> End Sunrise-Sunset Routines <<<<<<<<<<
 // <<<<<<<<<< Begin OWM Poll Routines >>>>>>>>>>
 void pollOWM() {
+
+	String currentLat = settings.altLat ?: (location.latitude ? location.latitude.toString() : "")
+	String currentLon = settings.altLon ?: (location.longitude ? location.longitude.toString() : "")
+	if (!activeLat || !activeLon) {
+		log.error "Coordinates are entirely blank! Please assign values in Device Preferences or your Hub Location configurations."
+		sendEvent(name: "status", value: "Config Error")
+		return
+    }
+	
+	String owmUrl = "https://api.openweathermap.org/data/" + (apiVer==true ? "4.0" : "3.0") + "/onecall?lat=${activeLat}&lon=${activeLon}&exclude=minutely,hourly&mode=json&units=imperial&appid=${apiKey}"
+	if (!currentLat || !currentLon) {
+		log.error "Coordinates are completely empty. Skipping API poll."
+		return
+	}
 	if (ifreInstalled()) {
 		updated(); return
 	}
@@ -409,11 +424,9 @@ void pollOWM() {
 		LOGWARN('OpenWeatherMap API Key not found.  Please configure in preferences.')
 		return
 	}
-
 /*  for testing a different Lat/Lon location uncommnent the two lines below */
 //	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
 //	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-
 	Map ParamsOWM
 	ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '4.0' : '3.0') + '/onecall?lat=' + (String)settings.altLat + '&lon=' + (String)settings.altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
 	LOGINFO('Poll OpenWeatherMap.org: ' + ParamsOWM)
@@ -1504,42 +1517,38 @@ void initMe() {
 	myUpdData('city', city)
 	myUpdData('threedayLH', settings.threedayLH ? sTRU : sFLS)
 	Boolean altCoord = (settings.altCoord ?: false)
-	String valtLat; valtLat = location.latitude.toString().replace(sSPC, sBLK)
-	String valtLon; valtLon = location.longitude.toString().replace(sSPC, sBLK)
+	// String valtLat; valtLat = location.latitude.toString().replace(sSPC, sBLK)
+	// String valtLon; valtLon = location.longitude.toString().replace(sSPC, sBLK)
+
+	String valtLat = settings.altLat ?: (location.latitude ? location.latitude.toString() : "0.0")
+	String valtLon = settings.altLon ?: (location.longitude ? location.longitude.toString() : "0.0")
+
 	String altLat = settings.altLat ?: valtLat
 	String altLon = settings.altLon ?: valtLon
 	if (altCoord) {
-		if (altLat == null) {
-			device.updateSetting('altLat', [value:valtLat,type:'text'])
-		}
-		if (altLon == null) {
-			device.updateSetting('altLon', [value:valtLon,type:'text'])
-		}
-		if (altLat == null || altLon == null) {
-			if ((valtLat == null) || (valtLat == sBLK)) {
-				LOGERR('The Override Coordinates feature is selected but Both Hub & the Override Latitude are null.')
-			} else {
-				device.updateSetting('altLat', [value:valtLat,type:'text'])
-			}
-			if ((valtLon == null) || (valtLon == sBLK)) {
-				LOGERR('The Override Coordinates feature is selected but Both Hub & the Override Longitude are null.')
-			} else {
-				device.updateSetting('altLon', [value:valtLon,type:'text'])
-			}
-		}
+if (valtLat == null || valtLat == sBLK || valtLon == null || valtLon == sBLK) {
+    LOGERR('Coordinates could not be determined. Please set them in the device preferences or your Hub Location settings.')
+} else {
+    if (settings.altLat == null || settings.altLat == sBLK) {
+        device.updateSetting('altLat', [value: valtLat, type: 'string'])
+    }
+    if (settings.altLon == null || settings.altLon == sBLK) {
+        device.updateSetting('altLon', [value: valtLon, type: 'string'])
+    }
+}
 	} else {
-		device.updateSetting('altLat', [value:valtLat,type:'text'])
-		device.updateSetting('altLon', [value:valtLon,type:'text'])
+		device.updateSetting('altLat', [value:valtLat,type:'string'])
+		device.updateSetting('altLon', [value:valtLon,type:'string'])
 		if (altLat == null || altLon == null) {
 			if ((valtLat == null) || (valtLat == sBLK)) {
 				LOGERR("The Hub\'s latitude is not set. Please set it, or use the Override Coordinates feature.")
 			} else {
-				device.updateSetting('altLat', [value:valtLat,type:'text'])
+				device.updateSetting('altLat', [value:valtLat,type:'string'])
 			}
 			if ((valtLon == null) || (valtLon == sBLK)) {
 				LOGERR("The Hub\'s longitude is not set. Please set it, or use the Override Coordinates feature.")
 			} else {
-				device.updateSetting('altLon', [value:valtLon,type:'text'])
+				device.updateSetting('altLon', [value:valtLon,type:'string'])
 			}
 		}
 	}
@@ -1562,13 +1571,32 @@ void initMe() {
 	pollOWMl()
 }
 
-void pollOWMl() {
 /*  for testing a different Lat/Lon location uncommnent the two lines below */
 //	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
 //	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-	Map ParamsOWMl = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '4.0' : '3.0') + '/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey, timeout: 20 ]
-	LOGINFO('Poll OpenWeatherMap.org Location: ' + ParamsOWMl)
-	asynchttpGet('pollOWMlHandler', ParamsOWMl)
+void pollOWMl() {
+    /* Safe-extract local coordinate variables using Hub defaults if settings are blank */
+    String activeLat = settings.altLat ?: (location.latitude ? location.latitude.toString() : "")
+    String activeLon = settings.altLon ?: (location.longitude ? location.longitude.toString() : "")
+
+    /* Stop execution cleanly if coordinates can't be resolved anywhere */
+    if (!activeLat || !activeLon) {
+        log.error "OWM Poll Aborted: Latitude and Longitude coordinates are entirely empty!"
+        sendEvent(name: "status", value: "Config Error")
+        return
+    }
+
+    Map ParamsOWM = [
+        uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '4.0' : '3.0') + 
+             '/onecall?lat=' + activeLat + '&lon=' + activeLon + 
+             '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey,
+        requestContentType: 'application/json',
+        contentType: 'application/json',
+        timeout: 20
+    ]
+    
+    LOGINFO('Poll OpenWeatherMap.org: ' + ParamsOWM)
+    asynchttpGet('pollOWMHandler', ParamsOWM)
 }
 
 void pollOWMlHandler(resp, data) {
