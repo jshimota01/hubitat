@@ -67,7 +67,6 @@
 static String version()    {  return '1.0.13'  }
 import groovy.transform.Field
 
-@Field static final String DEFAULT_ICON_LOCATION = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm-icons/"
 @Field static final String sNULL=(String)null
 @Field static final String sAB='<a>'
 @Field static final String sACB='</a>'
@@ -315,6 +314,10 @@ metadata {
 		attribute 'cloudTomorrow', sNUM
 		attribute 'cloudDayAfterTomorrow', sNUM
 
+//icon storage
+       attribute DEFAULT_ICON_LOCATION = "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm-icons/"
+
+
 		command 'pollData'
 	}
 
@@ -339,7 +342,8 @@ metadata {
 			input 'rainFormat', 'enum', required: true, defaultValue: 'Inches', title: 'Display Unit - Precipitation: Inches or Millimeters',  options: ['Inches', 'Millimeters']
 			input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
 //	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-			input 'iconLocation', 'text', required: false, defaultValue: '', title: 'Alternative Icon Location:<br><i>blank for default location</i>'
+ // https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm-icons/
+			input 'iconLocation', 'text', required: false, defaultValue: 'https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_weather_alerts_driver_custom_OWM-API-3.0-4.0/owm-icons/', title: 'Alternative Icon Location:<br><i>blank for default location</i>'
 			input 'iconType', 'bool', title: 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile: On=Current or Off=Forecast', required: true, defaultValue: false
 			input 'altCoord', 'bool', required: true, defaultValue: false, title: "Override Hub's location coordinates"
 			if (altCoord) {
@@ -437,7 +441,7 @@ void pollOWM() {
 
 void pollOWMHandler(resp, data) {
 	LOGINFO('Polling OpenWeatherMap.org')
-	TimeZone tZ = TimeZone.getDefault()
+	// TimeZone tZ = TimeZone.getDefault()
 	String timestamp = new Date().format(myGetData('timeFormat') ?: 'h:mm a', tZ)
     
 	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
