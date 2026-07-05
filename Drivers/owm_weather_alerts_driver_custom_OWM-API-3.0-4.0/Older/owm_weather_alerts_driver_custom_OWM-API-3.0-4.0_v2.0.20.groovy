@@ -126,7 +126,8 @@ metadata {
         input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], defaultValue: "2", required: true
         
 		// Display Options
-		input name: "sliceOfDayEnable", type: "bool", title: "Display Options - Enable Slice OF Day?", defaultValue: true, required: true
+		input name: "owmAlertsEnable", type: "bool", title: "Display Options - Enable Alerts Tile?", defaultValue: true, required: true
+		input name: "sliceOfDayEnable", type: "bool", title: "Display Options - Enable Slice Of Day?", defaultValue: true, required: true
 		
         // Display Unit Selectors
         input name: "useImperialTemp", type: "bool", title: "Display Unit - Imperial Temperature?", description: "Turn ON for Fahrenheit (°F), OFF for Celsius (°C)", defaultValue: true, required: true
@@ -523,12 +524,33 @@ private def parsePayload(Map json) {
         }
     }
 
-    def alerts = json.alerts ?: []
+    logInfo "Weather Data processing completed. Dispatched to active Device states layout."
+    String calculatedCityAttr = "Local"
+    if (overrideCity && overrideCity.trim() != "") {
+        calculatedCityAttr = overrideCity.trim()
+    } else if (state.nearestCityName != null) {
+        calculatedCityAttr = state.nearestCityName
+    } else if (json.timezone) {
+        calculatedCityAttr = json.timezone.tokenize('/')[-1].replace('_', ' ')
+    }
+
+	def alerts = json.alerts ?: []
     String alertActive = "No active alerts"
     String alertSender = "N/A"
-    String alertDescr = "N/A"
-    String alertDescrFull = "N/A"
-    String alertTile = "<div style='text-align:center;'>No Active Weather Alerts</div>"
+    String alertDescr = "No active alerts"
+    String alertDescrFull = "No active alerts for ${calculatedCityAttr} at last poll"
+    
+    // Assembles the path for the default OpenWeatherMap alert/branding icon
+    String alertIconUrl = iconBasePath.endsWith("/") ? "${iconBasePath}OWM.png" : "${iconBasePath}/OWM.png"
+    
+    // Format the current time for the "as of" timestamp
+    String lastPollTime = new Date().format("HH:mm", location.timeZone)
+    
+    // Fallback block: Formatted with the icon, "as of", and the last poll time on the last line
+    String alertTile = "<div style='text-align:center;'>No Active Weather Alerts From</br>OpenWeatherMap.Org</div>" +
+                      "<div style='text-align:center; margin-top:5px; font-size:0.8em;'>" +
+                      "<img src='${alertIconUrl}' style='max-width:25px; max-height:25px; vertical-align:middle; margin-right:5px;'/>" +
+                      "as of ${lastPollTime}</div>"
 
     if (alerts.size() > 0) {
         def a = alerts[0]
@@ -536,7 +558,13 @@ private def parsePayload(Map json) {
         alertSender = a.sender_name ?: "N/A"
         alertDescr = a.description ? a.description.take(100) + "..." : "N/A"
         alertDescrFull = a.description ?: "N/A"
-        alertTile = "<div style='color:red; font-weight:bold; text-align:center;'>${alertActive}</div><div style='font-size:0.8em;'>${alertDescr}</div>"
+        
+        // Active alert block: Appends the matching icon and timestamp format to the bottom wrapper row
+        alertTile = "<div style='color:red; font-weight:bold; text-align:center;'>${alertActive}</div>" +
+                    "<div style='font-size:0.8em;'>${alertDescr}</div>" +
+                    "<div style='text-align:center; margin-top:5px; font-size:0.8em;'>" +
+                    "<img src='${alertIconUrl}' style='max-width:25px; max-height:25px; vertical-align:middle; margin-right:5px;'/>" +
+                    "as of ${lastPollTime}</div>"
     }
 
     String curTempStr = tempValue != null ? tempValue.toString() : "N/A"
@@ -547,16 +575,6 @@ private def parsePayload(Map json) {
                       "<tr><td>Today</td><td>Tom</td><td>D_After</td></tr>" +
                       "<tr><td>${curTempStr}°</td><td>${tHigh1Str}°</td><td>${tHigh2Str}°</td></tr>" +
                       "</table>"
-
-    logInfo "Weather Data processing completed. Dispatched to active Device states layout."
-    String calculatedCityAttr = "Local"
-    if (overrideCity && overrideCity.trim() != "") {
-        calculatedCityAttr = overrideCity.trim()
-    } else if (state.nearestCityName != null) {
-        calculatedCityAttr = state.nearestCityName
-    } else if (json.timezone) {
-        calculatedCityAttr = json.timezone.tokenize('/')[-1].replace('_', ' ')
-    }
 
     if (tempValue != null) sendEvent(name: "temperature", value: tempValue, unit: (settings.useImperialTemp ? "°F" : "°C"))
     if (humidityValue != null) sendEvent(name: "humidity", value: humidityValue, unit: "%")
@@ -705,11 +723,19 @@ private void updateSunPosition() {
 }
 
 private void calcBetwixtState(BigDecimal altitudeDeg) {
+    String sliceText = "fully night time"
+    
+    // Check if Slice Of Day is enabled in device preferences
+    if (settings.sliceOfDayEnable == false) {
+        sliceText = "Disabled in device preferences"
+        sendEvent(name: "betwixt", value: sliceText)
+        logDebug "Calculated betwixt slice: ${sliceText}"
+        return
+    }
+
     long currentEpoch = (new Date().getTime() / 1000)
     long sunriseEpoch = state.todaySunriseEpoch ?: 0
     long sunsetEpoch = state.todaySunsetEpoch ?: 0
-    
-    String sliceText = "fully night time"
     
     // Civil Twilight baseline is typically between -6.0° and -0.833° (atmospheric refraction accounted)
     boolean isTwilightAngle = (altitudeDeg >= -6.0 && altitudeDeg < -0.833)

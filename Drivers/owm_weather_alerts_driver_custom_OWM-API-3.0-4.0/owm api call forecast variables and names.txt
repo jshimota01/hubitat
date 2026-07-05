@@ -1,0 +1,46 @@
+
+
+
+
+
+
+
+"dt": 1783281600,  // today current time
+"sunrise": 1783254632, //today sunRise
+"sunset": 1783310543,  //today sunSet
+"moonrise": 1783320900, // today moonRise
+"moonset": 1783275660,  //today moonSet
+"moon_phase": 0.68, // today moonPhase
+"summary": "Expect a day of partly cloudy with clear spells", //today forecast summary
+"temp": { 
+  "day": 74.39,  // today day temp in Kelvin
+  "min": 54.86, // today minimum daily temp in Kelvin
+  "max": 82.85, // today maximum daily temp in Kelvin
+  "night": 65.19, // today night temp in Kelvin
+  "eve": 80.6, // today evening temp in Kelvin
+  "morn": 57.29 // today morning temp in Kelvin
+},
+"feels_like": {
+  "day": 73.08, // today day feels like temp in Kelvin
+  "night": 64.85, // today night feels like temp in Kelvin
+  "eve": 79.48, // today eve feels like temp in Kelvin
+  "morn": 56.48 // today morn feels like temp in Kelvin
+},
+"pressure": 1017,  //today atmo pressure at sea level in hPa
+"humidity": 33, //today humidity in percent
+"dew_point": 46.11, // today dew point temperature in kelvin
+"wind_speed": 9.82, // today wind speed in meters/sec
+"wind_deg": 25, // today wind direction in degrees (meteorological)
+"wind_gust": 16.46, // today wind gust speed in meters/sec
+"weather": [
+  {
+    "id": 804, // today weather condition ID
+    "main": "Clouds",  // today weather Group
+    "description": "overcast clouds",  // today weather group subtype
+    "icon": "04d"  // today weather condition icon
+  }
+],
+"clouds": 94, // today cloudiness in %
+"pop": 0,  // today probability of precipitation
+"uvi": 8.07  // today UV Index
+    },

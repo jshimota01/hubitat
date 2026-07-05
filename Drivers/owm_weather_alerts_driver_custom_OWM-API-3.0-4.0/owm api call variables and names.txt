@@ -1,0 +1,30 @@
+3.0 api
+{
+  "lat": 45.2722,
+  "lon": -123.0079,
+  "timezone": "America/Los_Angeles",
+  "timezone_offset": -25200,
+  "current": {
+    "dt": 1783178059,  //current time
+    "sunrise": 1783168193, //current sunrise
+    "sunset": 1783224162, // current sunset
+    "temp": 59.95,  //current temp in Kelvin
+    "feels_like": 59.45,  //current temp feels like to a human in Kelvin
+    "pressure": 1020,  //current atmo pressure at sea level in hPa
+    "humidity": 81,  //current humidity in percent
+    "dew_point": 54.12, // current dew point temperature in kelvin
+    "uvi": 1.25,  // current UV Index
+    "clouds": 0, // current cloudiness in %
+    "visibility": 10000, // current visibility in meters
+    "wind_speed": 5.01, //current wind speed in meters/sec
+    "wind_deg": 92,  // current wind direction in degrees (meteorological)
+    "wind_gust": 8.01, // current wind gust speed in meters/sec
+    "weather": [
+      {
+        "id": 800,  //current weather condition ID
+        "main": "Clear", //current weather Group
+        "description": "clear sky",  //current weather group subtype
+        "icon": "01d"  //current weather condition icon
+      }
+    ]
+  },
