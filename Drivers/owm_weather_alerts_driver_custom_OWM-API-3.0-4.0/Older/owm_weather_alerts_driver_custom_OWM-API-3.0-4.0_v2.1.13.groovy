@@ -161,6 +161,10 @@ metadata {
         // Optional City field that dynamically overrides latitude/longitude if populated
         input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
 		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: false
+		
+		// Need to look into this to see why it was implemented. I'm not using it
+		// input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
+		
         input name: "overrideLatitude", type: "text", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
         input name: "overrideLongitude", type: "text", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
 		input name: "altIconsEnable", type: "bool", title: "Base Override - Use Alternative Icons?", description: "Turn ON to use alternate icons (found in csv map within the driver), or OFF to use the standard OpenWeatherMap icons<br><b>Base Override - Icon Location MUST be filled!</b>", defaultValue: false, required: true
@@ -200,7 +204,7 @@ def installed() {
 }
 
 def updated() {
-    logInfo "Preferences updated, re-initializing driver rules..."
+    logInfo "Preferences updated. Running initialization ..."
     
     if (!settings.altIconLoc || settings.altIconLoc.trim() == "") {
         if (settings.altIconsEnable == true) {
@@ -213,10 +217,10 @@ def updated() {
 
 def initialize() {
     unschedule()
-   logInfo "Initializing driver."  
+   logInfo "Initializing driver ..."  
   
     if (logDebugEnable == true) {
-        logInfonfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
+        logInfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
         runIn(1800, "disableDebugLogging")
     }
 
@@ -234,7 +238,7 @@ def initialize() {
         }
         
         logDebug "Generated daytime cron string: ${dayCronStr}"
-        schedule(dayCronStr, "refresh")
+		schedule(dayCronStr, "scheduledPoll")
     }
 
     if (nightInterval == "manual") {
@@ -251,8 +255,13 @@ def initialize() {
         }
         
         logDebug "Generated nighttime cron string: ${nightCronStr}"
-        schedule(nightCronStr, "refresh")
+        schedule(nightCronStr, "scheduledPoll")
     }
+}
+
+def scheduledPoll() {
+    logDebug "Scheduled background poll sequence initiated."
+    pollOWM("schedule")
 }
 
 // This command executes automatically from your generated cron schedules inside initialize()
@@ -265,11 +274,255 @@ def refresh() {
         return
     }
 
-    // Execution to check long lat and city logic block
-    calcLonLatCityState()  
-  
-    // Execution to owm Poll logic block
-    // temp comment out pollOWM()  
+    // Execution to owm Poll logic block, alerting that it was invoked by refresh
+    pollOWM("refresh") 
+}
+
+def pollOWM(String type = "manual") {
+    // Evaluation of execution triggers using logInfo
+    switch(type) {
+        case "refresh":
+            logInfo "pollOWM run on manual Refresh"
+            break
+        case "schedule":
+            logInfo "polling OpenWeatherMaps API on schedule"
+            break
+        case "manual":
+        default:
+            logInfo "PollOWM run manually"
+            break
+    }
+
+    logDebug "pollOWM triggered. Evaluating location coordinates..."
+    
+    // Ensure state variables exist by evaluating coordinate overrides
+    calcLonLatCityState()
+    
+    if (state.usedLatitude == 0.0 || state.usedLongitude == 0.0) {
+        logWarn "pollOWM aborted: Valid coordinates are missing (Lat: ${state.usedLatitude}, Lon: ${state.usedLongitude})"
+        return
+    }
+
+    // Execution to check sun position for use in calcBetwixt and calcDayState blocks
+    BigDecimal altitude = calcSunPosition()
+	
+    // Execution for certain variables used in parsed data returned from pollOWMAPI
+    calcBetwixtState(altitude)
+    calcIsDayState(altitude)
+	
+    // Resolve path safely and save it to state before API execution
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
+	
+    // Fire off the API poll sequence
+    pollOWMAPI()
+}
+
+private void pollOWMAPI() {
+    logDebug "Building OpenWeatherMap API HTTP Request..."
+    
+    def lat = state.usedLatitude
+    def lon = state.usedLongitude
+    def version = settings.apiSelection ?: "3.0"
+    
+    if (!apiKey) {
+        logError "API request aborted: Missing API Key."
+        return
+    }
+    
+    // Structure endpoint variants depending on driver apiSelection context
+    String apiUrl = ""
+    switch(version) {
+        case "2.5":
+            apiUrl = "https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}"
+            break
+        case "3.0":
+        case "4.0": // Note: 4.0 API key uses 3.0 API poll method
+            apiUrl = "https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}"
+            break
+        default:
+            logError "Unknown API Version Selection: ${version}"
+            return
+    }
+    
+    def params = [
+        uri: apiUrl,
+        contentType: "application/json",
+        timeout: 15
+    ]
+    
+    logDebug "Polling OpenWeatherMap via URL: ${apiUrl}"
+    
+    try {
+        httpGet(params) { response ->
+            if (response.status == 200 && response.data) {
+                sendIfChanged(name: "lastResponseCode", value: response.status.toString())
+                sendIfChanged(name: "lastUpdated", value: new Date().format("yyyy-MM-dd HH:mm:ss", location.timeZone))
+                
+                // Route the payload to the custom data extractor
+                parseOWMData(response.data)
+            } else {
+                logError "OWM API call failed with status code: ${response.status}"
+                sendIfChanged(name: "lastResponseCode", value: response.status.toString())
+            }
+        }
+    } catch (Exception e) {
+        logError "Exception during OWM API Call execution: ${e.message}"
+    }
+}
+
+private void parseOWMData(Map json) {
+    if (!json) {
+        logWarn "parseOWMData received an empty payload map."
+        return
+    }
+    
+    logDebug "Parsing newly received OpenWeatherMap response data structure..."
+    
+    // Extract location and configuration details for the alert builder
+    String calculatedCityAttr = state.usedCity ?: "Local Area"
+    String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/"
+    
+    // Execute alerts calculation with live payload data
+    calcAlertsState(json, calculatedCityAttr, iconBasePath)
+    
+    // 1. Gather Current conditions dataset
+    def currentData = json.current ?: [:]
+    if (currentData) {
+        logTrace "Current weather data payload extracted successfully."
+    }
+    
+    // 2. Process Daily forecast arrays safely 
+    def dailyList = json.daily ?: []
+    
+    // Gather Today data (data.0)
+    def data0 = dailyList.size() > 0 ? dailyList[0] : [:]
+    if (data0) {
+        logTrace "Today's forecast data payload (data.0) extracted successfully."
+    }
+    
+    // Gather Tomorrow data (data.1)
+    def data1 = dailyList.size() > 1 ? dailyList[1] : [:]
+    if (data1) {
+        logTrace "Tomorrow's forecast data payload (data.1) extracted successfully."
+    }
+    
+    // Gather Day After Tomorrow data (data.2)
+    def data2 = dailyList.size() > 2 ? dailyList[2] : [:]
+    if (data2) {
+        logTrace "Day After Tomorrow's forecast data payload (data.2) extracted successfully."
+    }
+
+    // NEW: Route all isolated datasets into the custom event dispatcher
+    sendOWMData(currentData, data0, data1, data2)
+}
+
+private void sendOWMData(Map current, Map today, Map tom, Map tda) {
+    logDebug "sendOWMData initiated. Dispatching events to device attributes..."
+
+    // ==========================================
+    // 1. CURRENT DATA DISPATCHES
+    // ==========================================
+    if (current) {
+        if (current.temp != null) {
+            sendIfChanged(name: "currentTemperature", value: current.temp)
+            sendIfChanged(name: "temperature", value: current.temp) // Map to Core Capability
+        }
+        if (current.feels_like != null) sendIfChanged(name: "currentFeelsLike", value: current.feels_like)
+        if (current.humidity != null) {
+            sendIfChanged(name: "currentHumidity", value: current.humidity)
+            sendIfChanged(name: "humidity", value: current.humidity) // Map to Core Capability
+        }
+        if (current.pressure != null) {
+            sendIfChanged(name: "currentPressure", value: current.pressure)
+            sendIfChanged(name: "pressure", value: current.pressure) // Map to Core Capability
+        }
+        if (current.uvi != null) {
+            sendIfChanged(name: "currentUVI", value: current.uvi)
+            sendIfChanged(name: "ultravioletIndex", value: current.uvi) // Map to Core Capability
+        }
+        if (current.clouds != null) sendIfChanged(name: "currentCloudPCT", value: current.clouds)
+        if (current.visibility != null) sendIfChanged(name: "currentVisibility", value: current.visibility)
+        if (current.wind_speed != null) sendIfChanged(name: "currentWindSpeed", value: current.wind_speed)
+        if (current.wind_deg != null) sendIfChanged(name: "currentWindDeg", value: current.wind_deg)
+        if (current.wind_gust != null) sendIfChanged(name: "currentWindGust", value: current.wind_gust)
+        
+        // Handle nested weather condition arrays safely if available
+        if (current.weather && current.weather[0]) {
+            sendIfChanged(name: "currentConditionCode", value: current.weather[0].id)
+            sendIfChanged(name: "currentConditionType", value: current.weather[0].main)
+            sendIfChanged(name: "currentConditionTypeFull", value: current.weather[0].description)
+            sendIfChanged(name: "currentConditionIcon", value: current.weather[0].icon)
+        }
+    }
+
+    // ==========================================
+    // 2. TODAY DATA DISPATCHES (data.0)
+    // ==========================================
+    if (today) {
+        if (today.pop != null) sendIfChanged(name: "todayPOP", value: today.pop)
+        if (today.summary != null) sendIfChanged(name: "todaySummary", value: today.summary)
+        if (today.moon_phase != null) sendIfChanged(name: "todayMoonPhase", value: today.moon_phase)
+        
+        // Nested temperature structures
+        if (today.temp) {
+            if (today.temp.min != null) sendIfChanged(name: "todayTempMin", value: today.temp.min)
+            if (today.temp.max != null) sendIfChanged(name: "todayTempMax", value: today.temp.max)
+            if (today.temp.day != null) sendIfChanged(name: "todayTempDay", value: today.temp.day)
+            if (today.temp.night != null) sendIfChanged(name: "todayTempNight", value: today.temp.night)
+        }
+    }
+
+    // ==========================================
+    // 3. TOMORROW DATA DISPATCHES (data.1)
+    // ==========================================
+    if (tom) {
+        if (tom.pop != null) sendIfChanged(name: "tomPOP", value: tom.pop)
+        if (tom.summary != null) sendIfChanged(name: "tomSummary", value: tom.summary)
+        if (tom.moon_phase != null) sendIfChanged(name: "tomMoonPhase", value: tom.moon_phase)
+        
+        if (tom.temp) {
+            if (tom.temp.min != null) sendIfChanged(name: "tomTempMin", value: tom.temp.min)
+            if (tom.temp.max != null) sendIfChanged(name: "tomTempMax", value: tom.temp.max)
+            if (tom.temp.day != null) sendIfChanged(name: "tomTempDay", value: tom.temp.day)
+            if (tom.temp.night != null) sendIfChanged(name: "tomTempNight", value: tom.temp.night)
+        }
+    }
+
+    // ==========================================
+    // 4. DAY AFTER TOMORROW DATA DISPATCHES (data.2)
+    // ==========================================
+    if (tda) {
+        if (tda.pop != null) sendIfChanged(name: "tdaPOP", value: tda.pop)
+        if (tda.summary != null) sendIfChanged(name: "tdaSummary", value: tda.summary)
+        if (tda.moon_phase != null) sendIfChanged(name: "tdaMoonPhase", value: tda.moon_phase)
+        
+        if (tda.temp) {
+            if (tda.temp.min != null) sendIfChanged(name: "tdaTempMin", value: tda.temp.min)
+            if (tda.temp.max != null) sendIfChanged(name: "tdaTempMax", value: tda.temp.max)
+            if (tda.temp.day != null) sendIfChanged(name: "tdaTempDay", value: tda.temp.day)
+            if (tda.temp.night != null) sendIfChanged(name: "tdaTempNight", value: tda.temp.night)
+        }
+    }
+    
+    logDebug "sendOWMData event parsing complete."
+}
+
+		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+private String calcIconBasePath(String altIconLoc) {
+    String base = altIconLoc ? altIconLoc.trim() : ""
+    
+    // Fall back to target default URL if empty or null
+    if (base == "") {
+        base = "https://tinyurl.com/icnqz"
+    }
+    
+    // Enforce trailing slash constraint
+    if (!base.endsWith("/")) {
+        base += "/"
+    }
+    
+    logDebug "Calculated Icon Base Path resolved to: ${base}"
+    return base
 }
 
 private BigDecimal calcSunPosition() {
@@ -315,15 +568,16 @@ private BigDecimal calcSunPosition() {
 }
 
 private void calcAlertsState(Map json, String calculatedCityAttr, String iconBasePath) {
-    def alerts = json.alerts ?: []
+    // Safely look up alerts array out of the incoming payload map
+    def alerts = json?.alerts ?: []
     String alertActive = "No active alerts"
-	String currentAlertSender = "N/A"
+    String currentAlertSender = "N/A"
     String currentAlertDesc = "No active alerts"
     
     String lastPollTime = new Date().format("HH:mm", location.timeZone)
     String currentAlertDescFull = "No active alerts for ${calculatedCityAttr} at last poll as of ${lastPollTime}"
     
-    String alertIconUrl = iconBasePath.endsWith("/") ? "${iconBasePath}OWM.png" : "${iconBasePath}/OWM.png"
+    String alertIconUrl = "${iconBasePath}OWM.png"
     
     String currentAlertTile = "<div style='text-align:center;'>No active weather alerts from<br>Source: OpenWeatherMap</div>" + 
                        "<div style='text-align:center; margin-top:5px; font-size:0.8em;'>" + 
@@ -366,30 +620,40 @@ private void calcBetwixtState(BigDecimal altitudeDeg) {
     boolean isSunUp = (altitudeDeg >= -0.833)
     
     if (sunriseEpoch > 0 && sunsetEpoch > 0) { 
-        long midDayEpoch = sunriseEpoch + ((sunsetEpoch - sunriseEpoch) / 2) 
-        if (currentEpoch < midDayEpoch) { 
-            if (isTwilightAngle) { 
-                sliceText = "between twilight and sunrise" 
-            } else if (isSunUp) { 
-                sliceText = "between sunrise and noon" 
+        long midDayEpoch = sunriseEpoch + ((sunsetEpoch - sunriseEpoch) / 2)
+        
+        // --- ADDED LOGIC FOR CURRENT NOON TIME ---
+        try {
+            String noonTimeStr = new Date(midDayEpoch * 1000).format("HH:mm", location.timeZone)
+            sendIfChanged(name: "currentNoonTime", value: noonTimeStr)
+        } catch (Exception e) {
+            logError "Exception occurred while calculating currentNoonTime: ${e.message}"
+        }
+        // ----------------------------------------
+
+        if (currentEpoch < midDayEpoch) {
+            if (isTwilightAngle) {
+                sliceText = "between twilight and sunrise"
+            } else if (isSunUp) {
+                sliceText = "between sunrise and noon"
             }
         } else {
-            if (isSunUp) { 
-                sliceText = "between noon and sunset" 
-            } else if (isTwilightAngle) { 
-                sliceText = "between sunset and twilight" 
+            if (isSunUp) {
+                sliceText = "between noon and sunset"
+            } else if (isTwilightAngle) {
+                sliceText = "between sunset and twilight"
             }
         }
     } else {
-        if (isTwilightAngle) { 
-            sliceText = "between twilight and sunrise" 
-        } else if (isSunUp) { 
-            sliceText = "between sunrise and noon" 
+        if (isTwilightAngle) {
+            sliceText = "between twilight and sunrise"
+        } else if (isSunUp) {
+            sliceText = "between sunrise and noon"
         }
     }
-    
-    sendIfChanged(name: "betwixt", value: sliceText) 
-    logDebug "Calculated betwixt slice: ${sliceText} (Current Alt: ${altitudeDeg}°)" 
+
+    sendIfChanged(name: "betwixt", value: sliceText)
+    logDebug "Calculated betwixt slice: ${sliceText} (Current Alt: ${altitudeDeg}°)"
 }
 
 private void calcIsDayState(BigDecimal altitudeDeg) {
@@ -412,16 +676,28 @@ private void calcIsDayState(BigDecimal altitudeDeg) {
     }
     
     sendIfChanged(name: "currentIsDay", value: isDayText) 
-    logDebug "Calculated isDay: ${isDayText}" 
+    logTrace "Calculated currentIsDay: ${isDayText}" 
 }
 
 private void calcLonLatCityState() {
-    logDebug "Starting calcLonLatCityState evaluation..."
+    logDebug "Starting calcLonLatCityState evaluation..." 
+    
+    // Check if the setting values have changed since the last execution
+    String currentCity = settings.overrideCity?.trim() ?: ""
+    String currentLat  = settings.overrideLatitude?.trim() ?: ""
+    String currentLon  = settings.overrideLongitude?.trim() ?: ""
+
+    if (state.lastOverrideCity == currentCity && 
+        state.lastOverrideLatitude == currentLat && 
+        state.lastOverrideLongitude == currentLon) {
+        logTrace "Override settings have not changed. Skipping geo-lookup and using cached values."
+        return
+    }
     
     // Define the placeholder variables to output to
-    String usedCity = ""
-    BigDecimal usedLatitude = 0.0
-    BigDecimal usedLongitude = 0.0
+    String usedCity = "" 
+    BigDecimal usedLatitude = 0.0 
+    BigDecimal usedLongitude = 0.0 
     
     // Base URL for the OWM Geocoding API
     String geoApiUrl = "https://api.openweathermap.org/geo/1.0/"
@@ -464,26 +740,16 @@ private void calcLonLatCityState() {
     // SCENARIO 2 & 3: overrideCity is empty, handle coordinates
     // -------------------------------------------------------------
     else {
-        boolean physicalOverridesExist = (settings.apiLatitude && settings.apiLatitude.trim() != "" && 
-                                          settings.apiLongitude && settings.apiLongitude.trim() != "")
-        
-        if (physicalOverridesExist) {
-            // SCENARIO 2: Latitude and Longitude settings are filled manually
-            logDebug "Scenario 2: Coordinate overrides are populated. Using specified lat/lon."
-            usedLatitude = settings.apiLatitude.trim().toBigDecimal()
-            usedLongitude = settings.apiLongitude.trim().toBigDecimal()
+        // Fallback to Hub default location parameters
+        logDebug "Scenario 3: Fallback to Hub default location parameters."
+        if (location.latitude != null && location.longitude != null) {
+            usedLatitude = location.latitude.toBigDecimal()
+            usedLongitude = location.longitude.toBigDecimal()
         } else {
-            // SCENARIO 3: Everything is empty, fallback to Hub coordinates
-            logDebug "Scenario 3: Fallback to Hub default location parameters."
-            if (location.latitude != null && location.longitude != null) {
-                usedLatitude = location.latitude.toBigDecimal()
-                usedLongitude = location.longitude.toBigDecimal()
-            } else {
-                logWarn "Hub settings are missing Latitude/Longitude coordinates!"
-            }
+            logWarn "Hub settings are missing Latitude/Longitude coordinates!"
         }
         
-        // Perform Reverse Lookup to identify nearest city from coordinates (Scenarios 2 & 3)
+        // Perform Reverse Lookup to identify nearest city from coordinates
         if (usedLatitude != 0.0 && usedLongitude != 0.0) {
             logDebug "Performing Reverse Geo-Lookup for coordinates: ${usedLatitude}, ${usedLongitude}"
             try {
@@ -492,7 +758,6 @@ private void calcLonLatCityState() {
                     contentType: "application/json",
                     timeout: 10
                 ]
-                
                 httpGet(params) { response ->
                     if (response.status == 200 && response.data) {
                         def geoData = response.data[0]
@@ -515,21 +780,20 @@ private void calcLonLatCityState() {
     // -------------------------------------------------------------
     // State / Attribute Storage Block
     // -------------------------------------------------------------
-    // Storing variables into driver state so they persist and are accessible by executeOwmCall()
     state.usedCity = usedCity
     state.usedLatitude = usedLatitude
     state.usedLongitude = usedLongitude
     
-    // Optionally trigger an update to device attributes if you want them on the Hubitat UI
-    sendIfChanged(name: "city", value: usedCity)
-    sendIfChanged(name: "apiLatitude", value: usedLatitude)
-    sendIfChanged(name: "apiLongitude", value: usedLongitude)
+    // Cache the current settings so we can compare against them next time
+    state.lastOverrideCity = currentCity
+    state.lastOverrideLatitude = currentLat
+    state.lastOverrideLongitude = currentLon
     
     logDebug "Completed calcLonLatCityState. Outputs -> City: ${usedCity} | Lat: ${usedLatitude} | Lon: ${usedLongitude}"
 }
 
 def disableDebugLogging() {
-    logInfonfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
+    logInfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
     device.updateSetting("logDebugEnable", [type: "bool", value: false])
 }
 

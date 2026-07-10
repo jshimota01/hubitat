@@ -160,9 +160,7 @@ metadata {
         
         // Optional City field that dynamically overrides latitude/longitude if populated
         input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
-
-		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: true, defaultValue: 'https://tinyurl.com/icnqz/'
+		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: false
 		
 		// Need to look into this to see why it was implemented. I'm not using it
 		// input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
@@ -206,7 +204,7 @@ def installed() {
 }
 
 def updated() {
-    logInfo "Preferences updated, re-initializing driver rules..."
+    logInfo "Preferences updated. Running initialization ..."
     
     if (!settings.altIconLoc || settings.altIconLoc.trim() == "") {
         if (settings.altIconsEnable == true) {
@@ -219,10 +217,10 @@ def updated() {
 
 def initialize() {
     unschedule()
-   logInfo "Initializing driver."  
+   logInfo "Initializing driver ..."  
   
     if (logDebugEnable == true) {
-        logInfonfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
+        logInfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
         runIn(1800, "disableDebugLogging")
     }
 
@@ -240,7 +238,7 @@ def initialize() {
         }
         
         logDebug "Generated daytime cron string: ${dayCronStr}"
-        schedule(dayCronStr, "refresh")
+		schedule(dayCronStr, "scheduledPoll")
     }
 
     if (nightInterval == "manual") {
@@ -257,8 +255,13 @@ def initialize() {
         }
         
         logDebug "Generated nighttime cron string: ${nightCronStr}"
-        schedule(nightCronStr, "refresh")
+        schedule(nightCronStr, "scheduledPoll")
     }
+}
+
+def scheduledPoll() {
+    logDebug "Scheduled background poll sequence initiated."
+    pollOWM("schedule")
 }
 
 // This command executes automatically from your generated cron schedules inside initialize()
@@ -271,11 +274,25 @@ def refresh() {
         return
     }
 
-    // Execution to owm Poll logic block
-    pollOWM()  
+    // Execution to owm Poll logic block, alerting that it was invoked by refresh
+    pollOWM("refresh") 
 }
 
-def pollOWM() {
+def pollOWM(String type = "manual") {
+    // Evaluation of execution triggers using logInfo
+    switch(type) {
+        case "refresh":
+            logInfo "pollOWM run on manual Refresh"
+            break
+        case "schedule":
+            logInfo "polling OpenWeatherMaps API on schedule"
+            break
+        case "manual":
+        default:
+            logInfo "PollOWM run manually"
+            break
+    }
+
     logDebug "pollOWM triggered. Evaluating location coordinates..."
     
     // Ensure state variables exist by evaluating coordinate overrides
@@ -289,9 +306,12 @@ def pollOWM() {
     // Execution to check sun position for use in calcBetwixt and calcDayState blocks
     BigDecimal altitude = calcSunPosition()
 	
-	// Execution for certain variables used in parsed data returned from pollOWMAPI
-	calcBetwixtState(altitude)
+    // Execution for certain variables used in parsed data returned from pollOWMAPI
+    calcBetwixtState(altitude)
     calcIsDayState(altitude)
+	
+    // Resolve path safely and save it to state before API execution
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
 	
     // Fire off the API poll sequence
     pollOWMAPI()
@@ -360,7 +380,7 @@ private void parseOWMData(Map json) {
     
     // Extract location and configuration details for the alert builder
     String calculatedCityAttr = state.usedCity ?: "Local Area"
-    String iconBasePath = settings.altIconLoc ?: ""
+	String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/"
     
     // Execute alerts calculation with live payload data
     calcAlertsState(json, calculatedCityAttr, iconBasePath)
@@ -391,6 +411,24 @@ private void parseOWMData(Map json) {
     if (data2) {
         logTrace "Day After Tomorrow's forecast data payload (data.2) extracted successfully."
     }
+}
+
+		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+private String calcIconBasePath(String altIconLoc) {
+    String base = altIconLoc ? altIconLoc.trim() : ""
+    
+    // Fall back to target default URL if empty or null
+    if (base == "") {
+        base = "https://tinyurl.com/icnqz"
+    }
+    
+    // Enforce trailing slash constraint
+    if (!base.endsWith("/")) {
+        base += "/"
+    }
+    
+    logDebug "Calculated Icon Base Path resolved to: ${base}"
+    return base
 }
 
 private BigDecimal calcSunPosition() {
@@ -445,7 +483,7 @@ private void calcAlertsState(Map json, String calculatedCityAttr, String iconBas
     String lastPollTime = new Date().format("HH:mm", location.timeZone)
     String currentAlertDescFull = "No active alerts for ${calculatedCityAttr} at last poll as of ${lastPollTime}"
     
-    String alertIconUrl = iconBasePath.endsWith("/") ? "${iconBasePath}OWM.png" : "${iconBasePath}/OWM.png"
+    String alertIconUrl = "${iconBasePath}OWM.png"
     
     String currentAlertTile = "<div style='text-align:center;'>No active weather alerts from<br>Source: OpenWeatherMap</div>" + 
                        "<div style='text-align:center; margin-top:5px; font-size:0.8em;'>" + 
@@ -661,7 +699,7 @@ private void calcLonLatCityState() {
 }
 
 def disableDebugLogging() {
-    logInfonfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
+    logInfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
     device.updateSetting("logDebugEnable", [type: "bool", value: false])
 }
 

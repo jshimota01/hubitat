@@ -23,7 +23,11 @@ metadata {
         attribute "betwixt", "string"
         attribute "overrideCity", "string"
         attribute "overrideLongitude", "number"
-        attribute "overrideLatitude", "numbr"
+        attribute "overrideLatitude", "number"
+		attribute "pressureUnit", "string"
+		attribute "temperatureUnit", "string"
+		attribute "windSpeedUnit", "string"
+		attribute "illuminanceUnit", "string"
 		
 		// - Api specific response attributes
 
@@ -40,8 +44,10 @@ metadata {
         attribute "currentAlertDescFull", "string"
         
         // - Calculated Solar Angles attributes
-        attribute "altitude", "number"
-        attribute "azimuth", "number"
+        attribute "altitude", "string"
+        attribute "azimuth", "string"
+		attribute "altitudeText", "string"
+		attribute "azimuthText", "string"
 
         // - Calculated Polling Timestamps attributes
         attribute "lastPollForecast", "string"
@@ -56,6 +62,8 @@ metadata {
 		// - Current unique derived attributes
         attribute "currentIlluminanceText", "string"
 		attribute "currentPressureText", "string"
+		attribute "currentTemperatureText", "string"
+		attribute "currentWindSpeedText", "string"
 		attribute "currentTile", "string"
 		attribute "currentVisibility", "number"
         attribute "currentTwilightBegin", "string"
@@ -160,22 +168,21 @@ metadata {
         
         // Optional City field that dynamically overrides latitude/longitude if populated
         input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
-
-		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: true, defaultValue: 'https://tinyurl.com/icnqz/'
+		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: false
 		
 		// Need to look into this to see why it was implemented. I'm not using it
 		// input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
 		
-        input name: "overrideLatitude", type: "text", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
-        input name: "overrideLongitude", type: "text", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
+        input name: "overrideLatitude", type: "decimal", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
+        input name: "overrideLongitude", type: "decimal", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
 		input name: "altIconsEnable", type: "bool", title: "Base Override - Use Alternative Icons?", description: "Turn ON to use alternate icons (found in csv map within the driver), or OFF to use the standard OpenWeatherMap icons<br><b>Base Override - Icon Location MUST be filled!</b>", defaultValue: false, required: true
 		
 		// Display Selector Options
         input name: "precisionPrecip", type: "enum", title: "Display Decimal Precision - Precipitation", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for rainfall readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "2", required: true
-        input name: "precisionPressure", type: "enum", title: "Display Decimal Precision - Pressure", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for barometer readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 30 mb, 30.5 mb, 30.55 mb</i>", defaultValue: "2", required: true
-        input name: "precisionTemp", type: "enum", title: "Display Decimal Precision - Temperature", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for temperature readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 70 °F, 70.3 °F, 70.55 °F</i>", defaultValue: "2", required: true
-        input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for wind speed readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 12 mph, 12.7 mph, 12.77 mph</i>", defaultValue: "2", required: true
+        input name: "precisionPressure", type: "enum", title: "Display Decimal Precision - Pressure", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for barometer readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 30mb,30.5mb, 30.55mb</i>", defaultValue: "2", required: true
+        input name: "precisionSunAngles", type: "enum", title: "Display Decimal Precision - Sun Angles", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for sun angles (altitude and azimuth) readings in logging and tiles<br>Default: <b>0</b><br><i>EG(with Unit): 149°, 149.5°, 149.55°</i>", defaultValue: "0", required: true
+        input name: "precisionTemp", type: "enum", title: "Display Decimal Precision - Temperature", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for temperature readings in logging and tiles<br>Default: <b>2</b><br><i>EG(with Unit): 70°F, 70.3°F, 70.55°F</i>", defaultValue: "2", required: true
+        input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for wind speed readings in logging and tiles<br>Default: <b>2</b><br><i>EG (with Unit): 12 mph, 12.7 mph, 12.77 mph</i>", defaultValue: "2", required: true
         
 		// Display Options
 		input name: "owmAlertsEnable", type: "bool", title: "Display Options - Enable Alerts Tile?", description: "Enable to Alert tile output updates on schedule for normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -184,8 +191,8 @@ metadata {
         // Display Unit Selectors
 		input name: "pressureUnit", type: "enum", title: "Display Unit - Barometric Pressure", options: ["inHg": "Mercury (inHg)", "hPa": "Hectopascals (hPa)", "mb": "Millibar (mb)", "none": "None (No Unit Suffix)"], description: "Choice of barometer unit used in tiles and logging<br>Default: <b>Mercury (inHg)</b>", defaultValue: "inHg", required: true
 		input name: "illuminanceUnit", type: "enum", title: "Display Unit - Illuminance", options: ["lx": "Lux (lx)", "fc": "Foot-candle (fc)", "ph": "Phot (ph)", "none": "None (No Unit Suffix)"], description: "Choice of illuminance unit used in tiles and logging<br>Default: <b>Lux (lx)</b>", defaultValue: "lx", required: true
-		input name: "temperatureUnit", type: "enum", title: "Display Unit - Temperature", options: ["f": "Fahrenheit (°F)", "c": "Celsius (°C)", "k": "Kelvin (K)", "none": "None (No Unit Suffix)"], description: "Choice of temperature unit formatting used in tiles and logging<br>Default: <b>Fahrenheit (°F)</b>", defaultValue: "f", required: true
-		input name: "windUnit", type: "enum", title: "Display Unit - Wind Speed", options: ["mph": "Miles per Hour (mph)", "kmh": "Kilometers per Hour (km/h)", "kt": "Knots (kt)", "ms": "Meters per Second (m/s)", "none": "None (No Unit Suffix)"], description: "Choice of wind speed unit used in tiles and logging<br>Default: <b>Miles per Hour(mph)</b>", defaultValue: "mph", required: true		
+		input name: "temperatureUnit", type: "enum", title: "Display Unit - Temperature", options: ["°F": "Fahrenheit (°F)", "°C": "Celsius (°C)", "K": "Kelvin (K)", "none": "None (No Unit Suffix)"], description: "Choice of temperature unit formatting used in tiles and logging<br>Default: <b>Fahrenheit (°F)</b>", defaultValue: "°F", required: true
+		input name: "windSpeedUnit", type: "enum", title: "Display Unit - Wind Speed", options: ["mph": "Miles per Hour (mph)", "kmh": "Kilometers per Hour (km/h)", "kt": "Knots (kt)", "ms": "Meters per Second (m/s)", "none": "None (No Unit Suffix)"], description: "Choice of wind speed unit used in tiles and logging<br>Default: <b>Miles per Hour(mph)</b>", defaultValue: "mph", required: true		
         // Polling Option Dropdown Menu
         input name: "dayInterval", type: "enum", title: "Polling - Daytime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency to OWM during daytime (between sunrise and sunset)<br>Default: <b>30 Minutes</b>", defaultValue: "30", required: true
         input name: "nightInterval", type: "enum", title: "Polling - Nighttime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency of OWM during nighttime (between sunset and sunrise)<br>Default: <b>1 Hour</b>", defaultValue: "60", required: true
@@ -202,11 +209,30 @@ metadata {
 def installed() {
     logInfo "Driver Installed. Turning on initial debug logging for 30 minutes."
     device.updateSetting("logDebugEnable", [type: "bool", value: true])
+    
+    // Push defaults to settings so they display properly on the driver page fields
+    if (settings.pressureUnit == null) device.updateSetting("pressureUnit", [type: "enum", value: "inHg"])
+    if (settings.illuminanceUnit == null) device.updateSetting("illuminanceUnit", [type: "enum", value: "lx"])
+    if (settings.temperatureUnit == null) device.updateSetting("temperatureUnit", [type: "enum", value: "°F"])
+    if (settings.windSpeedUnit == null) device.updateSetting("windSpeedUnit", [type: "enum", value: "mph"])
+
+    // Update current device attributes to reflect defaults on initial install
+    sendIfChanged(name: "pressureUnit", value: "inHg")
+    sendIfChanged(name: "illuminanceUnit", value: " lx")
+    sendIfChanged(name: "temperatureUnit", value: "°F")
+    sendIfChanged(name: "windSpeedUnit", value: " mph")
+
     initialize()
 }
 
 def updated() {
-    logInfo "Preferences updated, re-initializing driver rules..."
+    logInfo "Preferences updated. Running initialization ..."
+    
+    // Ensure changed unit selections immediately update device attributes
+    sendIfChanged(name: "pressureUnit", value: settings.pressureUnit ?: "inHg")
+    sendIfChanged(name: "illuminanceUnit", value: settings.illuminanceUnit ?: "lx")
+    sendIfChanged(name: "temperatureUnit", value: settings.temperatureUnit ?: "°F")
+    sendIfChanged(name: "windSpeedUnit", value: settings.windSpeedUnit ?: "mph")
     
     if (!settings.altIconLoc || settings.altIconLoc.trim() == "") {
         if (settings.altIconsEnable == true) {
@@ -219,46 +245,20 @@ def updated() {
 
 def initialize() {
     unschedule()
-   logInfo "Initializing driver."  
+    logInfo "Initializing driver ..."  
   
     if (logDebugEnable == true) {
-        logInfonfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
+        logInfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
         runIn(1800, "disableDebugLogging")
     }
 
-    if (dayInterval == "manual") {
-        logInfo "Daytime polling interval configured to MANUAL. Automatic daylight scheduling skipped."
-    } else if (dayInterval) {
-        String dayCronStr = ""
-        int mins = dayInterval.toInteger()
-        
-        if (mins < 60) {
-            dayCronStr = "0 0/${mins} 6-17 * * ?"
-        } else {
-            int hours = mins / 60
-            dayCronStr = "0 0 6-17/${hours} * * ?"
-        }
-        
-        logDebug "Generated daytime cron string: ${dayCronStr}"
-        schedule(dayCronStr, "refresh")
-    }
+    // Fire an immediate poll to get current sunrise/sunset data and kick off dynamic scheduling
+    runIn(2, "scheduledPoll")
+}
 
-    if (nightInterval == "manual") {
-        logInfo "Nighttime polling interval configured to MANUAL. Automatic night scheduling skipped."
-    } else if (nightInterval) {
-        String nightCronStr = ""
-        int mins = nightInterval.toInteger()
-        
-        if (mins < 60) {
-            nightCronStr = "0 0/${mins} 0-5,18-23 * * ?"
-        } else {
-            int hours = mins / 60
-            nightCronStr = "0 0 0-5/${hours},18-23/${hours} * * ?"
-        }
-        
-        logDebug "Generated nighttime cron string: ${nightCronStr}"
-        schedule(nightCronStr, "refresh")
-    }
+def scheduledPoll() {
+    logDebug "Scheduled background poll sequence initiated."
+    pollOWM("schedule")
 }
 
 // This command executes automatically from your generated cron schedules inside initialize()
@@ -271,11 +271,73 @@ def refresh() {
         return
     }
 
-    // Execution to owm Poll logic block
-    pollOWM()  
+    // Execution to owm Poll logic block, alerting that it was invoked by refresh
+    pollOWM("refresh") 
 }
 
-def pollOWM() {
+private void updateDynamicSchedules(long sunriseEpoch, long sunsetEpoch) {
+    // Unschedule previous scheduledPoll instances so we don't stack cron jobs
+    unschedule("scheduledPoll")
+
+    if (dayInterval == "manual" && nightInterval == "manual") {
+        logInfo "Both daytime and nighttime polling are set to MANUAL. Dynamic scheduling skipped."
+        return
+    }
+
+    // Convert epoch seconds to local hours (0-23)
+    int sunriseHour = new Date(sunriseEpoch * 1000).format("H", location.timeZone).toInteger()
+    int sunsetHour = new Date(sunsetEpoch * 1000).format("H", location.timeZone).toInteger()
+    
+    logDebug "Dynamic scheduling boundaries parsed -> True Sunrise Hour: ${sunriseHour}, True Sunset Hour: ${sunsetHour}"
+
+    // 1. Daytime Cron Generation (From Sunrise Hour up to Sunset Hour minus 1)
+    if (dayInterval != "manual" && dayInterval) {
+        int mins = dayInterval.toInteger()
+        int endDayHour = sunsetHour - 1
+        String dayCronStr = ""
+        
+        if (mins < 60) {
+            dayCronStr = "0 0/${mins} ${sunriseHour}-${endDayHour} * * ?"
+        } else {
+            int hours = mins / 60
+            dayCronStr = "0 0 ${sunriseHour}-${endDayHour}/${hours} * * ?"
+        }
+        logDebug "Generated dynamic daytime cron string: ${dayCronStr}"
+        schedule(dayCronStr, "scheduledPoll")
+    }
+
+    // 2. Nighttime Cron Generation (From Sunset Hour through midnight to Sunrise Hour minus 1)
+    if (nightInterval != "manual" && nightInterval) {
+        int mins = nightInterval.toInteger()
+        int endNightHour = sunriseHour - 1
+        String nightCronStr = ""
+        
+        if (mins < 60) {
+            nightCronStr = "0 0/${mins} ${sunsetHour}-23,0-${endNightHour} * * ?"
+        } else {
+            int hours = mins / 60
+            nightCronStr = "0 0 ${sunsetHour}-23/${hours},0-${endNightHour}/${hours} * * ?"
+        }
+        logDebug "Generated dynamic nighttime cron string: ${nightCronStr}"
+        schedule(nightCronStr, "scheduledPoll")
+    }
+}
+
+def pollOWM(String type = "manual") {
+    // Evaluation of execution triggers using logInfo
+    switch(type) {
+        case "refresh":
+            logInfo "pollOWM run on manual Refresh"
+            break
+        case "schedule":
+            logInfo "polling OpenWeatherMaps API on schedule"
+            break
+        case "manual":
+        default:
+            logInfo "PollOWM run manually"
+            break
+    }
+
     logDebug "pollOWM triggered. Evaluating location coordinates..."
     
     // Ensure state variables exist by evaluating coordinate overrides
@@ -289,9 +351,12 @@ def pollOWM() {
     // Execution to check sun position for use in calcBetwixt and calcDayState blocks
     BigDecimal altitude = calcSunPosition()
 	
-	// Execution for certain variables used in parsed data returned from pollOWMAPI
-	calcBetwixtState(altitude)
+    // Execution for certain variables used in parsed data returned from pollOWMAPI
+    calcBetwixtState(altitude)
     calcIsDayState(altitude)
+	
+    // Resolve path safely and save it to state before API execution
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
 	
     // Fire off the API poll sequence
     pollOWMAPI()
@@ -360,7 +425,7 @@ private void parseOWMData(Map json) {
     
     // Extract location and configuration details for the alert builder
     String calculatedCityAttr = state.usedCity ?: "Local Area"
-    String iconBasePath = settings.altIconLoc ?: ""
+    String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/"
     
     // Execute alerts calculation with live payload data
     calcAlertsState(json, calculatedCityAttr, iconBasePath)
@@ -369,6 +434,17 @@ private void parseOWMData(Map json) {
     def currentData = json.current ?: [:]
     if (currentData) {
         logTrace "Current weather data payload extracted successfully."
+        
+        // --- ADDED: Extract and track true sunrise/sunset epochs ---
+        if (currentData.sunrise) state.todaySunriseEpoch = currentData.sunrise.toLong()
+        if (currentData.sunset) state.todaySunsetEpoch = currentData.sunset.toLong()
+        
+        // Ensure rain and snow default to 0 if missing or nested improperly from OWM
+        def rainVal = currentData.rain?.getAt("1h") != null ? currentData.rain["1h"] : 0
+        def snowVal = currentData.snow?.getAt("1h") != null ? currentData.snow["1h"] : 0
+        
+        currentData["calculatedRain"] = rainVal
+        currentData["calculatedSnow"] = snowVal
     }
     
     // 2. Process Daily forecast arrays safely 
@@ -376,63 +452,283 @@ private void parseOWMData(Map json) {
     
     // Gather Today data (data.0)
     def data0 = dailyList.size() > 0 ? dailyList[0] : [:]
-    if (data0) {
-        logTrace "Today's forecast data payload (data.0) extracted successfully."
-    }
+    // ... [keep your existing data1 and data2 extraction logic here] ...
+
+    // Route all isolated datasets into the custom event dispatcher
+    sendOWMData(currentData, data0, data1, data2)
     
-    // Gather Tomorrow data (data.1)
-    def data1 = dailyList.size() > 1 ? dailyList[1] : [:]
-    if (data1) {
-        logTrace "Tomorrow's forecast data payload (data.1) extracted successfully."
-    }
-    
-    // Gather Day After Tomorrow data (data.2)
-    def data2 = dailyList.size() > 2 ? dailyList[2] : [:]
-    if (data2) {
-        logTrace "Day After Tomorrow's forecast data payload (data.2) extracted successfully."
+    // --- ADDED: Dynamically rebuild cron schedules based on the new true values ---
+    if (state.todaySunriseEpoch && state.todaySunsetEpoch) {
+        updateDynamicSchedules(state.todaySunriseEpoch, state.todaySunsetEpoch)
     }
 }
 
-private BigDecimal calcSunPosition() {
-    def lat = location.latitude
-    def lon = location.longitude
-    
-    if (lat == null || lon == null) {
-        logWarn "Latitude or Longitude is not configured in Hub settings. Skipping sun calculations."
-        return 0.0
+private void sendOWMData(Map current, Map today, Map tom, Map tda) {
+    logDebug "sendOWMData initiated. Dispatching events to device attributes..."
+
+    // ==========================================
+    // 1. CURRENT DATA DISPATCHES
+    // ==========================================
+    if (current) {
+        // Safe dispatch of newly captured precipitation attributes
+        sendIfChanged(name: "currentRain", value: current.calculatedRain != null ? current.calculatedRain : 0)
+        sendIfChanged(name: "currentSnow", value: current.calculatedSnow != null ? current.calculatedSnow : 0)
+
+        if (current.temp != null) {
+            BigDecimal calcTemp = convertKelvin(current.temp)
+            sendIfChanged(name: "currentTemperature", value: calcTemp)
+            sendIfChanged(name: "temperature", value: calcTemp) // Map to Core Capability
+        }
+        if (current.feels_like != null) {
+            sendIfChanged(name: "currentFeelsLike", value: convertKelvin(current.feels_like))
+        }
+        if (current.dew_point != null) {
+            sendIfChanged(name: "currentDewPoint", value: convertKelvin(current.dew_point))
+        }
+        if (current.humidity != null) {
+            sendIfChanged(name: "currentHumidity", value: current.humidity)
+            sendIfChanged(name: "humidity", value: current.humidity) // Map to Core Capability
+        }
+		if (current.pressure != null) {
+            BigDecimal calcPressure = convertPressure(current.pressure)
+            sendIfChanged(name: "currentPressure", value: calcPressure)
+            sendIfChanged(name: "pressure", value: calcPressure) // Map to Core Capability
+        }
+        if (current.uvi != null) {
+            sendIfChanged(name: "currentUVI", value: current.uvi)
+            sendIfChanged(name: "ultravioletIndex", value: current.uvi) // Map to Core Capability
+        }
+        if (current.clouds != null) sendIfChanged(name: "currentCloudPCT", value: current.clouds)
+        if (current.visibility != null) sendIfChanged(name: "currentVisibility", value: current.visibility)
+        
+        // Wind Speed elements converted from m/s using user selection preference logic
+        if (current.wind_speed != null) {
+            sendIfChanged(name: "currentWindSpeed", value: convertWindSpeed(current.wind_speed))
+        }
+        if (current.wind_deg != null) {
+            sendIfChanged(name: "currentWindDeg", value: current.wind_deg)
+        }
+        if (current.wind_gust != null) {
+            sendIfChanged(name: "currentWindGust", value: convertWindSpeed(current.wind_gust))
+        }
+        
+        // Handle nested weather condition arrays safely if available
+        if (current.weather && current.weather[0]) {
+            sendIfChanged(name: "currentConditionCode", value: current.weather[0].id)
+            sendIfChanged(name: "currentConditionType", value: current.weather[0].main)
+            sendIfChanged(name: "currentConditionTypeFull", value: current.weather[0].description)
+            sendIfChanged(name: "currentConditionIcon", value: current.weather[0].icon)
+        }
     }
 
-    def date = new Date()
-    def J2000 = 2451545.0
-    def JulianDate = (date.getTime() / 86400000.0) + 2440587.5
-    def d = JulianDate - J2000
+    // ==========================================
+    // 2. TODAY DATA DISPATCHES (data.0)
+    // ==========================================
+    if (today) {
+        if (today.pop != null) sendIfChanged(name: "todayPOP", value: today.pop)
+        if (today.summary != null) sendIfChanged(name: "todaySummary", value: today.summary)
+        if (today.moon_phase != null) sendIfChanged(name: "todayMoonPhase", value: today.moon_phase)
+        
+        // Nested temperature structures converted dynamically via user preferences layout
+        if (today.temp) {
+            if (today.temp.min != null) sendIfChanged(name: "todayTempMin", value: convertKelvin(today.temp.min))
+            if (today.temp.max != null) sendIfChanged(name: "todayTempMax", value: convertKelvin(today.temp.max))
+            if (today.temp.day != null) sendIfChanged(name: "todayTempDay", value: convertKelvin(today.temp.day))
+            if (today.temp.night != null) sendIfChanged(name: "todayTempNight", value: convertKelvin(today.temp.night))
+        }
+    }
 
-    def rad = Math.PI / 180.0
-    def e = rad * 23.4397
-    
-    def M = rad * (357.5291 + 0.98560028 * d)
-    def C = rad * (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M))
-    def lambda = M + C + rad * 102.9372 + Math.PI
-    
-    def declination = Math.asin(Math.sin(lambda) * Math.sin(e))
-    def rightAscension = Math.atan2(Math.sin(lambda) * Math.cos(e), Math.cos(lambda))
-    
-    def lw = rad * -lon
-    def phi = rad * lat
-    def H = rad * (280.16 + 360.9856235 * d) - lw - rightAscension
-    
-    def altitude = Math.asin(Math.sin(phi) * Math.sin(declination) + Math.cos(phi) * Math.cos(declination) * Math.cos(H))
-    def azimuth = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(declination) * Math.cos(phi))
-    
-    def azimuthDeg = azimuth * (180.0 / Math.PI) + 180.0
-    def altitudeDeg = altitude * (180.0 / Math.PI)
+    // ==========================================
+    // 3. TOMORROW DATA DISPATCHES (data.1)
+    // ==========================================
+    if (tom) {
+        if (tom.pop != null) sendIfChanged(name: "tomPOP", value: tom.pop)
+        if (tom.summary != null) sendIfChanged(name: "tomSummary", value: tom.summary)
+        if (tom.moon_phase != null) sendIfChanged(name: "tomMoonPhase", value: tom.moon_phase)
+        
+        if (tom.temp) {
+            if (tom.temp.min != null) sendIfChanged(name: "tomTempMin", value: convertKelvin(tom.temp.min))
+            if (tom.temp.max != null) sendIfChanged(name: "tomTempMax", value: convertKelvin(tom.temp.max))
+            if (tom.temp.day != null) sendIfChanged(name: "tomTempDay", value: convertKelvin(tom.temp.day))
+            if (tom.temp.night != null) sendIfChanged(name: "tomTempNight", value: convertKelvin(tom.temp.night))
+        }
+    }
 
-	azimuthDeg = (Math.round(azimuthDeg * 100.0) / 100.0).toBigDecimal()
-	altitudeDeg = (Math.round(altitudeDeg * 100.0) / 100.0).toBigDecimal()
+    // ==========================================
+    // 4. DAY AFTER TOMORROW DATA DISPATCHES (data.2)
+    // ==========================================
+    // ==========================================
+    if (tda) {
+        if (tda.pop != null) sendIfChanged(name: "tdaPOP", value: tda.pop)
+        if (tda.summary != null) sendIfChanged(name: "tdaSummary", value: tda.summary)
+        if (tda.moon_phase != null) sendIfChanged(name: "tdaMoonPhase", value: tda.moon_phase)
+        
+        if (tda.temp) {
+            if (tda.temp.min != null) sendIfChanged(name: "tdaTempMin", value: convertKelvin(tda.temp.min))
+            if (tda.temp.max != null) sendIfChanged(name: "tdaTempMax", value: convertKelvin(tda.temp.max))
+            if (tda.temp.day != null) sendIfChanged(name: "tdaTempDay", value: convertKelvin(tda.temp.day))
+            if (tda.temp.night != null) sendIfChanged(name: "tdaTempNight", value: convertKelvin(tda.temp.night))
+        }
+    }
+	
+	// Trigger the illuminance calculation right before concluding the lifecycle dispatch
+    calcCurrentIlluminance()
+	calcCurrentText()
+	
+    logDebug "sendOWMData event parsing complete."
+}
 
-    sendIfChanged(name: "azimuth", value: azimuthDeg, unit: "°")
-    sendIfChanged(name: "altitude", value: altitudeDeg, unit: "°")
-    return altitudeDeg
+		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+private String calcIconBasePath(String altIconLoc) {
+    String base = altIconLoc ? altIconLoc.trim() : ""
+    
+    // Fall back to target default URL if empty or null
+    if (base == "") {
+        base = "https://tinyurl.com/icnqz"
+    }
+    
+    // Enforce trailing slash constraint
+    if (!base.endsWith("/")) {
+        base += "/"
+    }
+    
+    logDebug "Calculated Icon Base Path resolved to: ${base}"
+    return base
+}
+
+private BigDecimal convertKelvin(def kelvinVal) {
+    if (kelvinVal == null) return 0.0
+    
+    BigDecimal K = kelvinVal.toBigDecimal()
+    BigDecimal converted = K
+    
+    // Determine conversion target from preference selection
+    String targetUnit = settings.temperatureUnit ?: "°F"
+    
+    switch (targetUnit) {
+        case "°F":
+            // Kelvin to Fahrenheit: (K − 273.15) × 9/5 + 32
+            converted = (K - 273.15) * 1.8 + 32
+            break
+        case "°C":
+            // Kelvin to Celsius: K − 273.15
+            converted = K - 273.15
+            break
+        case "K":
+        case "none":
+        default:
+            // Remain as Kelvin
+            converted = K
+            break
+    }
+    
+    // Apply user chosen decimal precision layout
+    int precision = (settings.precisionTemp ?: "2").toInteger()
+    return converted.setScale(precision, 4)
+}
+
+private BigDecimal convertPressure(def hpaVal) {
+    if (hpaVal == null) return 0.0
+    
+    BigDecimal hpa = hpaVal.toBigDecimal()
+    BigDecimal converted = hpa
+    
+    // Determine conversion target from preference selection
+    String targetUnit = settings.pressureUnit ?: "inHg"
+    
+    switch (targetUnit) {
+        case "inHg":
+            // Hectopascals to Inches of Mercury
+            converted = hpa * 0.029530
+            break
+        case "mmHg":
+            // Hectopascals to Millimeters of Mercury
+            converted = hpa * 0.750062
+            break
+        case "kPa":
+            // Hectopascals to Kilopascals
+            converted = hpa * 0.1
+            break
+        case "hPa":
+        case "mb":
+        case "none":
+        default:
+            // Remain as hPa / Millibars
+            converted = hpa
+            break
+    }
+    
+    // Apply user chosen pressure decimal precision
+    int precision = (settings.precisionPressure ?: "2").toInteger()
+    return converted.setScale(precision, 4)
+}
+
+private BigDecimal convertWindSpeed(def msVal) {
+    if (msVal == null) return 0.0
+    
+    BigDecimal ms = msVal.toBigDecimal()
+    BigDecimal converted = ms
+    
+    // Determine conversion target from user preference selection
+    String targetUnit = settings.windSpeedUnit ?: "mph"
+    
+    switch (targetUnit) {
+        case "mph":
+            // Meters per second to Miles per Hour
+            converted = ms * 2.23694
+            break
+        case "kmh":
+            // Meters per second to Kilometers per Hour
+            converted = ms * 3.6
+            break
+        case "kt":
+            // Meters per second to Knots
+            converted = ms * 1.94384
+            break
+        case "ms":
+        case "none":
+        default:
+            // Remain as Meters per second
+            converted = ms
+            break
+    }
+    
+    // Apply user chosen wind speed decimal precision
+    int precision = (settings.precisionWind ?: "2").toInteger()
+    return converted.setScale(precision, 4)
+}
+
+private BigDecimal calcSunPosition() {
+    def lat = state.usedLatitude ?: location.latitude 
+    def lon = state.usedLongitude ?: location.longitude 
+    
+    // Ensure precision checks preferences safely or defaults to 0
+    int precision = (settings.precisionSunAngles ?: "0").toInteger()
+    
+    if (lat == null || lon == null) {
+        logWarn "Latitude or Longitude is not configured in Hub settings. Skipping sun calculations." 
+        return 0.0 
+    }
+    
+    def date = new Date() 
+    def J2000 = 2451545.0 
+    def JulianDate = (date.getTime() / 86400000.0) + 2440587.5 
+    def d = JulianDate - J2000 
+
+    // ... [Your existing intermediate solar tracking mathematics go here] ...
+
+    // Fix: Explicitly add rounding mode '4' (BigDecimal.ROUND_HALF_UP) to prevent ArithmeticExceptions
+    azimuthDeg = azimuthDeg.toBigDecimal().setScale(precision, 4) 
+    altitudeDeg = altitudeDeg.toBigDecimal().setScale(precision, 4) 
+    
+    sendIfChanged(name: "azimuth", value: azimuthDeg.setScale(precision, 4).toPlainString()) 
+    sendIfChanged(name: "altitude", value: altitudeDeg.setScale(precision, 4).toPlainString()) 
+    
+    // --- FIXED: Added rounding mode 4 to prevent NullPointer/Arithmetic errors during conversion ---
+    sendIfChanged(name: "altitudeText", value: "${altitudeDeg.setScale(precision, 4)} °") 
+    sendIfChanged(name: "azimuthText", value: "${azimuthDeg.setScale(precision, 4)} °") 
+    
+    return altitudeDeg 
 }
 
 private void calcAlertsState(Map json, String calculatedCityAttr, String iconBasePath) {
@@ -445,7 +741,7 @@ private void calcAlertsState(Map json, String calculatedCityAttr, String iconBas
     String lastPollTime = new Date().format("HH:mm", location.timeZone)
     String currentAlertDescFull = "No active alerts for ${calculatedCityAttr} at last poll as of ${lastPollTime}"
     
-    String alertIconUrl = iconBasePath.endsWith("/") ? "${iconBasePath}OWM.png" : "${iconBasePath}/OWM.png"
+    String alertIconUrl = "${iconBasePath}OWM.png"
     
     String currentAlertTile = "<div style='text-align:center;'>No active weather alerts from<br>Source: OpenWeatherMap</div>" + 
                        "<div style='text-align:center; margin-top:5px; font-size:0.8em;'>" + 
@@ -456,7 +752,7 @@ private void calcAlertsState(Map json, String calculatedCityAttr, String iconBas
         def a = alerts[0]
         alertActive = a.event ?: "Active Alert"
         currentAlertSender = a.sender_name ?: "Unknown"
-        currentAlertDesc = a.description ? a.description.take(100) + "..." : "N/A"
+		currentAlertDesc = a.description ? (a.description.length() > 100 ? a.description.take(100) + "..." : a.description) : "No active alerts"
         currentAlertDescFull = (a.description ?: "N/A") + " as of ${lastPollTime}"
         
         currentAlertTile = "<div style='color:red; font-weight:bold; text-align:center;'>${alertActive}</div>" + 
@@ -547,35 +843,155 @@ private void calcIsDayState(BigDecimal altitudeDeg) {
     logTrace "Calculated currentIsDay: ${isDayText}" 
 }
 
-private void calcLonLatCityState() {
-    logDebug "Starting calcLonLatCityState evaluation..." 
+private void calcCurrentIlluminance() {
+    logDebug "Calculating dynamic current illuminance adjusted for chosen unit..."
     
-    // Check if the setting values have changed since the last execution
-    String currentCity = settings.overrideCity?.trim() ?: ""
-    String currentLat  = settings.overrideLatitude?.trim() ?: ""
-    String currentLon  = settings.overrideLongitude?.trim() ?: ""
-
-    if (state.lastOverrideCity == currentCity && 
-        state.lastOverrideLatitude == currentLat && 
-        state.lastOverrideLongitude == currentLon) {
-        logTrace "Override settings have not changed. Skipping geo-lookup and using cached values."
+    // Fetch dependencies safely from existing device attributes
+    def cloudPctVal = device.currentValue("currentCloudPCT")
+    def altitudeVal = device.currentValue("altitude")
+    
+    if (cloudPctVal == null || altitudeVal == null) {
+        logDebug "calcCurrentIlluminance postponed: Waiting for cloud percentage or sun altitude data."
         return
     }
     
-    // Define the placeholder variables to output to
-    String usedCity = "" 
-    BigDecimal usedLatitude = 0.0 
-    BigDecimal usedLongitude = 0.0 
+    BigDecimal clouds = cloudPctVal.toBigDecimal()
+    BigDecimal altitude = altitudeVal.toBigDecimal()
     
+    // If the sun is below the horizon, illuminance is 0 across all units
+    if (altitude <= 0) {
+        sendIfChanged(name: "currentIlluminance", value: 0)
+        sendIfChanged(name: "illuminance", value: 0) // Core capability compliance
+        return
+    }
+    
+    // Step 1: Compute maximum potential clear sky lux based on sun altitude angle
+    // Baseline max of 100,000 Lux for direct overhead sunlight
+    double radians = Math.toRadians(altitude.doubleValue())
+    BigDecimal clearSkyLux = 100000 * Math.sin(radians)
+    
+    // Step 2: Apply linear cloud percentage reduction factor
+    BigDecimal cloudFactor = (100 - clouds) / 100
+    BigDecimal rawLuxCalculation = clearSkyLux * cloudFactor
+    
+    // Step 3: Apply the 0.75 attenuation factor
+    BigDecimal attenuatedLux = rawLuxCalculation * 0.75
+    
+    // Step 4: Adjust calculation based on preferred illuminanceUnit preference selection
+    String targetUnit = settings.illuminanceUnit ?: "lx"
+    BigDecimal convertedValue = attenuatedLux
+    int precision = 0 // Default to 0 places for pure Lux readings
+    
+    switch (targetUnit) {
+        case "fc":
+            // Lux to Foot-candle conversion: lx * 0.092903
+            convertedValue = attenuatedLux * 0.09290304
+            precision = 1 // Standard practice allows decimal precision for lower values like fc
+            break
+        case "ph":
+            // Lux to Phot conversion: lx * 0.0001
+            convertedValue = attenuatedLux * 0.0001
+            precision = 4 // Phot readings are highly compact and require deeper decimal fields
+            break
+        case "lx":
+        case "none":
+        default:
+            // Remain as Standard Lux
+            convertedValue = attenuatedLux
+            precision = 0
+            break
+    }
+    
+    // Enforce valid boundaries and round using appropriate scale rules
+    BigDecimal finalValue = convertedValue.setScale(precision, 4)
+    if (finalValue < 0) finalValue = 0
+    
+    // Cap Lux at its relative 100k maximum if math exceeds standard constraints
+    if (targetUnit == "lx" && finalValue > 100000) finalValue = 100000
+    
+    logDebug "Illuminance Parsed: ${finalValue} ${targetUnit} (Base Lux: ${attenuatedLux.setScale(precision, 4)} lx)"
+    
+    // Persist to the matching attributes
+    sendIfChanged(name: "currentIlluminance", value: finalValue)
+    sendIfChanged(name: "illuminance", value: finalValue) // Maps directly to capability "IlluminanceMeasurement" 
+}
+
+private void calcCurrentText() {
+    logDebug "Generating formatted text attributes with unit suffixes..."
+
+    // 1. Temperature Text Formatting
+    def tempVal = device.currentValue("currentTemperature")
+    if (tempVal != null) {
+        String tUnit = settings.temperatureUnit ?: "°F"
+        // Cleanup selection values to display cleanly as text labels
+        if (tUnit == "f") tUnit = "°F"
+        if (tUnit == "c") tUnit = "°C"
+        if (tUnit == "k") tUnit = "K"
+        sendIfChanged(name: "currentTemperatureText", value: "${tempVal} ${tUnit}")
+    }
+
+    // 2. Pressure Text Formatting
+    def pressVal = device.currentValue("currentPressure")
+    if (pressVal != null) {
+        String pUnit = settings.pressureUnit ?: "inHg"
+        sendIfChanged(name: "currentPressureText", value: "${pressVal} ${pUnit}")
+    }
+
+    // 3. Wind Speed Text Formatting
+    def windVal = device.currentValue("currentWindSpeed")
+    if (windVal != null) {
+        String wUnit = settings.windSpeedUnit ?: "mph"
+        sendIfChanged(name: "currentWindSpeedText", value: "${windVal} ${wUnit}")
+    }
+
+    // 4. Illuminance Text Formatting
+    def luxVal = device.currentValue("currentIlluminance")
+    if (luxVal != null) {
+        String iUnit = settings.illuminanceUnit ?: "lx"
+        if (iUnit == "none") iUnit = "lx" // Fallback to standard reading string if none selected
+        sendIfChanged(name: "currentIlluminanceText", value: "${luxVal} ${iUnit}")
+    }
+	
+	// 5. Append inside your existing calcCurrentText() routine
+    def altVal = device.currentValue("altitude")
+    if (altVal != null) {
+        sendIfChanged(name: "altitudeText", value: "${altVal}°")
+    }
+
+    def azVal = device.currentValue("azimuth")
+    if (azVal != null) {
+        sendIfChanged(name: "azimuthText", value: "${azVal}°")
+    }
+}
+
+private void calcLonLatCityState() {
+    // Read current input settings values safely
+    String currentCity = settings.overrideCity ?: ""
+    BigDecimal currentLat = settings.overrideLatitude ? settings.overrideLatitude.toBigDecimal() : null
+    BigDecimal currentLon = settings.overrideLongitude ? settings.overrideLongitude.toBigDecimal() : null
+
+    // Optimisation check: If preferences match our last evaluated values, skip reprocessing
+    if (state.lastOverrideCity == currentCity &&
+        state.lastOverrideLatitude == currentLat &&
+        state.lastOverrideLongitude == currentLon &&
+        state.usedLatitude != null && state.usedLongitude != null) {
+        logDebug "Preferences unchanged. Skipping geo-lookup and using cached values."
+        return
+    }
+
+    // Define the placeholder variables to output to String
+    String usedCity = ""
+    BigDecimal usedLatitude = 0.0
+    BigDecimal usedLongitude = 0.0
+
     // Base URL for the OWM Geocoding API
     String geoApiUrl = "https://api.openweathermap.org/geo/1.0/"
-    
+
     // -------------------------------------------------------------
     // SCENARIO 1: If overrideCity is filled, prioritize it entirely
     // -------------------------------------------------------------
     if (settings.overrideCity && settings.overrideCity.trim() != "") {
         logDebug "Scenario 1: overrideCity is populated ('${settings.overrideCity}'). Performing Direct Geo-Lookup."
-        
         try {
             def encodedCity = URLEncoder.encode(settings.overrideCity.trim(), "UTF-8")
             def params = [
@@ -583,7 +999,6 @@ private void calcLonLatCityState() {
                 contentType: "application/json",
                 timeout: 10
             ]
-            
             httpGet(params) { response ->
                 if (response.status == 200 && response.data) {
                     def geoData = response.data[0]
@@ -600,69 +1015,44 @@ private void calcLonLatCityState() {
                 }
             }
         } catch (Exception e) {
-            logError "Exception occurred during Direct Geo-Lookup: ${e.message}"
+            logError "Exception occurred during Direct Geo-Lookup execution: ${e.message}"
         }
     }
     
     // -------------------------------------------------------------
-    // SCENARIO 2 & 3: overrideCity is empty, handle coordinates
+    // SCENARIO 2: Fall back to coordinate inputs or hub defaults
     // -------------------------------------------------------------
     else {
-        // Fallback to Hub default location parameters
-        logDebug "Scenario 3: Fallback to Hub default location parameters."
-        if (location.latitude != null && location.longitude != null) {
-            usedLatitude = location.latitude.toBigDecimal()
-            usedLongitude = location.longitude.toBigDecimal()
-        } else {
-            logWarn "Hub settings are missing Latitude/Longitude coordinates!"
-        }
-        
-        // Perform Reverse Lookup to identify nearest city from coordinates
-        if (usedLatitude != 0.0 && usedLongitude != 0.0) {
-            logDebug "Performing Reverse Geo-Lookup for coordinates: ${usedLatitude}, ${usedLongitude}"
-            try {
-                def params = [
-                    uri: "${geoApiUrl}reverse?lat=${usedLatitude}&lon=${usedLongitude}&limit=1&appid=${apiKey}",
-                    contentType: "application/json",
-                    timeout: 10
-                ]
-                httpGet(params) { response ->
-                    if (response.status == 200 && response.data) {
-                        def geoData = response.data[0]
-                        if (geoData) {
-                            usedCity = geoData.name ?: "Unknown City"
-                            logInfo "Reverse Geo-Lookup success. Nearest city resolved: ${usedCity}"
-                        } else {
-                            usedCity = "Unknown City"
-                            logWarn "Reverse Geo-Lookup found no explicit city metadata for these coordinates."
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                usedCity = "Lookup Failed"
-                logError "Exception occurred during Reverse Geo-Lookup: ${e.message}"
-            }
-        }
+        logDebug "Scenario 2: No overrideCity provided. Evaluating coordinate inputs or Hub configuration."
+        usedCity = "Local Area"
+        usedLatitude = currentLat ?: location.latitude?.toBigDecimal()
+        usedLongitude = currentLon ?: location.longitude?.toBigDecimal()
     }
-    
+
     // -------------------------------------------------------------
-    // State / Attribute Storage Block
+    // EXTRA PROTECTION: Enforce fallback to Hub defaults if values 
+    // remain blank or zero (e.g. failed lookups or empty settings)
     // -------------------------------------------------------------
+    if (!usedLatitude || usedLatitude == 0.0) {
+        usedLatitude = currentLat ?: location.latitude?.toBigDecimal() ?: 0.0
+        logDebug "Enforcing latitude fallback context. Target assigned: ${usedLatitude}"
+    }
+    if (!usedLongitude || usedLongitude == 0.0) {
+        usedLongitude = currentLon ?: location.longitude?.toBigDecimal() ?: 0.0
+        logDebug "Enforcing longitude fallback context. Target assigned: ${usedLongitude}"
+    }
+
+    // Commit calculated configurations into global variables for API calls
     state.usedCity = usedCity
     state.usedLatitude = usedLatitude
     state.usedLongitude = usedLongitude
-    
+
     // Cache the current settings so we can compare against them next time
     state.lastOverrideCity = currentCity
     state.lastOverrideLatitude = currentLat
     state.lastOverrideLongitude = currentLon
-    
-    logDebug "Completed calcLonLatCityState. Outputs -> City: ${usedCity} | Lat: ${usedLatitude} | Lon: ${usedLongitude}"
-}
 
-def disableDebugLogging() {
-    logInfonfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
-    device.updateSetting("logDebugEnable", [type: "bool", value: false])
+    logDebug "Completed calcLonLatCityState. Outputs -> City: ${usedCity} | Lat: ${usedLatitude} | Lon: ${usedLongitude}"
 }
 
 private void sendIfChanged(Map args) {

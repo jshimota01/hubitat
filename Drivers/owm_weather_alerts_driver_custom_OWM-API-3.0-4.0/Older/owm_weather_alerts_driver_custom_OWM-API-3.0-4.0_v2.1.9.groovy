@@ -1,11 +1,11 @@
 /**
- * OpenWeatherMap Multi-Version Weather Driver (2.5 / 3.0 / 4.0)
+ * OpenWeatherMap Multi-Version Weather Driver 2.0 (2.5 / 3.0 / 4.0)
  * Platform: Hubitat Elevation
  * Capabilities: Temperature, Illuminance, Relative Humidity, Ultraviolet Index
  */
 
 metadata {
-    definition(name: "OpenWeatherMap Multi-Version Weather Driver", namespace: "jshimota", author: "James Shimota") {
+    definition(name: "OpenWeatherMap Multi-Version Weather Driver 2.0", namespace: "jshimota", author: "James Shimota") {
         capability "Sensor"
         capability "Refresh"
         capability "Initialize"
@@ -20,14 +20,17 @@ metadata {
         // - Custom Driver Attributes
         attribute "lastUpdated", "string"
         attribute "lastResponseCode", "string"
-        attribute "betwixt", "string" 
-        attribute "city", "string"
+        attribute "betwixt", "string"
+        attribute "overrideCity", "string"
+        attribute "overrideLongitude", "number"
+        attribute "overrideLatitude", "numbr"
 		
 		// - Api specific response attributes
-		attribute "apiLatitude", "number"
-		attribute "apiLongitude", "number"
+
 		attribute "apiTimezone", "string"
 		attribute "apiTimezoneOffset", "number"
+		attribute "apiLatitude", "number"
+		attribute "apiLongitude", "number"
 		
         // - Alert attributes
         attribute "currentAlert", "string"
@@ -157,9 +160,15 @@ metadata {
         
         // Optional City field that dynamically overrides latitude/longitude if populated
         input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
-		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: false
-        input name: "apiLatitude", type: "text", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
-        input name: "apiLongitude", type: "text", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
+
+		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: true
+		
+		// Need to look into this to see why it was implemented. I'm not using it
+		// input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
+		
+        input name: "overrideLatitude", type: "text", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
+        input name: "overrideLongitude", type: "text", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
 		input name: "altIconsEnable", type: "bool", title: "Base Override - Use Alternative Icons?", description: "Turn ON to use alternate icons (found in csv map within the driver), or OFF to use the standard OpenWeatherMap icons<br><b>Base Override - Icon Location MUST be filled!</b>", defaultValue: false, required: true
 		
 		// Display Selector Options
@@ -201,7 +210,7 @@ def updated() {
     
     if (!settings.altIconLoc || settings.altIconLoc.trim() == "") {
         if (settings.altIconsEnable == true) {
-            log.warn "Alternative Icon Location is empty/default. Forcing 'Use Alternative Icons' to OFF for safety."
+            logWarn "Alternative Icon Location is empty/default. Forcing 'Use Alternative Icons' to OFF for safety."
             device.updateSetting("altIconsEnable", [type: "bool", value: false])
         }
     }
@@ -210,9 +219,10 @@ def updated() {
 
 def initialize() {
     unschedule()
-    
+   logInfo "Initializing driver."  
+  
     if (logDebugEnable == true) {
-        log.info "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
+        logInfonfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
         runIn(1800, "disableDebugLogging")
     }
 
@@ -253,166 +263,141 @@ def initialize() {
 
 // This command executes automatically from your generated cron schedules inside initialize()
 def refresh() {
-    logDebug "Refresh triggered."
-    if (!apiKey) { logWarn "Missing API Key"; return }
-
-    // Resolve final coordinate assignments via the routine
-    Map coords = calcLongLatCityState()
+    logDebug "Refresh triggered via schedule or button press."
     
-    if (coords.lat == null || coords.lon == null) {
-        logError "Halted: Invalid coordinates resolved."
+    // Safety check preference values
+    if (!apiKey) {
+        logWarn "Execution halted: API Key entry is missing!"
         return
     }
 
-    logDebug "Proceeding with weather lookup at Lat: ${coords.lat}, Lon: ${coords.lon}"
-    
-    // Assemble your endpoint implementation format
-    def weatherUrl = "https://api.openweathermap.org/data/3.0/onecall?lat=${coords.lat}&lon=${coords.lon}&appid=${apiKey}&units=imperial" // adjust units as needed (standard, metric, imperial)
-    logInfo "$weatherUrl used"
-    // Redirect execution to your main data retrieval logic block
-    executeOwmCall(weatherUrl) 
+    // Execution to owm Poll logic block
+    pollOWM()  
 }
 
-def executeOwmCall(String weatherUrl) {
-    logDebug "Executing OWM API call to: ${weatherUrl}"
+def pollOWM() {
+    logDebug "pollOWM triggered. Evaluating location coordinates..."
     
-    Map params = [
-        uri: weatherUrl,
+    // Ensure state variables exist by evaluating coordinate overrides
+    calcLonLatCityState()
+    
+    if (state.usedLatitude == 0.0 || state.usedLongitude == 0.0) {
+        logWarn "pollOWM aborted: Valid coordinates are missing (Lat: ${state.usedLatitude}, Lon: ${state.usedLongitude})"
+        return
+    }
+
+    // Execution to check sun position for use in calcBetwixt and calcDayState blocks
+    BigDecimal altitude = calcSunPosition()
+	
+	// Execution for certain variables used in parsed data returned from pollOWMAPI
+	calcBetwixtState(altitude)
+    calcIsDayState(altitude)
+	
+    // Fire off the API poll sequence
+    pollOWMAPI()
+}
+
+private void pollOWMAPI() {
+    logDebug "Building OpenWeatherMap API HTTP Request..."
+    
+    def lat = state.usedLatitude
+    def lon = state.usedLongitude
+    def version = settings.apiSelection ?: "3.0"
+    
+    if (!apiKey) {
+        logError "API request aborted: Missing API Key."
+        return
+    }
+    
+    // Structure endpoint variants depending on driver apiSelection context
+    String apiUrl = ""
+    switch(version) {
+        case "2.5":
+            apiUrl = "https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}"
+            break
+        case "3.0":
+        case "4.0": // Note: 4.0 API key uses 3.0 API poll method
+            apiUrl = "https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}"
+            break
+        default:
+            logError "Unknown API Version Selection: ${version}"
+            return
+    }
+    
+    def params = [
+        uri: apiUrl,
+        contentType: "application/json",
         timeout: 15
     ]
     
-    try {
-        asynchttpGet("processOwmResponse", params)
-    } catch (Exception e) {
-        logError "Exception occurred while executing asynchttpGet: ${e.message}"
-    }
-}
-
-// This handles the asynchronous callback from your HTTP request
-def processOwmResponse(response, data) {
-    if (response.hasError()) {
-        logError "OWM API call failed with status: ${response.status}. Error: ${response.errorMessage}"
-        sendIfChanged(name: "lastResponseCode", value: response.status.toString())
-        return
-    }
+    logDebug "Polling OpenWeatherMap via URL: ${apiUrl}"
     
-    logDebug "OWM Response received successfully (Status: ${response.status})"
-    sendIfChanged(name: "lastResponseCode", value: response.status.toString())
-    sendIfChanged(name: "lastUpdated", value: new Date().format("yyyy-MM-dd HH:mm:ss", location.timeZone))
-
     try {
-        // Parse the JSON payload directly from the string body response
-        def json = parseJson(response.data)
-        
-        // Pass the Map object to your parsing routine
-        parseOwmResponse(json)
-        
-        // If you want sun positions and alert evaluations to trigger sequentially:
-        def altDeg = calcSunPosition()
-        calcBetwixtState(altDeg)
-        calcIsDayState(altDeg)
-        
-        // Resolve dynamic city string and base icon path for alerts if needed
-        // calcAlertsState(json, device.currentValue("city") ?: "Local", altIconLoc ?: "")
-        
+        httpGet(params) { response ->
+            if (response.status == 200 && response.data) {
+                sendIfChanged(name: "lastResponseCode", value: response.status.toString())
+                sendIfChanged(name: "lastUpdated", value: new Date().format("yyyy-MM-dd HH:mm:ss", location.timeZone))
+                
+                // Route the payload to the custom data extractor
+                parseOWMData(response.data)
+            } else {
+                logError "OWM API call failed with status code: ${response.status}"
+                sendIfChanged(name: "lastResponseCode", value: response.status.toString())
+            }
+        }
     } catch (Exception e) {
-        logError "Failed to parse OWM payload JSON data: ${e.message}"
+        logError "Exception during OWM API Call execution: ${e.message}"
     }
 }
 
-// This handles the custom user dashboard command on the device profile details view
-def pollOWM() {
-    logInfo "Manual pollOWM command invoked by user."
-    refresh()
-}
-/**
- * Parses the main JSON payload from OWM One Call API
- * @param json The parsed JSON map object from the HTTP response
- */
-private void parseOwmResponse(Map json) {
+private void parseOWMData(Map json) {
     if (!json) {
-        logError "Null response received, skipping parse."
+        logWarn "parseOWMData received an empty payload map."
         return
     }
-
-    // 1. Parse Current Weather Node
-    if (json.current) {
-        logDebug "Parsing current weather data..."
-        def cur = json.current
-        
-        sendIfChanged(name: "currentTemperature", value: cur.temp)
-        sendIfChanged(name: "currentFeelsLike", value: cur.feels_like)
-        sendIfChanged(name: "currentHumidity", value: cur.humidity)
-        sendIfChanged(name: "currentPressure", value: cur.pressure)
-        sendIfChanged(name: "currentUVI", value: cur.uvi)
-        sendIfChanged(name: "currentCloudPCT", value: cur.clouds)
-        sendIfChanged(name: "currentVisibility", value: cur.visibility)
-        
-        // Handle optional current rain/snow nodes
-		def rainVal = (cur.rain ?: [:])["1h"] ?: 0.0
-		def snowVal = (cur.snow ?: [:])["1h"] ?: 0.0
-        sendIfChanged(name: "currentRain", value: rainVal)
-        sendIfChanged(name: "currentSnow", value: snowVal)
+    
+    logDebug "Parsing newly received OpenWeatherMap response data structure..."
+    
+    // Extract location and configuration details for the alert builder
+    String calculatedCityAttr = state.usedCity ?: "Local Area"
+    String iconBasePath = settings.altIconLoc ?: ""
+    
+    // Execute alerts calculation with live payload data
+    calcAlertsState(json, calculatedCityAttr, iconBasePath)
+    
+    // 1. Gather Current conditions dataset
+    def currentData = json.current ?: [:]
+    if (currentData) {
+        logTrace "Current weather data payload extracted successfully."
     }
-
-    // 2. Parse Daily Forecast Array (day.0 = today, day.1 = tomorrow, day.2 = dayafter)
-    if (json.daily && json.daily.size() >= 3) {
-        logDebug "Parsing 3-day weather forecast arrays..."
-        
-        // Day 0: Today
-        parseForecastDay(json.daily[0], "today")
-        
-        // Day 1: Tomorrow
-        parseForecastDay(json.daily[1], "tom")
-        
-        // Day 2: Day After Tomorrow
-        parseForecastDay(json.daily[2], "tda")
-    } else {
-        logWarn "Daily forecast payload incomplete or missing expected days."
+    
+    // 2. Process Daily forecast arrays safely 
+    def dailyList = json.daily ?: []
+    
+    // Gather Today data (data.0)
+    def data0 = dailyList.size() > 0 ? dailyList[0] : [:]
+    if (data0) {
+        logTrace "Today's forecast data payload (data.0) extracted successfully."
     }
-}
-
-/**
- * Helper method to handle redundant day mapping logic cleanly
- * @param dayData Map object representing a single index in the OWM daily array
- * @param prefix String prefix corresponding to the target device attribute
- */
-
-private void parseForecastDay(Map dayData, String prefix) {
-    if (!dayData) return
     
-    def tempMap = dayData.temp ?: [:]
-    def feelsMap = dayData.feels_like ?: [:]
+    // Gather Tomorrow data (data.1)
+    def data1 = dailyList.size() > 1 ? dailyList[1] : [:]
+    if (data1) {
+        logTrace "Tomorrow's forecast data payload (data.1) extracted successfully."
+    }
     
-    // Core temperatures with 0.0 safe defaults
-    sendIfChanged(name: "${prefix}TempMin", value: tempMap.min ?: 0.0)
-    sendIfChanged(name: "${prefix}TempMax", value: tempMap.max ?: 0.0)
-    sendIfChanged(name: "${prefix}TempNight", value: tempMap.night ?: 0.0)
-    sendIfChanged(name: "${prefix}TempEve", value: tempMap.eve ?: 0.0)
-    sendIfChanged(name: "${prefix}TempMorn", value: tempMap.morn ?: 0.0)
-    sendIfChanged(name: "${prefix}TempDay", value: tempMap.day ?: 0.0)
-    
-    // Feels like temperatures
-    sendIfChanged(name: "${prefix}FeelsLikeDay", value: feelsMap.day ?: 0.0)
-    sendIfChanged(name: "${prefix}FeelsLikeNight", value: feelsMap.night ?: 0.0)
-    sendIfChanged(name: "${prefix}FeelsLikeEve", value: feelsMap.eve ?: 0.0)
-    sendIfChanged(name: "${prefix}FeelsLikeMorn", value: feelsMap.morn ?: 0.0)
-    
-    // Summary, POP and Moon attributes
-    sendIfChanged(name: "${prefix}POP", value: dayData.pop ?: 0.0) 
-    sendIfChanged(name: "${prefix}Moonrise", value: dayData.moonrise ?: 0)
-    sendIfChanged(name: "${prefix}Moonset", value: dayData.moonset ?: 0)
-    sendIfChanged(name: "${prefix}MoonPhase", value: dayData.moon_phase ?: 0.0)
-    
-    String summaryText = dayData.summary ?: "No summary provided"
-    sendIfChanged(name: "${prefix}Summary", value: summaryText)
+    // Gather Day After Tomorrow data (data.2)
+    def data2 = dailyList.size() > 2 ? dailyList[2] : [:]
+    if (data2) {
+        logTrace "Day After Tomorrow's forecast data payload (data.2) extracted successfully."
+    }
 }
 
 private BigDecimal calcSunPosition() {
-    Map coords = calcLongLatCityState()
-    def lat = coords.lat
-    def lon = coords.lon
-    if (lat == null || lon == null) { 
+    def lat = location.latitude
+    def lon = location.longitude
+    
+    if (lat == null || lon == null) {
         logWarn "Latitude or Longitude is not configured in Hub settings. Skipping sun calculations."
         return 0.0
     }
@@ -451,9 +436,10 @@ private BigDecimal calcSunPosition() {
 }
 
 private void calcAlertsState(Map json, String calculatedCityAttr, String iconBasePath) {
-    def alerts = json.alerts ?: []
+    // Safely look up alerts array out of the incoming payload map
+    def alerts = json?.alerts ?: []
     String alertActive = "No active alerts"
-	String currentAlertSender = "N/A"
+    String currentAlertSender = "N/A"
     String currentAlertDesc = "No active alerts"
     
     String lastPollTime = new Date().format("HH:mm", location.timeZone)
@@ -502,30 +488,40 @@ private void calcBetwixtState(BigDecimal altitudeDeg) {
     boolean isSunUp = (altitudeDeg >= -0.833)
     
     if (sunriseEpoch > 0 && sunsetEpoch > 0) { 
-        long midDayEpoch = sunriseEpoch + ((sunsetEpoch - sunriseEpoch) / 2) 
-        if (currentEpoch < midDayEpoch) { 
-            if (isTwilightAngle) { 
-                sliceText = "between twilight and sunrise" 
-            } else if (isSunUp) { 
-                sliceText = "between sunrise and noon" 
+        long midDayEpoch = sunriseEpoch + ((sunsetEpoch - sunriseEpoch) / 2)
+        
+        // --- ADDED LOGIC FOR CURRENT NOON TIME ---
+        try {
+            String noonTimeStr = new Date(midDayEpoch * 1000).format("HH:mm", location.timeZone)
+            sendIfChanged(name: "currentNoonTime", value: noonTimeStr)
+        } catch (Exception e) {
+            logError "Exception occurred while calculating currentNoonTime: ${e.message}"
+        }
+        // ----------------------------------------
+
+        if (currentEpoch < midDayEpoch) {
+            if (isTwilightAngle) {
+                sliceText = "between twilight and sunrise"
+            } else if (isSunUp) {
+                sliceText = "between sunrise and noon"
             }
         } else {
-            if (isSunUp) { 
-                sliceText = "between noon and sunset" 
-            } else if (isTwilightAngle) { 
-                sliceText = "between sunset and twilight" 
+            if (isSunUp) {
+                sliceText = "between noon and sunset"
+            } else if (isTwilightAngle) {
+                sliceText = "between sunset and twilight"
             }
         }
     } else {
-        if (isTwilightAngle) { 
-            sliceText = "between twilight and sunrise" 
-        } else if (isSunUp) { 
-            sliceText = "between sunrise and noon" 
+        if (isTwilightAngle) {
+            sliceText = "between twilight and sunrise"
+        } else if (isSunUp) {
+            sliceText = "between sunrise and noon"
         }
     }
-    
-    sendIfChanged(name: "betwixt", value: sliceText) 
-    logDebug "Calculated betwixt slice: ${sliceText} (Current Alt: ${altitudeDeg}°)" 
+
+    sendIfChanged(name: "betwixt", value: sliceText)
+    logDebug "Calculated betwixt slice: ${sliceText} (Current Alt: ${altitudeDeg}°)"
 }
 
 private void calcIsDayState(BigDecimal altitudeDeg) {
@@ -548,94 +544,124 @@ private void calcIsDayState(BigDecimal altitudeDeg) {
     }
     
     sendIfChanged(name: "currentIsDay", value: isDayText) 
-    logDebug "Calculated isDay: ${isDayText}" 
+    logTrace "Calculated currentIsDay: ${isDayText}" 
 }
 
-/**
- * Resolves final Latitude and Longitude values based on multi-tier overrides.
- * Fallback order: Hub Defaults -> Driver Preferences -> OWM Geocoding API lookup
- * @return Map containing keys: [lat: BigDecimal, lon: BigDecimal]
- */
-private Map calcLongLatCityState() {
-    // Tier 1: Pull initial base values from Hub Settings
-    def finalLat = location.latitude ? location.latitude.toBigDecimal() : null
-    def finalLon = location.longitude ? location.longitude.toBigDecimal() : null
+private void calcLonLatCityState() {
+    logDebug "Starting calcLonLatCityState evaluation..." 
     
-    logDebug "Tier 1 - Base Hub Coordinates: Lat: ${finalLat}, Lon: ${finalLon}"
+    // Check if the setting values have changed since the last execution
+    String currentCity = settings.overrideCity?.trim() ?: ""
+    String currentLat  = settings.overrideLatitude?.trim() ?: ""
+    String currentLon  = settings.overrideLongitude?.trim() ?: ""
 
-    // Tier 2: Check if manual coordinates are entered in driver preferences to override Hub
-    if (settings.apiLatitude && settings.apiLongitude) {
-        finalLat = settings.apiLatitude.toBigDecimal()
-        finalLon = settings.apiLongitude.toBigDecimal()
-        logDebug "Tier 2 - Driver Preference Override Applied: Lat: ${finalLat}, Lon: ${finalLon}"
+    if (state.lastOverrideCity == currentCity && 
+        state.lastOverrideLatitude == currentLat && 
+        state.lastOverrideLongitude == currentLon) {
+        logTrace "Override settings have not changed. Skipping geo-lookup and using cached values."
+        return
     }
-
-    // Tier 3: If an overrideCity name is supplied, hit OWM Geocoding API API to override everything
+    
+    // Define the placeholder variables to output to
+    String usedCity = "" 
+    BigDecimal usedLatitude = 0.0 
+    BigDecimal usedLongitude = 0.0 
+    
+    // Base URL for the OWM Geocoding API
+    String geoApiUrl = "https://api.openweathermap.org/geo/1.0/"
+    
+    // -------------------------------------------------------------
+    // SCENARIO 1: If overrideCity is filled, prioritize it entirely
+    // -------------------------------------------------------------
     if (settings.overrideCity && settings.overrideCity.trim() != "") {
-        logDebug "Tier 3 - City Name entry found ('${settings.overrideCity}'). Executing OWM Geo API Lookup..."
+        logDebug "Scenario 1: overrideCity is populated ('${settings.overrideCity}'). Performing Direct Geo-Lookup."
         
-        if (!settings.apiKey) {
-            logWarn "Cannot run Geo Lookup: API Key is completely missing!"
-            return [lat: finalLat, lon: finalLon]
-        }
-
-        // Encode the string query cleanly for the endpoint call
-        def encodedCity = URLEncoder.encode(settings.overrideCity.trim(), "UTF-8")
-        def geoUrl = "https://api.openweathermap.org/geo/1.0/direct?q=${encodedCity}&limit=1&appid=${settings.apiKey}"
-        
-        Map params = [
-            uri: geoUrl,
-            contentType: "application/json",
-            timeout: 10
-        ]
-
         try {
+            def encodedCity = URLEncoder.encode(settings.overrideCity.trim(), "UTF-8")
+            def params = [
+                uri: "${geoApiUrl}direct?q=${encodedCity}&limit=1&appid=${apiKey}",
+                contentType: "application/json",
+                timeout: 10
+            ]
+            
             httpGet(params) { response ->
-                if (response?.status == 200 && response.data) {
-                    def geoList = response.data
-                    if (geoList instanceof List && geoList.size() > 0) {
-                        def firstMatch = geoList[0]
-                        if (firstMatch.lat != null && firstMatch.lon != null) {
-                            finalLat = firstMatch.lat.toBigDecimal()
-                            finalLon = firstMatch.lon.toBigDecimal()
-                            
-                            // Log and dynamically update the setting values so the UI reflects coordinates
-                            logInfo "OWM Geo Lookup successful for '${settings.overrideCity}': Found Lat: ${finalLat}, Lon: ${finalLon}"
-							try {
-								device.updateSetting("apiLatitude", [type: "text", value: finalLat.toString()])
-								device.updateSetting("apiLongitude", [type: "text", value: finalLon.toString()])
-							} catch (Exception dbEx) {
-								logDebug "Ignored database race condition during updateSetting: ${dbEx.message}"
-							}
-                        } else {
-                            logWarn "OWM Geo returned a payload, but 'lat' or 'lon' values were missing."
-                        }
+                if (response.status == 200 && response.data) {
+                    def geoData = response.data[0]
+                    if (geoData) {
+                        usedCity = geoData.name ?: settings.overrideCity
+                        usedLatitude = geoData.lat ? geoData.lat.toBigDecimal() : 0.0
+                        usedLongitude = geoData.lon ? geoData.lon.toBigDecimal() : 0.0
+                        logInfo "Direct Geo-Lookup success. Resolved to: ${usedCity} (${usedLatitude}, ${usedLongitude})"
                     } else {
-                        logWarn "OWM Geo API returned no matches for city string: '${settings.overrideCity}'"
+                        logWarn "Direct Geo-Lookup returned no matching results for: ${settings.overrideCity}"
                     }
                 } else {
-                    logError "OWM Geo API call failed with status response code: ${response?.status}"
+                    logError "Direct Geo-Lookup failed with status code: ${response.status}"
                 }
             }
         } catch (Exception e) {
-            logError "Exception occurred during OWM Geocoding API execution request: ${e.message}"
+            logError "Exception occurred during Direct Geo-Lookup: ${e.message}"
         }
     }
-
-    // Final Validation Fallback Check
-    if (finalLat == null || finalLon == null) {
-        logError "Critical Error: Resolution failed. Both Hub and local preference coordinates are empty!"
-    } else {
-        // Track the current synchronized coordinates inside attributes
-        sendIfChanged(name: "apiLatitude", value: finalLat)
-        sendIfChanged(name: "apiLongitude", value: finalLon)
+    
+    // -------------------------------------------------------------
+    // SCENARIO 2 & 3: overrideCity is empty, handle coordinates
+    // -------------------------------------------------------------
+    else {
+        // Fallback to Hub default location parameters
+        logDebug "Scenario 3: Fallback to Hub default location parameters."
+        if (location.latitude != null && location.longitude != null) {
+            usedLatitude = location.latitude.toBigDecimal()
+            usedLongitude = location.longitude.toBigDecimal()
+        } else {
+            logWarn "Hub settings are missing Latitude/Longitude coordinates!"
+        }
+        
+        // Perform Reverse Lookup to identify nearest city from coordinates
+        if (usedLatitude != 0.0 && usedLongitude != 0.0) {
+            logDebug "Performing Reverse Geo-Lookup for coordinates: ${usedLatitude}, ${usedLongitude}"
+            try {
+                def params = [
+                    uri: "${geoApiUrl}reverse?lat=${usedLatitude}&lon=${usedLongitude}&limit=1&appid=${apiKey}",
+                    contentType: "application/json",
+                    timeout: 10
+                ]
+                httpGet(params) { response ->
+                    if (response.status == 200 && response.data) {
+                        def geoData = response.data[0]
+                        if (geoData) {
+                            usedCity = geoData.name ?: "Unknown City"
+                            logInfo "Reverse Geo-Lookup success. Nearest city resolved: ${usedCity}"
+                        } else {
+                            usedCity = "Unknown City"
+                            logWarn "Reverse Geo-Lookup found no explicit city metadata for these coordinates."
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                usedCity = "Lookup Failed"
+                logError "Exception occurred during Reverse Geo-Lookup: ${e.message}"
+            }
+        }
     }
-
-    return [lat: finalLat, lon: finalLon]
+    
+    // -------------------------------------------------------------
+    // State / Attribute Storage Block
+    // -------------------------------------------------------------
+    state.usedCity = usedCity
+    state.usedLatitude = usedLatitude
+    state.usedLongitude = usedLongitude
+    
+    // Cache the current settings so we can compare against them next time
+    state.lastOverrideCity = currentCity
+    state.lastOverrideLatitude = currentLat
+    state.lastOverrideLongitude = currentLon
+    
+    logDebug "Completed calcLonLatCityState. Outputs -> City: ${usedCity} | Lat: ${usedLatitude} | Lon: ${usedLongitude}"
 }
 
 def disableDebugLogging() {
-    log.info "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
+    logInfonfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
     device.updateSetting("logDebugEnable", [type: "bool", value: false])
 }
 

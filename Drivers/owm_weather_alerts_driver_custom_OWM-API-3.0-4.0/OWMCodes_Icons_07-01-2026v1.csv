@@ -1,0 +1,250 @@
+ConditionCode,ConditionType,ConditionDescFull,OWNCond.pngitiond.pngayIcon,OWMConditionNightIcon,AltConditionDayIcon,AltConditionNightIcon
+200,Thunderstorm,Thunderstorm with Light Rain,11d.png,11n.png,38.png,47.png
+201,Thunderstorm,Thunderstorm with Rain,11d.png,11n.png,38.png,47.png
+202,Thunderstorm,Thunderstorm with Heavy Rain,11d.png,11n.png,38.png,47.png
+210,Thunderstorm,Light Thunderstorm,11d.png,11n.png,38.png,47.png
+211,Thunderstorm,Thunderstorm,11d.png,11n.png,38.png,47.png
+212,Thunderstorm,Heavy Thunderstorm,11d.png,11n.png,38.png,47.png
+221,Thunderstorm,Ragged Thunderstorm,11d.png,11n.png,38.png,47.png
+230,Thunderstorm,Thunderstorm with Light Drizzle,11d.png,11n.png,38.png,47.png
+231,Thunderstorm,Thunderstorm with Drizzle,11d.png,11n.png,38.png,47.png
+232,Thunderstorm,Thunderstorm with Heavy Drizzle,11d.png,11n.png,38.png,47.png
+300,Drizzle,Light Intensity Drizzle,09d.png,09n.png,9.png,9.png
+301,Drizzle,Drizzle,09d.png,09n.png,9.png,9.png
+302,Drizzle,Heavy Intensity Drizzle,09d.png,09n.png,9.png,9.png
+310,Drizzle,Light Intensity Drizzle Rain,09d.png,09n.png,9.png,9.png
+311,Drizzle,Drizzle Rain,09d.png,09n.png,9.png,9.png
+312,Drizzle,Heavy Intensity Drizzle Rain,09d.png,09n.png,9.png,9.png
+313,Drizzle,Shower Rain and Drizzle,09d.png,09n.png,9.png,9.png
+314,Drizzle,Heavy Shower Rain and Drizzle,09d.png,09n.png,9.png,9.png
+321,Drizzle,Shower Drizzle,09d.png,09n.png,9.png,9.png
+500,Rain,Light Rain,10d.png,10n.png,39.png,9.png
+501,Rain,Moderate Rain,10d.png,10n.png,39.png,11.png
+502,Rain,Heavy Intensity Rain,10d.png,10n.png,39.png,11.png
+503,Rain,Very Heavy Rain,10d.png,10n.png,39.png,11.png
+504,Rain,Extreme Rain,10d.png,10n.png,39.png,11.png
+511,Rain,Freezing Rain,13d.png,13n.png,39.png,11.png
+520,Rain,Light Intensity Shower Rain,09d.png,09n.png,39.png,9.png
+521,Rain,Shower Rain,09d.png,09n.png,39.png,11.png
+522,Rain,Heavy Intensity Shower Rain,09d.png,09n.png,39.png,11.png
+531,Rain,Ragged Shower Rain,09d.png,09n.png,39.png,9.png
+600,Snow,Light Snow,13d.png,13n.png,13.png,46.png
+601,Snow,Snow,13d.png,13n.png,14.png,46.png
+602,Snow,Heavy Snow,13d.png,13n.png,16.png,46.png
+611,Snow,Sleet,13d.png,13n.png,9.png,46.png
+612,Snow,Light Shower Sleet,13d.png,13n.png,8.png,46.png
+613,Snow,Shower Sleet,13d.png,13n.png,9.png,45.png
+615,Snow,Light Rain and Snow,13d.png,13n.png,39.png,45.png
+616,Snow,Rain and Snow,13d.png,13n.png,39.png,45.png
+620,Snow,Light Shower Snow,13d.png,13n.png,13.png,46.png
+621,Snow,Shower Snow,13d.png,13n.png,16.png,46.png
+622,Snow,Heavy Shower Snow,13d.png,13n.png,42.png,42.png
+701,Mist,Mist,50d.png,50n.png,23.png,23.png
+711,Smoke,Smoke,50d.png,50n.png,23.png,23.png
+721,Haze,Haze,50d.png,50n.png,23.png,23.png
+731,Dust,Sand/Dust Whirls,50d.png,50n.png,23.png,23.png
+741,Fog,Fog,50d.png,50n.png,23.png,23.png
+751,Sand,Sand,50d.png,50n.png,23.png,23.png
+761,Dust,Dust,50d.png,50n.png,23.png,23.png
+762,Ash,Volcanic Ash,50d.png,50n.png,23.png,23.png
+771,Squall,Squalls,50d.png,50n.png,23.png,23.png
+781,Tornado,Tornado,50d.png,50n.png,23.png,23.png
+800,Clear,Clear Sky,01d.png,01n.png,32.png,31.png
+801,Clouds,Few Clouds: 11-25%,02d.png,02n.png,34.png,33.png
+802,Clouds,Scattered Clouds: 25-50%,03d.png,03n.png,30.png,29.png
+803,Clouds,Broken Clouds: 51-84%,04d.png,04n.png,28.png,27.png
+804,Clouds,Heavy/Overcast Clouds: 85-100%,04d.png,04n.png,26.png,26.png
+999,Unknown Type,Unknown Weather Description,50n.png,50n.png,na.png,na.png
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,01n,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,02n,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,03n,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,04n,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,

@@ -24,6 +24,10 @@ metadata {
         attribute "overrideCity", "string"
         attribute "overrideLongitude", "number"
         attribute "overrideLatitude", "numbr"
+		attribute "pressureUnit", "string"
+		attribute "temperatureUnit", "string"
+		attribute "windSpeedUnit", "string"
+		attribute "illuminanceUnit", "string"
 		
 		// - Api specific response attributes
 
@@ -160,9 +164,7 @@ metadata {
         
         // Optional City field that dynamically overrides latitude/longitude if populated
         input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
-
-		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: true, defaultValue: 'https://tinyurl.com/icnqz/'
+		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: false
 		
 		// Need to look into this to see why it was implemented. I'm not using it
 		// input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
@@ -184,8 +186,8 @@ metadata {
         // Display Unit Selectors
 		input name: "pressureUnit", type: "enum", title: "Display Unit - Barometric Pressure", options: ["inHg": "Mercury (inHg)", "hPa": "Hectopascals (hPa)", "mb": "Millibar (mb)", "none": "None (No Unit Suffix)"], description: "Choice of barometer unit used in tiles and logging<br>Default: <b>Mercury (inHg)</b>", defaultValue: "inHg", required: true
 		input name: "illuminanceUnit", type: "enum", title: "Display Unit - Illuminance", options: ["lx": "Lux (lx)", "fc": "Foot-candle (fc)", "ph": "Phot (ph)", "none": "None (No Unit Suffix)"], description: "Choice of illuminance unit used in tiles and logging<br>Default: <b>Lux (lx)</b>", defaultValue: "lx", required: true
-		input name: "temperatureUnit", type: "enum", title: "Display Unit - Temperature", options: ["f": "Fahrenheit (°F)", "c": "Celsius (°C)", "k": "Kelvin (K)", "none": "None (No Unit Suffix)"], description: "Choice of temperature unit formatting used in tiles and logging<br>Default: <b>Fahrenheit (°F)</b>", defaultValue: "f", required: true
-		input name: "windUnit", type: "enum", title: "Display Unit - Wind Speed", options: ["mph": "Miles per Hour (mph)", "kmh": "Kilometers per Hour (km/h)", "kt": "Knots (kt)", "ms": "Meters per Second (m/s)", "none": "None (No Unit Suffix)"], description: "Choice of wind speed unit used in tiles and logging<br>Default: <b>Miles per Hour(mph)</b>", defaultValue: "mph", required: true		
+		input name: "temperatureUnit", type: "enum", title: "Display Unit - Temperature", options: ["°F": "Fahrenheit (°F)", "°C": "Celsius (°C)", "K": "Kelvin (K)", "none": "None (No Unit Suffix)"], description: "Choice of temperature unit formatting used in tiles and logging<br>Default: <b>Fahrenheit (°F)</b>", defaultValue: "°F", required: true
+		input name: "windSpeedUnit", type: "enum", title: "Display Unit - Wind Speed", options: ["mph": "Miles per Hour (mph)", "kmh": "Kilometers per Hour (km/h)", "kt": "Knots (kt)", "ms": "Meters per Second (m/s)", "none": "None (No Unit Suffix)"], description: "Choice of wind speed unit used in tiles and logging<br>Default: <b>Miles per Hour(mph)</b>", defaultValue: "mph", required: true		
         // Polling Option Dropdown Menu
         input name: "dayInterval", type: "enum", title: "Polling - Daytime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency to OWM during daytime (between sunrise and sunset)<br>Default: <b>30 Minutes</b>", defaultValue: "30", required: true
         input name: "nightInterval", type: "enum", title: "Polling - Nighttime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency of OWM during nighttime (between sunset and sunrise)<br>Default: <b>1 Hour</b>", defaultValue: "60", required: true
@@ -202,11 +204,30 @@ metadata {
 def installed() {
     logInfo "Driver Installed. Turning on initial debug logging for 30 minutes."
     device.updateSetting("logDebugEnable", [type: "bool", value: true])
+    
+    // Push defaults to settings so they display properly on the driver page fields
+    if (settings.pressureUnit == null) device.updateSetting("pressureUnit", [type: "enum", value: "inHg"])
+    if (settings.illuminanceUnit == null) device.updateSetting("illuminanceUnit", [type: "enum", value: "lx"])
+    if (settings.temperatureUnit == null) device.updateSetting("temperatureUnit", [type: "enum", value: "°F"])
+    if (settings.windSpeedUnit == null) device.updateSetting("windSpeedUnit", [type: "enum", value: "mph"])
+
+    // Update current device attributes to reflect defaults on initial install
+    sendIfChanged(name: "pressureUnit", value: "inHg")
+    sendIfChanged(name: "illuminanceUnit", value: "lx")
+    sendIfChanged(name: "temperatureUnit", value: "°F")
+    sendIfChanged(name: "windSpeedUnit", value: "mph")
+
     initialize()
 }
 
 def updated() {
-    logInfo "Preferences updated, re-initializing driver rules..."
+    logInfo "Preferences updated. Running initialization ..."
+    
+    // Ensure changed unit selections immediately update device attributes
+    sendIfChanged(name: "pressureUnit", value: settings.pressureUnit ?: "inHg")
+    sendIfChanged(name: "illuminanceUnit", value: settings.illuminanceUnit ?: "lx")
+    sendIfChanged(name: "temperatureUnit", value: settings.temperatureUnit ?: "°F")
+    sendIfChanged(name: "windSpeedUnit", value: settings.windSpeedUnit ?: "mph")
     
     if (!settings.altIconLoc || settings.altIconLoc.trim() == "") {
         if (settings.altIconsEnable == true) {
@@ -219,10 +240,10 @@ def updated() {
 
 def initialize() {
     unschedule()
-   logInfo "Initializing driver."  
+   logInfo "Initializing driver ..."  
   
     if (logDebugEnable == true) {
-        logInfonfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
+        logInfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
         runIn(1800, "disableDebugLogging")
     }
 
@@ -240,7 +261,7 @@ def initialize() {
         }
         
         logDebug "Generated daytime cron string: ${dayCronStr}"
-        schedule(dayCronStr, "refresh")
+		schedule(dayCronStr, "scheduledPoll")
     }
 
     if (nightInterval == "manual") {
@@ -257,8 +278,13 @@ def initialize() {
         }
         
         logDebug "Generated nighttime cron string: ${nightCronStr}"
-        schedule(nightCronStr, "refresh")
+        schedule(nightCronStr, "scheduledPoll")
     }
+}
+
+def scheduledPoll() {
+    logDebug "Scheduled background poll sequence initiated."
+    pollOWM("schedule")
 }
 
 // This command executes automatically from your generated cron schedules inside initialize()
@@ -271,11 +297,25 @@ def refresh() {
         return
     }
 
-    // Execution to owm Poll logic block
-    pollOWM()  
+    // Execution to owm Poll logic block, alerting that it was invoked by refresh
+    pollOWM("refresh") 
 }
 
-def pollOWM() {
+def pollOWM(String type = "manual") {
+    // Evaluation of execution triggers using logInfo
+    switch(type) {
+        case "refresh":
+            logInfo "pollOWM run on manual Refresh"
+            break
+        case "schedule":
+            logInfo "polling OpenWeatherMaps API on schedule"
+            break
+        case "manual":
+        default:
+            logInfo "PollOWM run manually"
+            break
+    }
+
     logDebug "pollOWM triggered. Evaluating location coordinates..."
     
     // Ensure state variables exist by evaluating coordinate overrides
@@ -289,9 +329,12 @@ def pollOWM() {
     // Execution to check sun position for use in calcBetwixt and calcDayState blocks
     BigDecimal altitude = calcSunPosition()
 	
-	// Execution for certain variables used in parsed data returned from pollOWMAPI
-	calcBetwixtState(altitude)
+    // Execution for certain variables used in parsed data returned from pollOWMAPI
+    calcBetwixtState(altitude)
     calcIsDayState(altitude)
+	
+    // Resolve path safely and save it to state before API execution
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
 	
     // Fire off the API poll sequence
     pollOWMAPI()
@@ -360,7 +403,7 @@ private void parseOWMData(Map json) {
     
     // Extract location and configuration details for the alert builder
     String calculatedCityAttr = state.usedCity ?: "Local Area"
-    String iconBasePath = settings.altIconLoc ?: ""
+    String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/"
     
     // Execute alerts calculation with live payload data
     calcAlertsState(json, calculatedCityAttr, iconBasePath)
@@ -369,6 +412,13 @@ private void parseOWMData(Map json) {
     def currentData = json.current ?: [:]
     if (currentData) {
         logTrace "Current weather data payload extracted successfully."
+        
+        // Ensure rain and snow default to 0 if missing or nested improperly from OWM
+        def rainVal = currentData.rain?.getAt("1h") != null ? currentData.rain["1h"] : 0
+        def snowVal = currentData.snow?.getAt("1h") != null ? currentData.snow["1h"] : 0
+        
+        currentData["calculatedRain"] = rainVal
+        currentData["calculatedSnow"] = snowVal
     }
     
     // 2. Process Daily forecast arrays safely 
@@ -391,6 +441,238 @@ private void parseOWMData(Map json) {
     if (data2) {
         logTrace "Day After Tomorrow's forecast data payload (data.2) extracted successfully."
     }
+
+    // Route all isolated datasets into the custom event dispatcher
+    sendOWMData(currentData, data0, data1, data2)
+}
+
+private void sendOWMData(Map current, Map today, Map tom, Map tda) {
+    logDebug "sendOWMData initiated. Dispatching events to device attributes..."
+
+    // ==========================================
+    // 1. CURRENT DATA DISPATCHES
+    // ==========================================
+    if (current) {
+        // Safe dispatch of newly captured precipitation attributes
+        sendIfChanged(name: "currentRain", value: current.calculatedRain != null ? current.calculatedRain : 0)
+        sendIfChanged(name: "currentSnow", value: current.calculatedSnow != null ? current.calculatedSnow : 0)
+
+        if (current.temp != null) {
+            BigDecimal calcTemp = convertKelvin(current.temp)
+            sendIfChanged(name: "currentTemperature", value: calcTemp)
+            sendIfChanged(name: "temperature", value: calcTemp) // Map to Core Capability
+        }
+        if (current.feels_like != null) {
+            sendIfChanged(name: "currentFeelsLike", value: convertKelvin(current.feels_like))
+        }
+        if (current.dew_point != null) {
+            sendIfChanged(name: "currentDewPoint", value: convertKelvin(current.dew_point))
+        }
+        if (current.humidity != null) {
+            sendIfChanged(name: "currentHumidity", value: current.humidity)
+            sendIfChanged(name: "humidity", value: current.humidity) // Map to Core Capability
+        }
+		if (current.pressure != null) {
+            BigDecimal calcPressure = convertPressure(current.pressure)
+            sendIfChanged(name: "currentPressure", value: calcPressure)
+            sendIfChanged(name: "pressure", value: calcPressure) // Map to Core Capability
+        }
+        if (current.uvi != null) {
+            sendIfChanged(name: "currentUVI", value: current.uvi)
+            sendIfChanged(name: "ultravioletIndex", value: current.uvi) // Map to Core Capability
+        }
+        if (current.clouds != null) sendIfChanged(name: "currentCloudPCT", value: current.clouds)
+        if (current.visibility != null) sendIfChanged(name: "currentVisibility", value: current.visibility)
+        
+        // Wind Speed elements converted from m/s using user selection preference logic
+        if (current.wind_speed != null) {
+            sendIfChanged(name: "currentWindSpeed", value: convertWindSpeed(current.wind_speed))
+        }
+        if (current.wind_deg != null) {
+            sendIfChanged(name: "currentWindDeg", value: current.wind_deg)
+        }
+        if (current.wind_gust != null) {
+            sendIfChanged(name: "currentWindGust", value: convertWindSpeed(current.wind_gust))
+        }
+        
+        // Handle nested weather condition arrays safely if available
+        if (current.weather && current.weather[0]) {
+            sendIfChanged(name: "currentConditionCode", value: current.weather[0].id)
+            sendIfChanged(name: "currentConditionType", value: current.weather[0].main)
+            sendIfChanged(name: "currentConditionTypeFull", value: current.weather[0].description)
+            sendIfChanged(name: "currentConditionIcon", value: current.weather[0].icon)
+        }
+    }
+
+    // ==========================================
+    // 2. TODAY DATA DISPATCHES (data.0)
+    // ==========================================
+    if (today) {
+        if (today.pop != null) sendIfChanged(name: "todayPOP", value: today.pop)
+        if (today.summary != null) sendIfChanged(name: "todaySummary", value: today.summary)
+        if (today.moon_phase != null) sendIfChanged(name: "todayMoonPhase", value: today.moon_phase)
+        
+        // Nested temperature structures converted dynamically via user preferences layout
+        if (today.temp) {
+            if (today.temp.min != null) sendIfChanged(name: "todayTempMin", value: convertKelvin(today.temp.min))
+            if (today.temp.max != null) sendIfChanged(name: "todayTempMax", value: convertKelvin(today.temp.max))
+            if (today.temp.day != null) sendIfChanged(name: "todayTempDay", value: convertKelvin(today.temp.day))
+            if (today.temp.night != null) sendIfChanged(name: "todayTempNight", value: convertKelvin(today.temp.night))
+        }
+    }
+
+    // ==========================================
+    // 3. TOMORROW DATA DISPATCHES (data.1)
+    // ==========================================
+    if (tom) {
+        if (tom.pop != null) sendIfChanged(name: "tomPOP", value: tom.pop)
+        if (tom.summary != null) sendIfChanged(name: "tomSummary", value: tom.summary)
+        if (tom.moon_phase != null) sendIfChanged(name: "tomMoonPhase", value: tom.moon_phase)
+        
+        if (tom.temp) {
+            if (tom.temp.min != null) sendIfChanged(name: "tomTempMin", value: convertKelvin(tom.temp.min))
+            if (tom.temp.max != null) sendIfChanged(name: "tomTempMax", value: convertKelvin(tom.temp.max))
+            if (tom.temp.day != null) sendIfChanged(name: "tomTempDay", value: convertKelvin(tom.temp.day))
+            if (tom.temp.night != null) sendIfChanged(name: "tomTempNight", value: convertKelvin(tom.temp.night))
+        }
+    }
+
+    // ==========================================
+    // 4. DAY AFTER TOMORROW DATA DISPATCHES (data.2)
+    // ==========================================
+    if (tda) {
+        if (tda.pop != null) sendIfChanged(name: "tdaPOP", value: tda.pop)
+        if (tda.summary != null) sendIfChanged(name: "tdaSummary", value: tda.summary)
+        if (tda.moon_phase != null) sendIfChanged(name: "tdaMoonPhase", value: tda.moon_phase)
+        
+        if (tda.temp) {
+            if (tda.temp.min != null) sendIfChanged(name: "tdaTempMin", value: convertKelvin(tda.temp.min))
+            if (tda.temp.max != null) sendIfChanged(name: "tdaTempMax", value: convertKelvin(tda.temp.max))
+            if (tda.temp.day != null) sendIfChanged(name: "tdaTempDay", value: convertKelvin(tda.temp.day))
+            if (tda.temp.night != null) sendIfChanged(name: "tdaTempNight", value: convertKelvin(tda.temp.night))
+        }
+    }
+    logDebug "sendOWMData event parsing complete."
+}
+
+		//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+private String calcIconBasePath(String altIconLoc) {
+    String base = altIconLoc ? altIconLoc.trim() : ""
+    
+    // Fall back to target default URL if empty or null
+    if (base == "") {
+        base = "https://tinyurl.com/icnqz"
+    }
+    
+    // Enforce trailing slash constraint
+    if (!base.endsWith("/")) {
+        base += "/"
+    }
+    
+    logDebug "Calculated Icon Base Path resolved to: ${base}"
+    return base
+}
+
+private BigDecimal convertKelvin(def kelvinVal) {
+    if (kelvinVal == null) return 0.0
+    
+    BigDecimal K = kelvinVal.toBigDecimal()
+    BigDecimal converted = K
+    
+    // Determine conversion target from preference selection
+    String targetUnit = settings.temperatureUnit ?: "°F"
+    
+    switch (targetUnit) {
+        case "°F":
+            // Kelvin to Fahrenheit: (K − 273.15) × 9/5 + 32
+            converted = (K - 273.15) * 1.8 + 32
+            break
+        case "°C":
+            // Kelvin to Celsius: K − 273.15
+            converted = K - 273.15
+            break
+        case "K":
+        case "none":
+        default:
+            // Remain as Kelvin
+            converted = K
+            break
+    }
+    
+    // Apply user chosen decimal precision layout
+    int precision = (settings.precisionTemp ?: "2").toInteger()
+    return converted.setScale(precision, BigDecimal.ROUND_HALF_UP)
+}
+
+private BigDecimal convertPressure(def hpaVal) {
+    if (hpaVal == null) return 0.0
+    
+    BigDecimal hpa = hpaVal.toBigDecimal()
+    BigDecimal converted = hpa
+    
+    // Determine conversion target from preference selection
+    String targetUnit = settings.pressureUnit ?: "inHg"
+    
+    switch (targetUnit) {
+        case "inHg":
+            // Hectopascals to Inches of Mercury
+            converted = hpa * 0.029530
+            break
+        case "mmHg":
+            // Hectopascals to Millimeters of Mercury
+            converted = hpa * 0.750062
+            break
+        case "kPa":
+            // Hectopascals to Kilopascals
+            converted = hpa * 0.1
+            break
+        case "hPa":
+        case "mb":
+        case "none":
+        default:
+            // Remain as hPa / Millibars
+            converted = hpa
+            break
+    }
+    
+    // Apply user chosen pressure decimal precision
+    int precision = (settings.precisionPress ?: "2").toInteger()
+    return converted.setScale(precision, BigDecimal.ROUND_HALF_UP)
+}
+
+private BigDecimal convertWindSpeed(def msVal) {
+    if (msVal == null) return 0.0
+    
+    BigDecimal ms = msVal.toBigDecimal()
+    BigDecimal converted = ms
+    
+    // Determine conversion target from user preference selection
+    String targetUnit = settings.windSpeedUnit ?: "mph"
+    
+    switch (targetUnit) {
+        case "mph":
+            // Meters per second to Miles per Hour
+            converted = ms * 2.23694
+            break
+        case "kmh":
+            // Meters per second to Kilometers per Hour
+            converted = ms * 3.6
+            break
+        case "kt":
+            // Meters per second to Knots
+            converted = ms * 1.94384
+            break
+        case "ms":
+        case "none":
+        default:
+            // Remain as Meters per second
+            converted = ms
+            break
+    }
+    
+    // Apply user chosen wind speed decimal precision
+    int precision = (settings.precisionWind ?: "2").toInteger()
+    return converted.setScale(precision, BigDecimal.ROUND_HALF_UP)
 }
 
 private BigDecimal calcSunPosition() {
@@ -445,7 +727,7 @@ private void calcAlertsState(Map json, String calculatedCityAttr, String iconBas
     String lastPollTime = new Date().format("HH:mm", location.timeZone)
     String currentAlertDescFull = "No active alerts for ${calculatedCityAttr} at last poll as of ${lastPollTime}"
     
-    String alertIconUrl = iconBasePath.endsWith("/") ? "${iconBasePath}OWM.png" : "${iconBasePath}/OWM.png"
+    String alertIconUrl = "${iconBasePath}OWM.png"
     
     String currentAlertTile = "<div style='text-align:center;'>No active weather alerts from<br>Source: OpenWeatherMap</div>" + 
                        "<div style='text-align:center; margin-top:5px; font-size:0.8em;'>" + 
@@ -661,7 +943,7 @@ private void calcLonLatCityState() {
 }
 
 def disableDebugLogging() {
-    logInfonfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
+    logInfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
     device.updateSetting("logDebugEnable", [type: "bool", value: false])
 }
 

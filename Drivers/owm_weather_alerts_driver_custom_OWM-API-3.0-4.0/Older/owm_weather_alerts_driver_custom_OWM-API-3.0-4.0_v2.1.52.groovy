@@ -44,10 +44,10 @@ metadata {
         attribute "currentAlertDescFull", "string"
         
         // - Calculated Solar Angles attributes
-        attribute "altitude", "string"
-        attribute "azimuth", "string"
-		attribute "currentAltitudeText", "string"
-		attribute "currentAzimuthText", "string"
+        attribute "altitude", "number"
+        attribute "azimuth", "number"
+		attribute "altitudeText", "string"
+		attribute "azimuthText", "string"
 
         // - Calculated Polling Timestamps attributes
         attribute "lastPollForecast", "string"
@@ -159,6 +159,8 @@ metadata {
         attribute "weatherIcon", "string"
         attribute "weatherIcons", "string"
 	
+		command "clearAllDriverStates"
+		command "clearAllDriverAttributes"
         command "pollOWM"
     }
 
@@ -170,7 +172,7 @@ metadata {
         input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
 		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: false
 		
-		// Need to look into this to see why it was implemented. I'm not using it
+		// Need to look into this to see why it was implemented. I am not using it
 		// input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
 		
         input name: "overrideLatitude", type: "decimal", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
@@ -179,9 +181,10 @@ metadata {
 		
 		// Display Selector Options
         input name: "precisionPrecip", type: "enum", title: "Display Decimal Precision - Precipitation", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for rainfall readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "2", required: true
-        input name: "precisionPressure", type: "enum", title: "Display Decimal Precision - Pressure", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for barometer readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 30 mb, 30.5 mb, 30.55 mb</i>", defaultValue: "2", required: true
-        input name: "precisionTemp", type: "enum", title: "Display Decimal Precision - Temperature", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for temperature readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 70 °F, 70.3 °F, 70.55 °F</i>", defaultValue: "2", required: true
-        input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for wind speed readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 12 mph, 12.7 mph, 12.77 mph</i>", defaultValue: "2", required: true
+        input name: "precisionPressure", type: "enum", title: "Display Decimal Precision - Pressure", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for barometer readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 30mb,30.5mb, 30.55mb</i>", defaultValue: "2", required: true
+        input name: "precisionSunAngles", type: "enum", title: "Display Decimal Precision - Sun Angles", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for sun angles (altitude and azimuth) readings in logging and tiles<br>Default: <b>0</b><br><i>EG(with Unit): 149°, 149.5°, 149.55°</i>", defaultValue: "0", required: true
+        input name: "precisionTemp", type: "enum", title: "Display Decimal Precision - Temperature", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for temperature readings in logging and tiles<br>Default: <b>2</b><br><i>EG(with Unit): 70°F, 70.3°F, 70.55°F</i>", defaultValue: "2", required: true
+        input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for wind speed readings in logging and tiles<br>Default: <b>2</b><br><i>EG (with Unit): 12 mph, 12.7 mph, 12.77 mph</i>", defaultValue: "2", required: true
         
 		// Display Options
 		input name: "owmAlertsEnable", type: "bool", title: "Display Options - Enable Alerts Tile?", description: "Enable to Alert tile output updates on schedule for normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -217,9 +220,9 @@ def installed() {
 
     // Update current device attributes to reflect defaults on initial install
     sendIfChanged(name: "pressureUnit", value: "inHg")
-    sendIfChanged(name: "illuminanceUnit", value: "lx")
+    sendIfChanged(name: "illuminanceUnit", value: " lx")
     sendIfChanged(name: "temperatureUnit", value: "°F")
-    sendIfChanged(name: "windSpeedUnit", value: "mph")
+    sendIfChanged(name: "windSpeedUnit", value: " mph")
 
     initialize()
 }
@@ -229,9 +232,9 @@ def updated() {
     
     // Ensure changed unit selections immediately update device attributes
     sendIfChanged(name: "pressureUnit", value: settings.pressureUnit ?: "inHg")
-    sendIfChanged(name: "illuminanceUnit", value: settings.illuminanceUnit ?: "lx")
+    sendIfChanged(name: "illuminanceUnit", value: settings.illuminanceUnit ?: " lx")
     sendIfChanged(name: "temperatureUnit", value: settings.temperatureUnit ?: "°F")
-    sendIfChanged(name: "windSpeedUnit", value: settings.windSpeedUnit ?: "mph")
+    sendIfChanged(name: "windSpeedUnit", value: settings.windSpeedUnit ?: " mph")
     
     if (!settings.altIconLoc || settings.altIconLoc.trim() == "") {
         if (settings.altIconsEnable == true) {
@@ -253,6 +256,24 @@ def initialize() {
 
     // Fire an immediate poll to get current sunrise/sunset data and kick off dynamic scheduling
     runIn(2, "scheduledPoll")
+}
+
+void clearAllDriverStates() {
+    log.info "Clearing all driver states..."
+    
+    // Clears all data stored in the state map
+    state.clear() 
+    
+    log.info "All states have been cleared."
+}
+
+void clearAllDriverAttributes() {
+    String attributesDeleted = ''
+    device.properties.supportedAttributes.each { it -> 
+        attributesDeleted += "${it}, " 
+        device.deleteCurrentState("$it") 
+    }
+    log.info "All current states (attributes) DELETED: ${attributesDeleted}"
 }
 
 def scheduledPoll() {
@@ -348,11 +369,11 @@ def pollOWM(String type = "manual") {
     }
 
     // Execution to check sun position for use in calcBetwixt and calcDayState blocks
-    BigDecimal altitude = calcSunPosition()
+	BigDecimal currentAlt = calcSunPosition()
 	
     // Execution for certain variables used in parsed data returned from pollOWMAPI
-    calcBetwixtState(altitude)
-    calcIsDayState(altitude)
+	calcBetwixtState(currentAlt)
+	calcIsDayState(currentAlt)
 	
     // Resolve path safely and save it to state before API execution
     state.iconBasePath = calcIconBasePath(settings.altIconLoc)
@@ -451,8 +472,8 @@ private void parseOWMData(Map json) {
     
     // Gather Today data (data.0)
     def data0 = dailyList.size() > 0 ? dailyList[0] : [:]
-    // ... [keep your existing data1 and data2 extraction logic here] ...
-
+    def data1 = dailyList.size() > 1 ? dailyList[1] : [:]
+	def data2 = dailyList.size() > 2 ? dailyList[2] : [:]
     // Route all isolated datasets into the custom event dispatcher
     sendOWMData(currentData, data0, data1, data2)
     
@@ -571,7 +592,10 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
     }
 	
 	// Trigger the illuminance calculation right before concluding the lifecycle dispatch
-    calcCurrentIlluminance()
+	BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("altitude")?.toBigDecimal() ?: 0.0)
+        
+    // Execute illuminance math now that cloud cover and sun position are synchronized
+    calcCurrentIlluminance(currentAlt)
 	calcCurrentText()
 	
     logDebug "sendOWMData event parsing complete."
@@ -593,6 +617,43 @@ private String calcIconBasePath(String altIconLoc) {
     
     logDebug "Calculated Icon Base Path resolved to: ${base}"
     return base
+}
+
+private BigDecimal convertIlluminance(BigDecimal rawLux) {
+    if (rawLux == null) return 0.0
+    
+    // Fall back to 'lx' if the preference is null or unconfigured
+    String targetUnit = settings.illuminanceUnit ?: "lx"
+    BigDecimal convertedValue = rawLux
+    int precision = 0 // Default precision for Lux and Foot-candles
+    
+    switch (targetUnit) {
+        case "fc":
+            // Lux to Foot-candle conversion: lx * 0.092903
+            convertedValue = rawLux * 0.092903
+            precision = 1 // Standard clarity representation
+            break
+            
+        case "ph":
+            // Lux to Phot conversion: lx * 0.0001
+            convertedValue = rawLux * 0.00001
+            precision = 4 // Phot values are extremely small, requiring deeper decimal precision
+            break
+            
+        case "lx":
+        case "none":
+        default:
+            // Remain as standard Lux
+            convertedValue = rawLux
+            precision = 0
+            break
+    }
+    
+    // Round using standard half-up scaling rules and guard against negative outcomes
+    BigDecimal finalValue = convertedValue.setScale(precision, BigDecimal.ROUND_HALF_UP)
+    if (finalValue < 0) finalValue = 0.0
+    
+    return finalValue
 }
 
 private BigDecimal convertKelvin(def kelvinVal) {
@@ -697,49 +758,6 @@ private BigDecimal convertWindSpeed(def msVal) {
     return converted.setScale(precision, 4)
 }
 
-private BigDecimal calcSunPosition() {
-    def lat = state.latitude
-    def lon = state.longitude
-    int precision = 2
-	
-    if (lat == null || lon == null) {
-        logWarn "Latitude or Longitude is not configured in Hub settings. Skipping sun calculations."
-        return 0.0
-    }
-
-    def date = new Date()
-    def J2000 = 2451545.0
-    def JulianDate = (date.getTime() / 86400000.0) + 2440587.5
-    def d = JulianDate - J2000
-
-    def rad = Math.PI / 180.0
-    def e = rad * 23.4397
-    
-    def M = rad * (357.5291 + 0.98560028 * d)
-    def C = rad * (1.9148 * Math.sin(M) + 0.0200 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M))
-    def lambda = M + C + rad * 102.9372 + Math.PI
-    
-    def declination = Math.asin(Math.sin(lambda) * Math.sin(e))
-    def rightAscension = Math.atan2(Math.sin(lambda) * Math.cos(e), Math.cos(lambda))
-    
-    def lw = rad * -lon
-    def phi = rad * lat
-    def H = rad * (280.16 + 360.9856235 * d) - lw - rightAscension
-    
-    def altitude = Math.asin(Math.sin(phi) * Math.sin(declination) + Math.cos(phi) * Math.cos(declination) * Math.cos(H))
-    def azimuth = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(declination) * Math.cos(phi))
-    
-    def azimuthDeg = azimuth * (180.0 / Math.PI) + 180.0
-    def altitudeDeg = altitude * (180.0 / Math.PI)
-
-	azimuthDeg = azimuthDeg.toBigDecimal().setScale(precision, 4)
-	altitudeDeg = altitudeDeg.toBigDecimal().setScale(precision, 4)
-
-    sendIfChanged(name: "azimuth", value: azimuthDeg.setScale(precision, 4).toPlainString())
-    sendIfChanged(name: "altitude", value: altitudeDeg.setScale(precision, 4).toPlainString())
-    return altitudeDeg
-}
-
 private void calcAlertsState(Map json, String calculatedCityAttr, String iconBasePath) {
     // Safely look up alerts array out of the incoming payload map
     def alerts = json?.alerts ?: []
@@ -778,7 +796,7 @@ private void calcAlertsState(Map json, String calculatedCityAttr, String iconBas
     sendIfChanged(name: "currentAlertTile", value: currentAlertTile)
 }
 
-private void calcBetwixtState(BigDecimal altitudeDeg) {
+private void calcBetwixtState(BigDecimal altitude) {
     if (settings.sliceOfDayEnable == false) {
         sendIfChanged(name: "betwixt", value: "Disabled in device preferences")
         return
@@ -789,8 +807,8 @@ private void calcBetwixtState(BigDecimal altitudeDeg) {
     long sunriseEpoch = state.todaySunriseEpoch ?: 0
     long sunsetEpoch = state.todaySunsetEpoch ?: 0
     
-    boolean isTwilightAngle = (altitudeDeg >= -6.0 && altitudeDeg < -0.833)
-    boolean isSunUp = (altitudeDeg >= -0.833)
+    boolean isTwilightAngle = (altitude >= -6.0 && altitude < -0.833)
+    boolean isSunUp = (altitude >= -0.833)
     
     if (sunriseEpoch > 0 && sunsetEpoch > 0) { 
         long midDayEpoch = sunriseEpoch + ((sunsetEpoch - sunriseEpoch) / 2)
@@ -826,16 +844,106 @@ private void calcBetwixtState(BigDecimal altitudeDeg) {
     }
 
     sendIfChanged(name: "betwixt", value: sliceText)
-    logDebug "Calculated betwixt slice: ${sliceText} (Current Alt: ${altitudeDeg}°)"
+    logDebug "Calculated betwixt slice: ${sliceText} (Current Altitude: ${altitude}°)"
 }
 
-private void calcIsDayState(BigDecimal altitudeDeg) {
+private BigDecimal calcSunPosition() {
+    // 1. Establish User Precision and Coordinates
+    int precision = (settings.precisionSunAngles ?: "0").toInteger()
+    BigDecimal locLat = state.usedLatitude != null ? state.usedLatitude.toBigDecimal() : location.latitude
+    BigDecimal locLon = state.usedLongitude != null ? state.usedLongitude.toBigDecimal() : location.longitude
+
+    if (locLat == null || locLon == null) {
+        if (logWarnEnable) log.warn "calcSunPosition: Latitude or Longitude coordinates are unavailable."
+        return 0.0
+    }
+
+    // 2. Get current universal time in UTC to bypass local timezone/DST errors
+    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    double hour = cal.get(Calendar.HOUR_OF_DAY) + (cal.get(Calendar.MINUTE) / 60.0) + (cal.get(Calendar.SECOND) / 3600.0)
+    int day = cal.get(Calendar.DAY_OF_MONTH)
+    int month = cal.get(Calendar.MONTH) + 1 
+    int year = cal.get(Calendar.YEAR)
+
+    // 3. Compute fractional Julian Date (relative to standard J2000 epoch)
+    if (month <= 2) {
+        year -= 1
+        month += 12
+    }
+    int A = (int)(year / 100)
+    int B = 2 - A + (int)(A / 4)
+    double jd = (int)(365.25 * (year + 4716)) + (int)(30.6001 * (month + 1)) + day + (hour / 24.0) + B - 1524.5
+    double d = jd - 2451545.0
+
+    // 4. Calculate Keplerian Solar Coordinates
+    double g = 357.529 + 0.98560028 * d        // Mean anomaly of the Sun
+    double q = 280.459 + 0.98564736 * d        // Mean longitude of the Sun
+    double L = q + 1.915 * Math.sin(Math.toRadians(g)) + 0.020 * Math.sin(Math.toRadians(2 * g)) // Ecliptic longitude
+    double e = 23.439 - 0.00000036 * d         // Obliquity of the ecliptic
+
+    // Declination and Right Ascension 
+    double sin_delta = Math.sin(Math.toRadians(e)) * Math.sin(Math.toRadians(L))
+    double delta = Math.toDegrees(Math.asin(sin_delta))
+    double ra = Math.toDegrees(Math.atan2(Math.cos(Math.toRadians(e)) * Math.sin(Math.toRadians(L)), Math.cos(Math.toRadians(L))))
+
+    // 5. Sidereal Time tracking and Local Hour Angle
+    double gst = 280.46061837 + 360.98564736629 * d
+    double lst = gst + locLon
+    double H = lst - ra
+
+    // 6. Project onto local horizontal plane (Altitude & Azimuth)
+    double latRad = Math.toRadians(locLat)
+    double deltaRad = Math.toRadians(delta)
+    double hRad = Math.toRadians(H)
+
+    // Calculate Altitude
+    double sin_alt = Math.sin(latRad) * Math.sin(deltaRad) + Math.cos(latRad) * Math.cos(deltaRad) * Math.cos(hRad)
+    sin_alt = Math.max(-1.0, Math.min(1.0, sin_alt)) // Safety clamp
+    double alt = Math.toDegrees(Math.asin(sin_alt))
+
+    // Calculate Azimuth
+    double cos_alt = Math.cos(Math.toRadians(alt))
+    double az = 0.0
+    if (Math.abs(cos_alt) > 0.0001) {
+        double cos_az = (Math.sin(deltaRad) - Math.sin(latRad) * sin_alt) / (Math.cos(latRad) * cos_alt)
+        cos_az = Math.max(-1.0, Math.min(1.0, cos_az))
+        az = Math.toDegrees(Math.acos(cos_az))
+        
+        if (Math.sin(hRad) > 0) {
+            az = 360.0 - az
+        }
+    } else {
+        az = (locLat > 0) ? 180.0 : 0.0
+    }
+
+    // Normalize Azimuth loop to 0-360 boundaries
+    az = (az % 360.0 + 360.0) % 360.0
+
+    // 7. Process precision preferences and build attributes
+    BigDecimal finalAltitude = BigDecimal.valueOf(alt).setScale(precision, java.math.RoundingMode.HALF_UP)
+    BigDecimal finalAzimuth = BigDecimal.valueOf(az).setScale(precision, java.math.RoundingMode.HALF_UP)
+
+    if (logInfoEnable) log.info "calcSunPosition: Solar Altitude computed as ${finalAltitude}°, Azimuth as ${finalAzimuth}°"
+
+    // 8. Publish the rounded numbers to the device attributes
+    sendIfChanged(name: "altitude", value: finalAltitude)
+    sendIfChanged(name: "azimuth", value: finalAzimuth)
+    sendIfChanged(name: "altitudeText", value: "${finalAltitude}°")
+    sendIfChanged(name: "azimuthText", value: "${finalAzimuth}°")
+
+	state.sunAltitude = finalAltitude
+
+    return finalAltitude
+}
+
+private void calcIsDayState(BigDecimal altitude) {
+	
     String isDayText = "false"
     long currentEpoch = (new Date().getTime() / 1000)
     long sunriseEpoch = state.todaySunriseEpoch ?: 0
     long sunsetEpoch = state.todaySunsetEpoch ?: 0
     
-    boolean isSunUp = (altitudeDeg >= -0.833) 
+    boolean isSunUp = (altitude >= -0.833) 
     
     if (sunriseEpoch > 0 && sunsetEpoch > 0) { 
         long midDayEpoch = sunriseEpoch + ((sunsetEpoch - sunriseEpoch) / 2) 
@@ -852,21 +960,24 @@ private void calcIsDayState(BigDecimal altitudeDeg) {
     logTrace "Calculated currentIsDay: ${isDayText}" 
 }
 
-private void calcCurrentIlluminance() {
+private void calcCurrentIlluminance(BigDecimal altitude) {
     logDebug "Calculating dynamic current illuminance adjusted for chosen unit..."
     
     // Fetch dependencies safely from existing device attributes
     def cloudPctVal = device.currentValue("currentCloudPCT")
-    def altitudeVal = device.currentValue("altitude")
+
+    logDebug "calcCurrentIlluminance() - altitude value being used in calculation: ${altitude}"
+	logDebug "calcCurrentIlluminance() cloudPctVal value being used in calculation: ${cloudPctVal}"
     
-    if (cloudPctVal == null || altitudeVal == null) {
+    if (cloudPctVal == null || altitude == null) {
         logDebug "calcCurrentIlluminance postponed: Waiting for cloud percentage or sun altitude data."
         return
     }
     
     BigDecimal clouds = cloudPctVal.toBigDecimal()
-    BigDecimal altitude = altitudeVal.toBigDecimal()
-    
+	
+    // Log the altitude value being used in the calculation
+        
     // If the sun is below the horizon, illuminance is 0 across all units
     if (altitude <= 0) {
         sendIfChanged(name: "currentIlluminance", value: 0)
@@ -915,13 +1026,15 @@ private void calcCurrentIlluminance() {
     BigDecimal finalValue = convertedValue.setScale(precision, 4)
     if (finalValue < 0) finalValue = 0
     
+	finalValue = convertIlluminance(attenuatedLux)
+
     // Cap Lux at its relative 100k maximum if math exceeds standard constraints
-    if (targetUnit == "lx" && finalValue > 100000) finalValue = 100000
-    
+    if (targetUnit == "lx" && finalValue > 100000) finalValue = 100000   
     logDebug "Illuminance Parsed: ${finalValue} ${targetUnit} (Base Lux: ${attenuatedLux.setScale(precision, 4)} lx)"
-    
-    // Persist to the matching attributes
-    sendIfChanged(name: "currentIlluminance", value: finalValue)
+
+
+	// Handle your final attribute updates using the converted results
+	sendIfChanged(name: "currentIlluminance", value: finalValue)
     sendIfChanged(name: "illuminance", value: finalValue) // Maps directly to capability "IlluminanceMeasurement" 
 }
 
@@ -932,10 +1045,6 @@ private void calcCurrentText() {
     def tempVal = device.currentValue("currentTemperature")
     if (tempVal != null) {
         String tUnit = settings.temperatureUnit ?: "°F"
-        // Cleanup selection values to display cleanly as text labels
-        if (tUnit == "f") tUnit = "°F"
-        if (tUnit == "c") tUnit = "°C"
-        if (tUnit == "k") tUnit = "K"
         sendIfChanged(name: "currentTemperatureText", value: "${tempVal} ${tUnit}")
     }
 
@@ -964,131 +1073,130 @@ private void calcCurrentText() {
 	// 5. Append inside your existing calcCurrentText() routine
     def altVal = device.currentValue("altitude")
     if (altVal != null) {
-        sendIfChanged(name: "currentAltitudeText", value: "${altVal}°")
+        sendIfChanged(name: "altitudeText", value: "${altVal}°")
     }
 
     def azVal = device.currentValue("azimuth")
     if (azVal != null) {
-        sendIfChanged(name: "currentAzimuthText", value: "${azVal}°")
+        sendIfChanged(name: "azimuthText", value: "${azVal}°")
     }
 }
 
 private void calcLonLatCityState() {
-    logDebug "Starting calcLonLatCityState evaluation..." 
-    
-    // Check if the setting values have changed since the last execution
-    String currentCity = settings.overrideCity?.trim() ?: ""
-    String currentLat  = settings.overrideLatitude?.trim() ?: ""
-    String currentLon  = settings.overrideLongitude?.trim() ?: ""
+    // Read current input settings values safely
+    String currentCity = settings.overrideCity ?: ""
+    BigDecimal currentLat = settings.overrideLatitude ? settings.overrideLatitude.toBigDecimal() : null 
+    BigDecimal currentLon = settings.overrideLongitude ? settings.overrideLongitude.toBigDecimal() : null 
 
-    if (state.lastOverrideCity == currentCity && 
-        state.lastOverrideLatitude == currentLat && 
-        state.lastOverrideLongitude == currentLon) {
-        logTrace "Override settings have not changed. Skipping geo-lookup and using cached values."
+    // Optimisation check: If preferences are unchanged and we already have cached outputs, skip
+    Boolean settingsChanged = (currentCity != state.lastOverrideCity || currentLat != state.lastOverrideLatitude || currentLon != state.lastOverrideLongitude)
+    Boolean hasCachedData = (state.usedCity && state.usedLatitude != null && state.usedLongitude != null)
+
+    if (!settingsChanged && hasCachedData) {
+        logDebug "Coordinates and city are unchanged and cached. Skipping geo lookup."
         return
     }
-    
-    // Define the placeholder variables to output to
-    String usedCity = "" 
-    BigDecimal usedLatitude = 0.0 
-    BigDecimal usedLongitude = 0.0 
-    
-    // Base URL for the OWM Geocoding API
-    String geoApiUrl = "https://api.openweathermap.org/geo/1.0/"
-    
-    // -------------------------------------------------------------
-    // SCENARIO 1: If overrideCity is filled, prioritize it entirely
-    // -------------------------------------------------------------
-    if (settings.overrideCity && settings.overrideCity.trim() != "") {
-        logDebug "Scenario 1: overrideCity is populated ('${settings.overrideCity}'). Performing Direct Geo-Lookup."
+
+    String usedCity = ""
+    BigDecimal usedLatitude = 0.0
+    BigDecimal usedLongitude = 0.0
+
+    // ------------------------------------------------------------- 
+    // SCENARIO 1: An explicit override city name has been given
+    // ------------------------------------------------------------- 
+    if (currentCity && currentCity.trim() != "") {
+        logDebug "Scenario 1: overrideCity provided ('${currentCity}'). Running Direct Geo-Lookup."
+        
+        String encodedCity = URLEncoder.encode(currentCity.trim(), "UTF-8")
+        String geoUrl = "https://api.openweathermap.org/geo/1.0/direct?q=${encodedCity}&limit=1&appid=${apiKey}"
+        
+        def params = [
+            uri: geoUrl,
+            contentType: "application/json",
+            timeout: 10
+        ]
         
         try {
-            def encodedCity = URLEncoder.encode(settings.overrideCity.trim(), "UTF-8")
+            httpGet(params) { response ->
+                if (response.status == 200 && response.data && response.data.size() > 0) {
+                    def locationData = response.data[0]
+                    usedCity = locationData.name ?: currentCity
+                    usedLatitude = locationData.lat ? locationData.lat.toBigDecimal() : 0.0
+                    usedLongitude = locationData.lon ? locationData.lon.toBigDecimal() : 0.0
+                    logDebug "Direct Geo-Lookup Success -> City: ${usedCity}, Lat: ${usedLatitude}, Lon: ${usedLongitude}"
+                } else {
+                    logWarn "Direct Geo-Lookup returned no results. Falling back to configurations."
+                }
+            }
+        } catch (Exception e) {
+            logError "Exception occurred during Direct Geo-Lookup execution: ${e.message}"
+        }
+    } 
+    // ------------------------------------------------------------- 
+    // SCENARIO 2: Fall back to coordinate inputs or hub defaults
+    // ------------------------------------------------------------- 
+    else {
+        logDebug "Scenario 2: No overrideCity provided. Evaluating coordinate inputs or Hub configuration."
+        usedLatitude = currentLat ?: location.latitude?.toBigDecimal()
+        usedLongitude = currentLon ?: location.longitude?.toBigDecimal()
+        
+        // Execute Reverse Geo Lookup using the determined coordinates
+        if (usedLatitude && usedLongitude && apiKey) {
+            logDebug "Attempting Reverse Geo-Lookup using Lat: ${usedLatitude}, Lon: ${usedLongitude}"
+            String reverseGeoUrl = "https://api.openweathermap.org/geo/1.0/reverse?lat=${usedLatitude}&lon=${usedLongitude}&limit=1&appid=${apiKey}"
+            
             def params = [
-                uri: "${geoApiUrl}direct?q=${encodedCity}&limit=1&appid=${apiKey}",
+                uri: reverseGeoUrl,
                 contentType: "application/json",
                 timeout: 10
             ]
             
-            httpGet(params) { response ->
-                if (response.status == 200 && response.data) {
-                    def geoData = response.data[0]
-                    if (geoData) {
-                        usedCity = geoData.name ?: settings.overrideCity
-                        usedLatitude = geoData.lat ? geoData.lat.toBigDecimal() : 0.0
-                        usedLongitude = geoData.lon ? geoData.lon.toBigDecimal() : 0.0
-                        logInfo "Direct Geo-Lookup success. Resolved to: ${usedCity} (${usedLatitude}, ${usedLongitude})"
-                    } else {
-                        logWarn "Direct Geo-Lookup returned no matching results for: ${settings.overrideCity}"
-                    }
-                } else {
-                    logError "Direct Geo-Lookup failed with status code: ${response.status}"
-                }
-            }
-        } catch (Exception e) {
-            logError "Exception occurred during Direct Geo-Lookup: ${e.message}"
-        }
-    }
-    
-    // -------------------------------------------------------------
-    // SCENARIO 2 & 3: overrideCity is empty, handle coordinates
-    // -------------------------------------------------------------
-    else {
-        // Fallback to Hub default location parameters
-        logDebug "Scenario 3: Fallback to Hub default location parameters."
-        if (location.latitude != null && location.longitude != null) {
-            usedLatitude = location.latitude.toBigDecimal()
-            usedLongitude = location.longitude.toBigDecimal()
-        } else {
-            logWarn "Hub settings are missing Latitude/Longitude coordinates!"
-        }
-        
-        // Perform Reverse Lookup to identify nearest city from coordinates
-        if (usedLatitude != 0.0 && usedLongitude != 0.0) {
-            logDebug "Performing Reverse Geo-Lookup for coordinates: ${usedLatitude}, ${usedLongitude}"
             try {
-                def params = [
-                    uri: "${geoApiUrl}reverse?lat=${usedLatitude}&lon=${usedLongitude}&limit=1&appid=${apiKey}",
-                    contentType: "application/json",
-                    timeout: 10
-                ]
                 httpGet(params) { response ->
-                    if (response.status == 200 && response.data) {
-                        def geoData = response.data[0]
-                        if (geoData) {
-                            usedCity = geoData.name ?: "Unknown City"
-                            logInfo "Reverse Geo-Lookup success. Nearest city resolved: ${usedCity}"
-                        } else {
-                            usedCity = "Unknown City"
-                            logWarn "Reverse Geo-Lookup found no explicit city metadata for these coordinates."
-                        }
+                    if (response.status == 200 && response.data && response.data.size() > 0) {
+                        def locationData = response.data[0]
+                        usedCity = locationData.name ?: "Local Area"
+                        logDebug "Reverse Geo-Lookup Success -> City resolved: ${usedCity}"
+                    } else {
+                        logWarn "Reverse Geo-Lookup returned empty results. Defaulting city name."
+                        usedCity = "Local Area"
                     }
                 }
             } catch (Exception e) {
-                usedCity = "Lookup Failed"
-                logError "Exception occurred during Reverse Geo-Lookup: ${e.message}"
+                logError "Exception occurred during Reverse Geo-Lookup execution: ${e.message}"
+                usedCity = "Local Area"
             }
+        } else {
+            usedCity = "Local Area"
         }
+    } 
+
+    // ------------------------------------------------------------- 
+    // EXTRA PROTECTION: Enforce fallback to Hub defaults if values 
+    // remain blank or zero (e.g. failed lookups or empty settings)
+    // ------------------------------------------------------------- 
+    if (!usedLatitude || usedLatitude == 0.0) {
+        usedLatitude = currentLat ?: location.latitude?.toBigDecimal() ?: 0.0
+        logDebug "Enforcing latitude fallback context. Target assigned: ${usedLatitude}"
     }
-    
-    // -------------------------------------------------------------
-    // State / Attribute Storage Block
-    // -------------------------------------------------------------
+    if (!usedLongitude || usedLongitude == 0.0) {
+        usedLongitude = currentLon ?: location.longitude?.toBigDecimal() ?: 0.0
+        logDebug "Enforcing longitude fallback context. Target assigned: ${usedLongitude}"
+    }
+    if (!usedCity || usedCity.trim() == "") {
+        usedCity = "Local Area"
+    }
+
+    // Commit calculated configurations into global variables for API calls
     state.usedCity = usedCity
     state.usedLatitude = usedLatitude
     state.usedLongitude = usedLongitude
-    
+
     // Cache the current settings so we can compare against them next time
     state.lastOverrideCity = currentCity
     state.lastOverrideLatitude = currentLat
     state.lastOverrideLongitude = currentLon
-    
-    logDebug "Completed calcLonLatCityState. Outputs -> City: ${usedCity} | Lat: ${usedLatitude} | Lon: ${usedLongitude}"
-}
-
-def disableDebugLogging() {
-    logInfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
-    device.updateSetting("logDebugEnable", [type: "bool", value: false])
+    logDebug "Completed calcLonLatCityState. Used City: ${state.usedCity}"
 }
 
 private void sendIfChanged(Map args) {
@@ -1110,6 +1218,11 @@ private void sendIfChanged(Map args) {
         sendEvent(eventMap)
         logDebug "Event triggered: ${args.name} -> ${args.value}"
     }
+}
+
+void disableDebugLogging() {
+    logInfo "30 minutes have elapsed. Automatically disabling debug logging."
+    device.updateSetting("logDebugEnable", [type: "bool", value: false])
 }
 
 private Map lookupConditionDetails(Integer code) {

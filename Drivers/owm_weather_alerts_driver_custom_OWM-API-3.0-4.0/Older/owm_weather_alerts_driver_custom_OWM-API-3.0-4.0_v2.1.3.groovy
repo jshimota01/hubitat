@@ -1,11 +1,11 @@
 /**
- * OpenWeatherMap Multi-Version Weather Driver (2.5 / 3.0 / 4.0)
+ * OpenWeatherMap Multi-Version Weather Driver 2.0 (2.5 / 3.0 / 4.0)
  * Platform: Hubitat Elevation
  * Capabilities: Temperature, Illuminance, Relative Humidity, Ultraviolet Index
  */
 
 metadata {
-    definition(name: "OpenWeatherMap Multi-Version Weather Driver", namespace: "jshimota", author: "James Shimota") {
+    definition(name: "OpenWeatherMap Multi-Version Weather Driver 2.0", namespace: "jshimota", author: "James Shimota") {
         capability "Sensor"
         capability "Refresh"
         capability "Initialize"
@@ -17,17 +17,20 @@ metadata {
         capability "RelativeHumidityMeasurement"
         capability "UltravioletIndex"
 
-        // - Custda Driver Attributes
+        // - Custom Driver Attributes
         attribute "lastUpdated", "string"
         attribute "lastResponseCode", "string"
-        attribute "betwixt", "string" 
-        attribute "city", "string"
+        attribute "betwixt", "string"
+        attribute "overrideCity", "string"
+        attribute "overrideLongitude", "number"
+        attribute "overrideLatitude", "numbr"
 		
 		// - Api specific response attributes
-		attribute "apiLatitude", "number"
-		attribute "apiLongitude", "number"
+
 		attribute "apiTimezone", "string"
 		attribute "apiTimezoneOffset", "number"
+		attribute "apiLatitude", "number"
+		attribute "apiLongitude", "number"
 		
         // - Alert attributes
         attribute "currentAlert", "string"
@@ -105,24 +108,24 @@ metadata {
 		attribute "todayFeelsLikeEve", "number"
 		attribute "todayFeelsLikeMorn", "number"
 				
-		// - Forecast tdaorrow unique attributes
-        attribute "tdaMoonrise", "number"
-        attribute "tdaMoonset", "number"
-        attribute "tdaMoonPhase", "number"
-		attribute "tdaPOP", "number"
-        attribute "tdaSummary", "string"
-		attribute "tdaTempMin", "number"
-		attribute "tdaTempNight", "number"
-		attribute "tdaTempMax", "number"
-		attribute "tdaTempEve", "number"
-		attribute "tdaTempMorn", "number"
-		attribute "tdaTempDay", "number"
-		attribute "tdaFeelsLikeDay", "number"
-		attribute "tdaFeelsLikeNight", "number"
-		attribute "tdaFeelsLikeEve", "number"
-		attribute "tdaFeelsLikeMorn", "number"
+		// - Forecast tomorrow unique attributes
+        attribute "tomMoonrise", "number"
+        attribute "tomMoonset", "number"
+        attribute "tomMoonPhase", "number"
+		attribute "tomPOP", "number"
+        attribute "tomSummary", "string"
+		attribute "tomTempMin", "number"
+		attribute "tomTempNight", "number"
+		attribute "tomTempMax", "number"
+		attribute "tomTempEve", "number"
+		attribute "tomTempMorn", "number"
+		attribute "tomTempDay", "number"
+		attribute "tomFeelsLikeDay", "number"
+		attribute "tomFeelsLikeNight", "number"
+		attribute "tomFeelsLikeEve", "number"
+		attribute "tomFeelsLikeMorn", "number"
 		
-		// - Forecast tdaorrow dayafter unique attributes
+		// - Forecast tomorrow dayafter unique attributes
         attribute "tdaMoonrise", "number"
         attribute "tdaMoonset", "number"
         attribute "tdaMoonPhase", "number"
@@ -149,7 +152,6 @@ metadata {
         attribute "weatherIcons", "string"
 	
         command "pollOWM"
-
     }
 
     preferences {
@@ -159,8 +161,8 @@ metadata {
         // Optional City field that dynamically overrides latitude/longitude if populated
         input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
 		input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location</i>", required: false
-        input name: "apiLatitude", type: "text", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
-        input name: "apiLongitude", type: "text", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
+        input name: "overrideLatitude", type: "text", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
+        input name: "overrideLongitude", type: "text", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
 		input name: "altIconsEnable", type: "bool", title: "Base Override - Use Alternative Icons?", description: "Turn ON to use alternate icons (found in csv map within the driver), or OFF to use the standard OpenWeatherMap icons<br><b>Base Override - Icon Location MUST be filled!</b>", defaultValue: false, required: true
 		
 		// Display Selector Options
@@ -202,7 +204,7 @@ def updated() {
     
     if (!settings.altIconLoc || settings.altIconLoc.trim() == "") {
         if (settings.altIconsEnable == true) {
-            log.warn "Alternative Icon Location is empty/default. Forcing 'Use Alternative Icons' to OFF for safety."
+            logWarn "Alternative Icon Location is empty/default. Forcing 'Use Alternative Icons' to OFF for safety."
             device.updateSetting("altIconsEnable", [type: "bool", value: false])
         }
     }
@@ -211,14 +213,15 @@ def updated() {
 
 def initialize() {
     unschedule()
-    
+   logInfo "Initializing driver."  
+  
     if (logDebugEnable == true) {
-        log.info "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
+        logInfonfo "Debug logging toggle is currently active. Auto-disable scheduled in 30 minutes."
         runIn(1800, "disableDebugLogging")
     }
 
     if (dayInterval == "manual") {
-        logInfo "Daytime polling interval configured to MANUAL. Autdaatic daylight scheduling skipped."
+        logInfo "Daytime polling interval configured to MANUAL. Automatic daylight scheduling skipped."
     } else if (dayInterval) {
         String dayCronStr = ""
         int mins = dayInterval.toInteger()
@@ -235,7 +238,7 @@ def initialize() {
     }
 
     if (nightInterval == "manual") {
-        logInfo "Nighttime polling interval configured to MANUAL. Autdaatic night scheduling skipped."
+        logInfo "Nighttime polling interval configured to MANUAL. Automatic night scheduling skipped."
     } else if (nightInterval) {
         String nightCronStr = ""
         int mins = nightInterval.toInteger()
@@ -252,97 +255,21 @@ def initialize() {
     }
 }
 
+// This command executes automatically from your generated cron schedules inside initialize()
 def refresh() {
-    logDebug "Refresh task executed."
+    logDebug "Refresh triggered via schedule or button press."
     
+    // Safety check preference values
     if (!apiKey) {
         logWarn "Execution halted: API Key entry is missing!"
         return
     }
-}
 
-def pollOWM() {
-    logInfo "Manual pollOWM command invoked by user."
-    refresh()
-}
-
-/**
- * Parses the main JSON payload from OWM One Call API
- * @param json The parsed JSON map object from the HTTP response
- */
-private void parseOwmResponse(Map json) {
-    if (!json) {
-        logError "Null response received, skipping parse."
-        return
-    }
-
-    // 1. Parse Current Weather Node
-    if (json.current) {
-        logDebug "Parsing current weather data..."
-        def cur = json.current
-        
-        sendIfChanged(name: "currentTemperature", value: cur.temp)
-        sendIfChanged(name: "currentFeelsLike", value: cur.feels_like)
-        sendIfChanged(name: "currentHumidity", value: cur.humidity)
-        sendIfChanged(name: "currentPressure", value: cur.pressure)
-        sendIfChanged(name: "currentUVI", value: cur.uvi)
-        sendIfChanged(name: "currentCloudPCT", value: cur.clouds)
-        sendIfChanged(name: "currentVisibility", value: cur.visibility)
-        
-        // Handle optional current rain/snow nodes
-        def rainVal = cur.rain?.["1h"] ?: 0.0
-        def snowVal = cur.snow?.["1h"] ?: 0.0
-        sendIfChanged(name: "currentRain", value: rainVal)
-        sendIfChanged(name: "currentSnow", value: snowVal)
-    }
-
-    // 2. Parse Daily Forecast Array (day.0 = today, day.1 = tomorrow, day.2 = dayafter)
-    if (json.daily && json.daily.size() >= 3) {
-        logDebug "Parsing 3-day weather forecast arrays..."
-        
-        // Day 0: Today
-        parseForecastDay(json.daily[0], "today")
-        
-        // Day 1: Tomorrow
-        parseForecastDay(json.daily[1], "tom")
-        
-        // Day 2: Day After Tomorrow
-        parseForecastDay(json.daily[2], "tda")
-    } else {
-        logWarn "Daily forecast payload incomplete or missing expected days."
-    }
-}
-
-/**
- * Helper method to handle redundant day mapping logic cleanly
- * @param dayData Map object representing a single index in the OWM daily array
- * @param prefix String prefix corresponding to the target device attribute
- */
-
-private void parseForecastDay(Map dayData, String prefix) {
-    if (!dayData) return
-    
-    def tempMap = dayData.temp ?: [:]
-    
-    // Explicitly cast or pass through safely
-    sendIfChanged(name: "${prefix}TempMin", value: tempMap.min)
-    sendIfChanged(name: "${prefix}TempMax", value: tempMap.max)
-    sendIfChanged(name: "${prefix}POP", value: dayData.pop) 
-    sendIfChanged(name: "${prefix}Moonrise", value: dayData.moonrise)
-    sendIfChanged(name: "${prefix}Moonset", value: dayData.moonset)
-    sendIfChanged(name: "${prefix}MoonPhase", value: dayData.moon_phase)
-    
-    String summaryText = dayData.summary ?: "No summary provided"
-    sendIfChanged(name: "${prefix}Summary", value: summaryText)
-}
-
-private String calcFormatTime(epoch) {
-    if (!epoch) return "N/A"
-    try {
-        return new java.util.Date((long)epoch * 1000).format("HH:mm", location.timeZone)
-    } catch (Exception e) {
-        return "N/A"
-    }
+    // Execution to check long lat and city logic block
+    calcLonLatCityState()  
+  
+    // Execution to owm Poll logic block
+    // temp comment out pollOWM()  
 }
 
 private BigDecimal calcSunPosition() {
@@ -488,8 +415,104 @@ private void calcIsDayState(BigDecimal altitudeDeg) {
     logDebug "Calculated isDay: ${isDayText}" 
 }
 
+private void calcLonLatCityState() {
+    logDebug "Starting calcLonLatCityState evaluation..." 
+    
+    // Define the placeholder variables to output to
+    String usedCity = "" 
+    BigDecimal usedLatitude = 0.0 
+    BigDecimal usedLongitude = 0.0 
+    
+    // Base URL for the OWM Geocoding API
+    String geoApiUrl = "https://api.openweathermap.org/geo/1.0/" 
+    
+    // -------------------------------------------------------------
+    // SCENARIO 1: If overrideCity is filled, prioritize it entirely
+    // -------------------------------------------------------------
+    if (settings.overrideCity && settings.overrideCity.trim() != "") { 
+        logDebug "Scenario 1: overrideCity is populated ('${settings.overrideCity}'). Performing Direct Geo-Lookup."
+        
+        try {
+            def encodedCity = URLEncoder.encode(settings.overrideCity.trim(), "UTF-8") 
+            def params = [
+                uri: "${geoApiUrl}direct?q=${encodedCity}&limit=1&appid=${apiKey}", 
+                contentType: "application/json", 
+                timeout: 10 
+            ]
+            
+            httpGet(params) { response ->
+                if (response.status == 200 && response.data) { 
+                    def geoData = response.data[0] 
+                    if (geoData) { 
+                        usedCity = geoData.name ?: settings.overrideCity 
+                        usedLatitude = geoData.lat ? geoData.lat.toBigDecimal() : 0.0 
+                        usedLongitude = geoData.lon ? geoData.lon.toBigDecimal() : 0.0 
+                        logInfo "Direct Geo-Lookup success. Resolved to: ${usedCity} (${usedLatitude}, ${usedLongitude})"
+                    } else {
+                        logWarn "Direct Geo-Lookup returned no matching results for: ${settings.overrideCity}" 
+                    }
+                } else {
+                    logError "Direct Geo-Lookup failed with status code: ${response.status}" 
+                }
+            }
+        } catch (Exception e) {
+            logError "Exception occurred during Direct Geo-Lookup: ${e.message}" 
+        }
+    }
+    
+    // -------------------------------------------------------------
+    // SCENARIO 2 & 3: overrideCity is empty, handle coordinates
+    // -------------------------------------------------------------
+    else {
+        // Fallback to Hub default location parameters
+        logDebug "Scenario 3: Fallback to Hub default location parameters." 
+        if (location.latitude != null && location.longitude != null) { 
+            usedLatitude = location.latitude.toBigDecimal() 
+            usedLongitude = location.longitude.toBigDecimal() 
+        } else {
+            logWarn "Hub settings are missing Latitude/Longitude coordinates!" 
+        }
+        
+        // Perform Reverse Lookup to identify nearest city from coordinates
+        if (usedLatitude != 0.0 && usedLongitude != 0.0) { 
+            logDebug "Performing Reverse Geo-Lookup for coordinates: ${usedLatitude}, ${usedLongitude}" 
+            try {
+                def params = [
+                    uri: "${geoApiUrl}reverse?lat=${usedLatitude}&lon=${usedLongitude}&limit=1&appid=${apiKey}", 
+                    contentType: "application/json", 
+                    timeout: 10 
+                ]
+                
+                httpGet(params) { response ->
+                    if (response.status == 200 && response.data) { 
+                        def geoData = response.data[0] 
+                        if (geoData) { 
+                            usedCity = geoData.name ?: "Unknown City" 
+                            logInfo "Reverse Geo-Lookup success. Nearest city resolved: ${usedCity}"
+                        } else {
+                            usedCity = "Unknown City" 
+                            logWarn "Reverse Geo-Lookup found no explicit city metadata for these coordinates." 
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                usedCity = "Lookup Failed" 
+                logError "Exception occurred during Reverse Geo-Lookup: ${e.message}" 
+            }
+        }
+    }
+    
+    // -------------------------------------------------------------
+    // State / Attribute Storage Block
+    // -------------------------------------------------------------
+    state.usedCity = usedCity 
+    state.usedLatitude = usedLatitude 
+    state.usedLongitude = usedLongitude 
+    logDebug "Completed calcLonLatCityState. Outputs -> City: ${usedCity} | Lat: ${usedLatitude} | Lon: ${usedLongitude}"
+}
+
 def disableDebugLogging() {
-    log.info "30 minutes elapsed: Autdaatically flipping 'Enable Debug Logging' switch off."
+    logInfonfo "30 minutes elapsed: Automatically flipping 'Enable Debug Logging' switch off."
     device.updateSetting("logDebugEnable", [type: "bool", value: false])
 }
 

@@ -1,0 +1,15 @@
+3. "Unknown Attributes" SectionAt the bottom of your attribute definition block, you listed several legacy or placeholder attributes that are currently ignored by the execution logic:  
+
+| Attribute                 | Status        |
+| ------------------------- | ------------- |
+| `currentTile`             | Declared only |
+| `currentConditionAltIcon` | Declared only |
+| `currentConditionIconImg` | Declared only |
+| `currentWindDirection`    | Declared only |
+
+
+
+| Preference           | Status                 | Notes                                                                                                                         |
+| -------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `altIconsEnable`     | **Effectively unused** | Only validated in `updated()`. It is never consulted when selecting icons, so changing it has no effect on runtime behavior.  |
+                                                                            |
