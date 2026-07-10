@@ -80,23 +80,26 @@ def updated() {
 }
 
 def initialize() {
-    if (dbgEnable) runIn(1800, logsOff)
+    if (dbgEnable) runIn(1800, logsOff) 
     
-    def fanOptionsList = ["on", "auto", "off", "circulate"]
-    sendEvent(name: "thermostatFanModes", value: groovy.json.JsonOutput.toJson(fanOptionsList))
+    def fanOptionsList = ["on", "auto", "off", "circulate"] 
+    sendEvent(name: "thermostatFanModes", value: groovy.json.JsonOutput.toJson(fanOptionsList)) 
     
-    def systemModesList = ["off", "heat", "cool", "emergencyHeat"]
-    sendEvent(name: "supportedThermostatModes", value: groovy.json.JsonOutput.toJson(systemModesList))
+    def systemModesList = ["off", "heat", "cool", "emergencyHeat"] 
+    sendEvent(name: "supportedThermostatModes", value: groovy.json.JsonOutput.toJson(systemModesList)) 
     
-    if (device.currentValue("battery") == null) {
-        sendEvent(name: "battery", value: 100, unit: "%")
-    }
-    if (device.currentValue("powerSource") == null) {
-        sendEvent(name: "powerSource", value: "unknown")
-    }
+    // --- Amazon API Compatibility Safeguards ---
+    if (device.currentValue("battery") == null) sendEvent(name: "battery", value: 100, unit: "%") 
+    if (device.currentValue("powerSource") == null) sendEvent(name: "powerSource", value: "unknown") 
+    if (device.currentValue("thermostatMode") == null) sendEvent(name: "thermostatMode", value: "off")
+    if (device.currentValue("thermostatOperatingState") == null) sendEvent(name: "thermostatOperatingState", value: "idle")
+    if (device.currentValue("temperature") == null) sendEvent(name: "temperature", value: 70, unit: getTemperatureScale())
+    if (device.currentValue("heatingSetpoint") == null) sendEvent(name: "heatingSetpoint", value: 68, unit: getTemperatureScale())
+    if (device.currentValue("coolingSetpoint") == null) sendEvent(name: "coolingSetpoint", value: 74, unit: getTemperatureScale())
+    if (device.currentValue("thermostatSetpoint") == null) sendEvent(name: "thermostatSetpoint", value: 68, unit: getTemperatureScale())
     
-    configure()
-    runIn(2, refresh)
+    configure() 
+    runIn(2, refresh) 
 }
 
 def logsOff() {
@@ -162,22 +165,33 @@ def parse(String description) {
         def attrInt = descMap.attrId ? Integer.parseInt(descMap.attrId, 16) : null
         
         switch(clusterInt) {
-            case 0x0201: // Thermostat Cluster
-                if (attrInt == 0x0000) {
-                    map.name = "temperature"
-                    map.value = getTemperature(descMap.value)
-                    map.unit = getTemperatureScale()
-                } else if (attrInt == 0x0011) {
-                    map.name = "coolingSetpoint"
-                    map.value = getTemperature(descMap.value)
-                    map.unit = getTemperatureScale()
-                } else if (attrInt == 0x0012) {
-                    map.name = "heatingSetpoint"
-                    map.value = getTemperature(descMap.value)
-                    map.unit = getTemperatureScale()
+		case 0x0201: // Thermostat Cluster
+        if (attrInt == 0x0000) {
+			map.name = "temperature"
+            map.value = getTemperature(descMap.value)
+            map.unit = getTemperatureScale()
+        } else if (attrInt == 0x0011) {
+			map.name = "coolingSetpoint"
+            map.value = getTemperature(descMap.value)
+            map.unit = getTemperatureScale()
+            // Sync to main thermostatSetpoint if currently in cool mode
+            if (device.currentValue("thermostatMode") == "cool") {
+				sendEvent(name: "thermostatSetpoint", value: map.value, unit: map.unit)
+            }
+            } else if (attrInt == 0x0012) {
+				map.name = "heatingSetpoint"
+                map.value = getTemperature(descMap.value)
+                map.unit = getTemperatureScale()
+                // Sync to main thermostatSetpoint if currently in heat or emergencyHeat mode
+                if (device.currentValue("thermostatMode") in ["heat", "emergencyHeat"]) {
+                    sendEvent(name: "thermostatSetpoint", value: map.value, unit: map.unit)
+                }
                 } else if (attrInt == 0x001C) {
-                    map.name = "thermostatMode"
+					map.name = "thermostatMode"
                     map.value = getModeMap()[descMap.value] ?: "off"
+                    // On mode change, update thermostatSetpoint to match active mode target bounds
+                    def activeSetpoint = (map.value == "cool") ? device.currentValue("coolingSetpoint") : device.currentValue("heatingSetpoint")
+                    if (activeSetpoint != null) sendEvent(name: "thermostatSetpoint", value: activeSetpoint, unit: getTemperatureScale())
                 } else if (attrInt == 0x001E) {
                     map.name = "thermostatRunMode"
                     map.value = getModeMap()[descMap.value] ?: "off"
@@ -187,30 +201,6 @@ def parse(String description) {
                 } else if (attrInt == 0x0029) {
                     map.name = "thermostatOperatingState"
                     map.value = getThermostatOperatingStateMap()[descMap.value] ?: "idle"
-                }
-                break
-                
-            case 0x0202: // Fan Control
-                if (attrInt == 0x0000) {
-                    if (device.currentValue("thermostatFanMode") != "circulate") {
-                        map.name = "thermostatFanMode"
-                        map.value = getFanModeMap()[descMap.value] ?: "auto"
-                    }
-                }
-                break
-                
-            case 0x0001: // Power Configuration
-                if (attrInt == 0x0020) {
-                    map.name = "battery"
-                    map.value = getBatteryLevel(descMap.value)
-                    map.unit = "%"
-                }
-                break
-                
-            case 0x0000: // Basic
-                if (attrInt == 0x0007) {
-                    map.name = "powerSource"
-                    map.value = getPowerSource()[descMap.value] ?: "unknown"
                 }
                 break
         }
@@ -232,7 +222,7 @@ def parse(String description) {
     return null
 }
  
-def getModeMap() { ["00":"off", "01":"auto", "03":"cool", "04":"heat", "05":"emergency heat", "06":"precooling", "07":"fan only", "08":"dry", "09":"sleep"] }
+def getModeMap() { ["00":"off", "01":"auto", "03":"cool", "04":"heat", "05":"emergencyHeat", "06":"precooling", "07":"fan only", "08":"dry", "09":"sleep"] }
 def modes() { ["off", "cool", "heat", "emergencyHeat"] }
 def getHoldModeMap() { ["00":"holdOff", "01":"holdOn"] }
 def getPowerSource() { ["01":"24VAC", "03":"Battery", "81":"24VAC"] }
@@ -253,13 +243,19 @@ def toggleHoldMode() {
 }
  
 def setThermostatMode(String value) {
+    if (dbgEnable) log.debug "setThermostatMode requested: ${value}"
     String normalizedValue = value.toLowerCase().replaceAll(/\s+(.)/) { match, group -> group.toUpperCase() }
-    if (normalizedValue == "emergencyHeat") normalizedValue = "emergencyHeat"
+    if (normalizedValue == "emergencyheat") normalizedValue = "emergencyHeat"
     
-    if (this.hasProperty(normalizedValue) || this.respondsTo(normalizedValue)) {
-        "$normalizedValue"()
-    } else {
-        log.error "Unsupported thermostat mode requested: $value"
+    switch(normalizedValue) {
+        case "off": off(); break
+        case "cool": cool(); break
+        case "heat": heat(); break
+        case "emergencyHeat": emergencyHeat(); break
+        case "auto": auto(); break
+        default:
+            log.error "Unsupported thermostat mode requested: $value"
+            break
     }
 }
 
@@ -385,20 +381,48 @@ def setCoolingSetpoint(degrees) {
     processSetpoint(degrees, 0x11)
 }
 
-private def processSetpoint(degrees, int attributeId) {
-    if (isHoldOn() || degrees == null) return
+def setThermostatMode(String value) {
+    if (dbgEnable) log.debug "setThermostatMode requested: ${value}"
+    String normalizedValue = value.toLowerCase().replaceAll(/\s+(.)/) { match, group -> group.toUpperCase() }
+    if (normalizedValue == "emergencyheat") normalizedValue = "emergencyHeat"
     
-    def isC = (getTemperatureScale() == "C")
-    int maxTemp = isC ? 44 : 86
-    int minTemp = isC ? 7 : 30
+    switch(normalizedValue) {
+        case "off": off(); break
+        case "cool": cool(); break
+        case "heat": heat(); break
+        case "emergencyHeat": emergencyHeat(); break
+        case "auto": auto(); break
+        default:
+            log.error "Unsupported thermostat mode requested: $value"
+            break
+    }
+}
+
+private def processSetpoint(degrees, int attributeId) { 
+    if (isHoldOn() || degrees == null) return 
     
-    int degreesInteger = Math.round(degrees).toInteger()
-    degreesInteger = Math.max(minTemp, Math.min(degreesInteger, maxTemp))
+    def isC = (getTemperatureScale() == "C") 
+    int maxTemp = isC ? 44 : 86 
+    int minTemp = isC ? 7 : 30 
     
-    double celsius = isC ? degreesInteger : fahrenheitToCelsius(degreesInteger)
-    int finalValue = Math.round(celsius * 100).toInteger()
+    int degreesInteger = Math.round(degrees).toInteger() 
+    degreesInteger = Math.max(minTemp, Math.min(degreesInteger, maxTemp)) 
     
-    String attrName = (attributeId == 0x12) ? "heatingSetpoint" : "coolingSetpoint"
-    sendEvent(name: attrName, value: degreesInteger, unit: getTemperatureScale())
-    return zigbee.writeAttribute(0x0201, attributeId, 0x29, finalValue)
+    double celsius = isC ? degreesInteger : fahrenheitToCelsius(degreesInteger) 
+    int finalValue = Math.round(celsius * 100).toInteger() 
+    
+    String attrName = (attributeId == 0x12) ? "heatingSetpoint" : "coolingSetpoint" 
+    sendEvent(name: attrName, value: degreesInteger, unit: getTemperatureScale()) 
+    
+    // Sync to primary thermostatSetpoint attribute for Alexa mapping visibility
+    sendEvent(name: "thermostatSetpoint", value: degreesInteger, unit: getTemperatureScale())
+    
+    // Cross-populate opposite setpoint if it happens to be null to insulate Alexa payload array
+    if (attrName == "heatingSetpoint" && device.currentValue("coolingSetpoint") == null) {
+        sendEvent(name: "coolingSetpoint", value: (degreesInteger + 5), unit: getTemperatureScale())
+    } else if (attrName == "coolingSetpoint" && device.currentValue("heatingSetpoint") == null) {
+        sendEvent(name: "heatingSetpoint", value: (degreesInteger - 5), unit: getTemperatureScale())
+    }
+    
+    return zigbee.writeAttribute(0x0201, attributeId, 0x29, finalValue) 
 }

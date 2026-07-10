@@ -1,22 +1,22 @@
 {
   "packageName": "Centralite Pearl Zigbee Thermostat",
   "author": "James Shimota",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "minimumHEVersion": "2.4.0",
   "dateReleased": "2026-06-03",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/README.md",
   "communityLink": "https://community.hubitat.com/t/release-centralite-pearl-aka-model-3157100-zigbee-thermostat/164420",
   "licenseFile": "",
-  "releaseNotes": "0.4.3 Initial Release\nSee internal notes for development versioning information\nAdded Firmware Update button and routine ",
+  "releaseNotes": "0.4.5 fix for gateway error in api compatibility with Amazon\n0.4.3 Initial Release\nSee internal notes for development versioning information\nAdded Firmware Update button and routine",
   "drivers": [
     {
-      "id": "2100366c-3e81-435f-9272-6300a49c35e9",
+      "id": "2100366c-3f81-435f-9272-6300a49c35e9",
       "name": "Centralite Pearl Zigbee Thermostat",
       "namespace": "jshimota",
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/centralitePearlThermostat.groovy",
       "required": true,
       "oauth": false,
-      "version": "0.4.4"
+      "version": "0.4.5"
     }
   ]
 }
