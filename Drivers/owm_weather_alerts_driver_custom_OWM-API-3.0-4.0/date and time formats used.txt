@@ -1,0 +1,12 @@
+		input name: "DateTimeForm", type: "enum", title: "Display Format - Date & Time Attributes", options: [
+		"1": "M/d/yyyy h:mm a", 
+		"2": "M/d/yyyy HH:mm", 
+		"3": "MM/dd/yyyy h:mm a", 
+		"4": "MM/dd/yyyy HH:mm", 
+		"5": "d/M/yyyy h:mm a", 
+		"6": "d/M/yyyy HH:mm", 
+		"7": "dd/MM/yyyy h:mm a", 
+		"8": "dd/MM/yyyy HH:mm", 
+		"9": "yyyy/MM/dd HH:mm", 
+		"10": "Unix, UTC (native)"]
+		

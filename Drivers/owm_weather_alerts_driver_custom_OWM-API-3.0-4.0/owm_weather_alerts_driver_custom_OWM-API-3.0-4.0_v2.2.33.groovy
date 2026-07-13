@@ -18,7 +18,8 @@ metadata {
         capability "UltravioletIndex"
 
         // - Custom Driver Attributes
-        attribute "lastUpdated", "string"
+        attribute "lastUpdatedDateTime", "number"
+        attribute "lastUpdatedDateTimeText", "string"
         attribute "lastResponseCode", "string"
         attribute "betwixt", "string"
         attribute "overrideCity", "string"
@@ -73,6 +74,9 @@ metadata {
 		attribute "currentWindDirCardinal", "string"
 		attribute "currentWindDirFull", "string"
 		attribute "currentWindDirIcon", "string"
+        attribute "currentTwilightBeginTimeText", "string"
+        attribute "currentSolarNoonTimeText", "string"
+        attribute "currentTwilightEndTimeText", "string"
 
 		// - Current Condition attributes
 		attribute "currentConditionCode", "number"
@@ -96,6 +100,8 @@ metadata {
         attribute "currentWindGust", "number"
         attribute "currentWindDeg", "number"
         attribute "currentWindSpeed", "number"		
+        attribute "currentSunriseTimeText", "string"
+        attribute "currentSunsetTimeText", "string"
 		
 		
 		// - Forecast today unique attributes
@@ -124,6 +130,10 @@ metadata {
 		attribute "todayCloudPCT", "number"
 		attribute "todayPOP", "number"
 		attribute "todayUVI", "number"
+        attribute "todaySunriseTimeText", "string"
+        attribute "todaySunsetTimeText", "string"
+        attribute "todayMoonriseTimeText", "string"
+        attribute "todayMoonsetTimeText", "string"
 				
 		// - Forecast tomorrow unique attributes
 		attribute "tomSunriseTime", "number"
@@ -151,6 +161,10 @@ metadata {
 		attribute "tomCloudPCT", "number"
 		attribute "tomPOP", "number"
 		attribute "tomUVI", "number"
+        attribute "tomSunriseTimeText", "string"
+        attribute "tomSunsetTimeText", "string"
+        attribute "tomMoonriseTimeText", "string"
+        attribute "tomMoonsetTimeText", "string"
 
 		// - Forecast tomorrow dayafter unique attributes
 		attribute "tdaSunriseTime", "number"
@@ -178,6 +192,10 @@ metadata {
 		attribute "tdaCloudPCT", "number"
 		attribute "tdaPOP", "number"
 		attribute "tdaUVI", "number"
+        attribute "tdaSunriseTimeText", "string"
+        attribute "tdaSunsetTimeText", "string"
+        attribute "tdaMoonriseTimeText", "string"
+        attribute "tdaMoonsetTimeText", "string"
 
 		// - Forecast unique derived attributes
 		attribute "todayWindDirCardinal", "string"
@@ -192,6 +210,12 @@ metadata {
 		attribute "todayMoonPhaseIcon", "string"
 		attribute "tomMoonPhaseIcon", "string"
 		attribute "tdaMoonPhaseIcon", "string"
+		attribute "todayDate", "number"
+		attribute "tomDate", "number"
+		attribute "tdaDate", "number"
+		attribute "todayDateText", "string"
+		attribute "tomDateText", "string"
+		attribute "tdaDateText", "string"
 
 		attribute "3DayForecastTile", "string"
 		
@@ -227,6 +251,11 @@ metadata {
 		input name: "owmAlertsEnable", type: "bool", title: "Display Options - Enable Alerts Tile?", description: "Enable to Alert tile output updates on schedule for normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
 		input name: "sliceOfDayEnable", type: "bool", title: "Display Options - Enable Slice Of Day?", description: "Enable to slice of day text updates on schedule for normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
 		
+		// Display Format Selectors
+		input name: "DateTimeForm", type: "enum", title: "Display Format - Date & Time Attributes", options: ["1": "M/d/yyyy h:mm a", "2": "M/d/yyyy HH:mm", "3": "MM/dd/yyyy h:mm a", "4": "MM/dd/yyyy HH:mm", "5": "d/M/yyyy h:mm a", "6": "d/M/yyyy HH:mm", "7": "dd/MM/yyyy h:mm a", "8": "dd/MM/yyyy HH:mm", "9": "yyyy/MM/dd HH:mm", "10": "Unix, UTC (native)"], description: "Choice of date & time format used in tiles and logging for attributes containing both date and time<br>Default: <b>M/d/yyyy h:mm a</b><br><i>EG: 7/12/2026 9:00 AM, 12/7/2026 09:01, 2026/07/12 09:02, 1783859756</i>", defaultValue: "1", required: true
+		input name: "DateForm", type: "enum", title: "Display Format - Date Only Attributes", options: ["1": "M/d/yyyy", "3": "MM/dd/yyyy", "5": "d/M/yyyy", "7": "dd/MM/yyyy", "9": "yyyy/MM/dd", "10": "Unix, UTC (native)"], description: "Choice of date format used in tiles and logging for attribute names containing ONLY date<br>Default: <b>M/d/yyyy</b><br><i>EG: 7/12/2026, 12/7/2026, 2026/07/12, 1783859756</i>", defaultValue: "1", required: true
+		input name: "TimeForm", type: "enum", title: "Display Format - Time Only Attributes", options: ["1": "h:mm a", "2": "HH:mm", "10": "Unix, UTC (native)"], description: "Choice of time format used in tiles and logging for attribute names containing ONLY time<br>Default: <b>h:mm a</b><br><i>EG: 9:00 AM, 13:00, 1783859756</i>", defaultValue: "1", required: true
+		
         // Display Unit Selectors
 		input name: "pressureUnit", type: "enum", title: "Display Unit - Barometric Pressure", options: ["hPa": "Hectopascals (hPa)", "inHg": "Inches of Mercury (inHg)", "kPa": "Kilopascals (kPa)", "mb": "Millibar (mb)", "mmHg": "Millimeters of Mercury (mmHg)", "none": "None (No Unit Suffix)"], description: "Choice of barometer unit used in tiles and logging<br>Default: <b>Inches of Mercury (inHg)</b>", defaultValue: "inHg", required: true
 		input name: "humidityUnit", type: "enum", title: "Display Unit - Humidity", options: ["%": "Percent (%)", "%RH": "Percent RH (%RH)", "g/m³": "Absolute Humidity (g/m³)", "g/kg³": "Mixing Ratio (g/kg³)", "none": "None (No Unit Suffix)"], description: "Choice of humidity unit formatting used in tiles and logging<br>Default: <b>Humidity (%)</b>", defaultValue: "%", required: true
@@ -234,6 +263,7 @@ metadata {
 		input name: "precipUnit", type: "enum", title: "Display Unit - Precipitation (Rain/Snow)", options: ["mmHr": "Millimeters per Hour (mmHr)", "inHr": "Inches per Hour (inHr)", "none": "None (No Unit Suffix)"], description: "Choice of precipitation (both rain and snow) unit formatting used in tiles and logging<br>Default: <b>Inches per Hour (inHr)</b>", defaultValue: "inHr", required: true
 		input name: "temperatureUnit", type: "enum", title: "Display Unit - Temperature", options: ["°F": "Fahrenheit (°F)", "°C": "Celsius (°C)", "K": "Kelvin (K)", "none": "None (No Unit Suffix)"], description: "Choice of temperature unit formatting used in tiles and logging<br>Default: <b>Fahrenheit (°F)</b>", defaultValue: "°F", required: true
 		input name: "windSpeedUnit", type: "enum", title: "Display Unit - Wind Speed", options: ["mph": "Miles per Hour (mph)", "kmh": "Kilometers per Hour (km/h)", "kt": "Knots (kt)", "ms": "Meters per Second (m/s)", "none": "None (No Unit Suffix)"], description: "Choice of wind speed unit used in tiles and logging<br>Default: <b>Miles per Hour (mph)</b>", defaultValue: "mph", required: true		
+
         // Polling Option Dropdown Menu
         input name: "dayInterval", type: "enum", title: "Polling - Daytime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency to OWM during daytime (between sunrise and sunset)<br>Default: <b>30 Minutes</b>", defaultValue: "30", required: true
         input name: "nightInterval", type: "enum", title: "Polling - Nighttime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency of OWM during nighttime (between sunset and sunrise)<br>Default: <b>1 Hour</b>", defaultValue: "60", required: true
@@ -350,6 +380,45 @@ def refresh() {
     pollOWM("refresh") 
 }
 
+def pollOWM(String type = "manual") {
+    // Evaluation of execution triggers using logInfo
+    switch(type) {
+        case "refresh":
+            logInfo "pollOWM run on manual Refresh"
+            break
+        case "schedule":
+            logInfo "polling OpenWeatherMaps API on schedule"
+            break
+        case "manual":
+        default:
+            logInfo "PollOWM run manually"
+            break
+    }
+
+    logDebug "pollOWM triggered. Evaluating location coordinates..."
+    
+    // Ensure state variables exist by evaluating coordinate overrides
+    calcLonLatCityState()
+    
+    if(state.usedLatitude == null || state.usedLongitude == null) {
+        logWarn "pollOWM aborted: Valid coordinates are missing (Lat: ${state.usedLatitude}, Lon: ${state.usedLongitude})"
+        return
+    }
+
+    // Execution to check sun position for use in calcBetwixt and calcDayState blocks
+	BigDecimal currentAlt = calcSunPosition()
+	
+    // Execution for certain variables used in parsed data returned from pollOWMAPI
+	calcBetwixtState(currentAlt)
+	calcIsDayState(currentAlt)
+	
+    // Resolve path safely and save it to state before API execution
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
+	
+    // Fire off the API poll sequence
+    pollOWMAPI()
+}
+
 private void updateDynamicSchedules(long sunriseEpoch, long sunsetEpoch) {
     // Always clear any previous scheduledPoll jobs to ensure only one is ever pending
     unschedule("scheduledPoll")
@@ -391,7 +460,7 @@ private void updateDynamicSchedules(long sunriseEpoch, long sunsetEpoch) {
 // --- Modular Tile Generator Routine ---
 void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
     // =========================================================================
-    // SECTION 1: currentTile
+    // SECTION 1: currentTile (Optimized & Relaxed CSS Style)
     // =========================================================================
     String tUnit = settings.temperatureUnit ?: "°F"
     String wUnit = settings.windSpeedUnit ?: "mph"
@@ -423,15 +492,15 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
     if (settings.altIconsEnable == true) {
         String windIconUrl = device.currentValue("currentWindDirIcon") ?: ""
         if (windIconUrl != "") {
-            windIconDisplay = "<img src='${windIconUrl}' style='height:1.2em; width:auto; vertical-align:middle; margin-right:2px;'>"
+            windIconDisplay = "<img src='${windIconUrl}' style='height:1.1em;vertical-align:middle;margin-right:2px;'>"
         }
     }
 
-    // Base string layout (Updated header to include '- currently')
-    String currentBodyHtml = "<div style='display:flex;flex-direction:column;justify-content:space-between;height:100%;padding:8px;box-sizing:border-box;background:rgba(30,30,40,0.65);border-radius:12px;color:#fff;font-family:sans-serif;line-height:1.2;text-align:center'><div style='font-size:0.85em;font-weight:bold;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;'>${cityName} - currently</div><div style='display:flex;align-items:center;justify-content:space-around;width:100%'><img src='https://openweathermap.org/img/wn/${icon}@2x.png' style='width:38%;max-height:60px;object-fit:contain'><div style='font-size:1.8em;font-weight:bold;letter-spacing:-1px'>${temp}${tUnit}</div></div><div style='font-size:0.8em;font-weight:600;color:#ddd;text-transform:capitalize;padding:0 4px;overflow:hidden;text-overflow:ellipsis;'>${cond}</div><div style='font-size:0.75em;color:#aaa;display:flex;justify-content:center;gap:10px'><span>H: ${hi}°</span><span>L: ${lo}°</span></div><div style='display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.15);padding-top:4px;font-size:0.7em;color:#bbb;align-items:center;'><span>💧 ${hum}%</span><span style='display:flex;align-items:center;'>${windIconDisplay}${wind} ${wUnit}</span></div>"
+    // Relaxed layout framework maximizing native browser rendering over hyper-specific CSS blocks
+    String currentBodyHtml = "<div style='background:rgba(30,30,40,0.65);border-radius:10px;padding:6px;color:#fff;font-family:sans-serif;text-align:center;line-height:1.25;'><div style='font-weight:bold;font-size:1.1em;'>${cityName} - Currently</div><div style='display:flex;align-items:center;justify-content:center;gap:10px;'><img src='https://openweathermap.org/img/wn/${icon}.png' style='width:42px;height:42px;'> <span style='font-size:2.2em;font-weight:bold;'>${temp}${tUnit}</span></div><div style='color:#ddd;text-transform:capitalize;'>${cond}</div><div style='color:#aaa;margin:2px 0;'>H: ${hi}° | L: ${lo}°</div><div style='display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.15);padding-top:4px;margin-top:2px;color:#bbb;'><span>💧 ${hum}%</span><span>${windIconDisplay}${wind} ${wUnit}</span></div>"
     
-    int currentLenEstimate = currentBodyHtml.length() + "<div style='font-size:0.6em;color:#888;margin-top:2px;'>999 chars long</div></div>".length()
-    String currentTileHtml = currentBodyHtml + "<div style='font-size:0.6em;color:#888;margin-top:2px;'>${currentLenEstimate} chars long</div></div>"
+    int currentLenEstimate = currentBodyHtml.length() + "<div style='font-size:0.75em;color:#777;margin-top:3px;'>999 chars</div></div>".length()
+    String currentTileHtml = currentBodyHtml + "<div style='font-size:0.75em;color:#777;margin-top:3px;'>${currentLenEstimate} chars</div></div>"
     
     sendIfChanged(name: "currentTile", value: currentTileHtml)
 
@@ -522,7 +591,9 @@ private void pollOWMAPI() {
         httpGet(params) { response ->
             if (response.status == 200 && response.data) {
                 sendIfChanged(name: "lastResponseCode", value: response.status.toString())
-                sendIfChanged(name: "lastUpdated", value: new Date().format("yyyy-MM-dd HH:mm:ss", location.timeZone))
+				long currentUnixEpochSeconds = new Date().getTime() / 1000L
+				sendIfChanged(name: "lastUpdatedDateTime", value: currentUnixEpochSeconds)			
+                sendIfChanged(name: "lastUpdatedDateTimeText", value: new Date().format("yyyy-MM-dd HH:mm:ss", location.timeZone))
                 
                 // Route the payload to the custom data extractor
                 parseOWMData(response.data)
@@ -547,21 +618,17 @@ private void parseOWMData(Map json) {
     
     logDebug "Parsing newly received OpenWeatherMap response data structure..." 
     
-    // Extract location and configuration details for the alert builder
     String calculatedCityAttr = state.usedCity ?: "Local Area" 
     String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/" 
     
-    // 1. Extract API specific response location metadata
     if (json.lat != null) sendIfChanged(name: "apiLatitude", value: json.lat)
     if (json.lon != null) sendIfChanged(name: "apiLongitude", value: json.lon)
     if (json.timezone != null) sendIfChanged(name: "apiTimezone", value: json.timezone)
     if (json.timezone_offset != null) sendIfChanged(name: "apiTimezoneOffset", value: json.timezone_offset)
 
-    // Establish local variables to pass directly into scheduling, bypassing async state lag
     long liveSunrise = 0
     long liveSunset = 0
 
-    // 2. Gather Current conditions dataset
     def currentData = json.current ?: [:] 
     if (currentData) {
         logTrace "Current weather data payload extracted successfully." 
@@ -574,14 +641,13 @@ private void parseOWMData(Map json) {
             state.todaySunsetEpoch = liveSunset 
         }
         
-        // Ensure rain and snow default to 0 if missing or nested improperly from OWM
         def rainVal = currentData.rain?.getAt("1h") != null ? currentData.rain["1h"] : 0.00
         def snowVal = currentData.snow?.getAt("1h") != null ? currentData.snow["1h"] : 0.00
         currentData["calculatedRain"] = rainVal 
         currentData["calculatedSnow"] = snowVal 
     }
     
-    // 3. Process Daily forecast arrays safely
+	// Process Daily forecast arrays safely
     def dailyList = json.daily ?: [] 
     
     // Gather Today, Tomorrow, and Day After data maps
@@ -589,27 +655,32 @@ private void parseOWMData(Map json) {
     def data1 = dailyList.size() > 1 ? dailyList[1] : [:] 
     def data2 = dailyList.size() > 2 ? dailyList[2] : [:]
     
-    // Route all isolated datasets into the custom event dispatcher
-    sendOWMData(currentData, data0, data1, data2) 
+    // --- POPULATE NEW DATE ATTRIBUTES ---
+    if (data0 && data0.dt != null) sendIfChanged(name: "todayDate", value: data0.dt)
+    if (data1 && data1.dt != null) sendIfChanged(name: "tomDate", value: data1.dt)
+    if (data2 && data2.dt != null) sendIfChanged(name: "tdaDate", value: data2.dt)
     
-if (liveSunrise > 0 && liveSunset > 0) {
+    // Route all isolated datasets into the custom event dispatcher
+    sendOWMData(currentData, data0, data1, data2)
+    
+    if (liveSunrise > 0 && liveSunset > 0) {
         updateDynamicSchedules(liveSunrise, liveSunset) 
     }
-    // Execute alerts calculation with live payload data
     calcAlertsState(json, calculatedCityAttr, iconBasePath) 
 
     calcCurrentTwilight()
     
-    // --- FIXED: Recalculate slice of day and solar noon using live payload times to bypass initialization race logic ---
     BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("altitude")?.toBigDecimal() ?: 0.0)
     calcBetwixtState(currentAlt, liveSunrise, liveSunset)
 	
-    // Pass live forecast maps directly into the loop to solve duplicate updates
     generateTiles(currentData, data0, data1, data2)
 
-    // Safe clear of setup flag without destructive scheduled re-polls
+    // --- FIX PATH: If initializing, force a brief 2-second out-of-band delayed execution
+    // to give the Hubitat database thread time to commit the newly updated numeric time variables.
     if (state.isInitializing == true) {
         state.isInitializing = false
+        logDebug "Driver is initializing. Scheduling secondary out-of-band text refresh to prevent DB race conditions."
+        runIn(2, "calcCurrentText")
     }
 }
 
@@ -914,22 +985,54 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
     logDebug "sendOWMData event parsing complete."
 }
 
-private String calcIconBasePath(String altIconLoc) {
-	//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-    String base = altIconLoc ? altIconLoc.trim() : ""
-    
-    // Fall back to target default URL if empty or null
-    if (base == "") {
-        base = "https://tinyurl.com/icnqz"
+// -----------------CONVERTERS
+
+/**
+ * Converts an epoch timestamp into structured date/time formats based on a chosen schema option.
+ * 
+ * @param epochSeconds The raw Unix epoch timestamp (in seconds) received from the API.
+ * @param formatOption A string ('1' through '9') representing the desired output layout scheme.
+ * @return A Map containing [dateTime: String, date: String, time: String]
+ */
+private Map convertDateTimeFormat(def epochSeconds, String formatOption) {
+    if (epochSeconds == null) {
+        logDebug "convertDateTimeFormat received a null epoch timestamp value."
+        return [dateTime: "--", date: "--", time: "--"]
     }
     
-    // Enforce trailing slash constraint
-    if (!base.endsWith("/")) {
-        base += "/"
+    // Convert epoch seconds to milliseconds for Java/Groovy Date tracking
+    long msecs = epochSeconds.toLong() * 1000L
+    Date dateObject = new Date(msecs)
+    TimeZone tz = location.timeZone ?: TimeZone.getDefault()
+    
+    String DTFormat = ""
+    String dateFormat = ""
+    String timeFormat = ""
+    
+    switch(formatOption?.toString()) {
+        case '1': DTFormat = 'M/d/yyyy h:mm a';  dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
+        case '2': DTFormat = 'M/d/yyyy HH:mm';   dateFormat = 'M/d/yyyy';   timeFormat = 'HH:mm'; break
+        case '3': DTFormat = 'MM/dd/yyyy h:mm a'; dateFormat = 'MM/dd/yyyy'; timeFormat = 'h:mm a'; break
+        case '4': DTFormat = 'MM/dd/yyyy HH:mm';  dateFormat = 'MM/dd/yyyy'; timeFormat = 'HH:mm'; break
+        case '5': DTFormat = 'd/M/yyyy h:mm a';  dateFormat = 'd/M/yyyy';   timeFormat = 'h:mm a'; break
+        case '6': DTFormat = 'd/M/yyyy HH:mm';   dateFormat = 'd/M/yyyy';   timeFormat = 'HH:mm'; break
+        case '7': DTFormat = 'dd/MM/yyyy h:mm a'; dateFormat = 'dd/MM/yyyy'; timeFormat = 'h:mm a'; break
+        case '8': DTFormat = 'dd/MM/yyyy HH:mm';  dateFormat = 'dd/MM/yyyy'; timeFormat = 'HH:mm'; break
+        case '9': DTFormat = 'yyyy/MM/dd HH:mm';  dateFormat = 'yyyy/MM/dd'; timeFormat = 'HH:mm'; break
+        default:  DTFormat = 'M/d/yyyy h:mm a';  dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
     }
     
-    logDebug "Calculated Icon Base Path resolved to: ${base}"
-    return base
+    // Format the date target strings utilizing Hubitat's local timezone rules safely
+    try {
+        return [
+            dateTime: dateObject.format(DTFormat, tz),
+            date: dateObject.format(dateFormat, tz),
+            time: dateObject.format(timeFormat, tz)
+        ]
+    } catch (Exception e) {
+        logError "Exception occurred during convertDateTimeFormat conversion execution: ${e.message}"
+        return [dateTime: "--", date: "--", time: "--"]
+    }
 }
 
 private BigDecimal convertIlluminance(BigDecimal rawLux) {
@@ -1223,6 +1326,26 @@ private Map convertWindDirectionState(degrees) {
     return [cardinal: token, full: word, iconUrl: finalIconUrl]
 }
 
+// -----------------------  CALCS
+
+private String calcIconBasePath(String altIconLoc) {
+	//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+    String base = altIconLoc ? altIconLoc.trim() : ""
+    
+    // Fall back to target default URL if empty or null
+    if (base == "") {
+        base = "https://tinyurl.com/icnqz"
+    }
+    
+    // Enforce trailing slash constraint
+    if (!base.endsWith("/")) {
+        base += "/"
+    }
+    
+    logDebug "Calculated Icon Base Path resolved to: ${base}"
+    return base
+}
+
 void calcMoonPhaseIcon() {
     logDebug "Calculating moon phase icons..."
     
@@ -1403,6 +1526,9 @@ private void calcCurrentTwilight() {
 
         sendIfChanged(name: "currentTwilightBeginTime", value: twilightBeginEpoch)
         sendIfChanged(name: "currentTwilightEndTime", value: twilightEndEpoch)
+		state.twilightBeginEpoch = twilightBeginEpoch
+		state.twilightEndEpoch   = twilightEndEpoch
+		
     } else {
         logWarn "calcCurrentTwilight skipped: Missing todaySunriseEpoch or todaySunsetEpoch in state."
     }
@@ -1432,9 +1558,9 @@ private void calcBetwixtState(BigDecimal altitude, long liveSunrise = 0, long li
 			// Hubitat sandboxed way to format a raw long timestamp without instantiating Date(long)
 			java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("HH:mm")
 			sdf.setTimeZone(location.timeZone)
-			String noonTimeStr = sdf.format(midDayEpoch * 1000L)
-			
+			String noonTimeStr = (midDayEpoch)
 			sendIfChanged(name: "currentSolarNoonTime", value: noonTimeStr)
+			state.solarNoonEpoch = noonTimeStr
 		} catch (Exception e) {
 			logError "Exception occurred while calculating currentSolarNoonTime: ${e.message}"
 		}
@@ -1532,6 +1658,7 @@ private void calcCurrentText(BigDecimal freshLux = null, BigDecimal freshTemp = 
     logDebug "Generating formatted text attributes with unit suffixes..."
 
     // 1. Temperature Text Formatting
+    logDebug "Section 1: Formatting Temp value ..."
     def tempVal = (freshTemp != null) ? freshTemp : device.currentValue("currentTemperature")
     if (tempVal != null) {
         String tUnit = settings.temperatureUnit ?: "°F"
@@ -1539,6 +1666,7 @@ private void calcCurrentText(BigDecimal freshLux = null, BigDecimal freshTemp = 
     }
 
     // 2. Pressure Text Formatting
+    logDebug "Section 2: Formatting Pressure value ..."
     def pressVal = (freshPress != null) ? freshPress : device.currentValue("currentPressure")
     if (pressVal != null) {
         String pUnit = settings.pressureUnit ?: "inHg"
@@ -1546,6 +1674,7 @@ private void calcCurrentText(BigDecimal freshLux = null, BigDecimal freshTemp = 
     }
 
     // 3. Wind Speed Text Formatting
+    logDebug "Section 3: Formatting Wind Speed Text value ..."
     def windVal = (freshWind != null) ? freshWind : device.currentValue("currentWindSpeed")
     if (windVal != null) {
         String wUnit = settings.windSpeedUnit ?: "mph"
@@ -1553,6 +1682,7 @@ private void calcCurrentText(BigDecimal freshLux = null, BigDecimal freshTemp = 
     }
 
     // 4. Illuminance Text Formatting
+    logDebug "Section 4: Formatting Illuminance value ..."
     def luxVal = (freshLux != null) ? freshLux : device.currentValue("currentIlluminance")
     if (luxVal != null) {
         String iUnit = settings.illuminanceUnit ?: "lx"
@@ -1561,6 +1691,7 @@ private void calcCurrentText(BigDecimal freshLux = null, BigDecimal freshTemp = 
     }
 	
     // 5. Solar Angles Formatting
+    logDebug "Section 5: Formatting Solar Angle values ..."
     def altVal = device.currentValue("altitude")
     if (altVal != null) {
         sendIfChanged(name: "altitudeText", value: "${altVal}°")
@@ -1573,6 +1704,7 @@ private void calcCurrentText(BigDecimal freshLux = null, BigDecimal freshTemp = 
 
     // 6. Humidity Formatting
     def humVal = (freshHum != null) ? freshHum : device.currentValue("currentHumidity")
+    logDebug "Section 6: Formatting Humidity value ..."
     if (humVal != null) {
         String hUnit = settings.humidityUnit ?: "%"
         if (hUnit == "none") hUnit = ""
@@ -1581,6 +1713,98 @@ private void calcCurrentText(BigDecimal freshLux = null, BigDecimal freshTemp = 
         if (hUnit == "g/m³") hUnit = " g/m³"
         if (hUnit == "g/kg³") hUnit = " g/kg³"
         sendIfChanged(name: "currentHumidityText", value: "${humVal}${hUnit ? "${hUnit}" : ""}")
+    }
+
+    // 7. DateTime Attributes Auto-Formatting (Updated to loop dynamically)
+    logDebug "Section 7: Formatting all properties ending in 'DateTime' via convertDateTimeFormat..."
+    String chosenFormat = settings.DateTimeForm ?: "1"
+    
+    device.properties.supportedAttributes.each { attr ->
+        String attrName = attr.name
+        if (attrName.endsWith("DateTime")) {
+            def epochValue = device.currentValue(attrName)
+            if (epochValue != null) {
+                String targetTextAttribute = "${attrName}Text"
+                
+                if (chosenFormat == "10") {
+                    sendIfChanged(name: targetTextAttribute, value: "${epochValue}")
+                } else {
+                    Map formattedMap = convertDateTimeFormat(epochValue, chosenFormat)
+                    sendIfChanged(name: targetTextAttribute, value: formattedMap.dateTime)
+                }
+            }
+        }
+    }
+
+    // 8 DateTime Attributes Auto-Formatting
+    logDebug "Section 8: Formatting all properties containing 'DateTime' via convertDateTimeFormat..."
+    def lastUpdatedEpoch = device.currentValue("lastUpdatedDateTime")
+    if (lastUpdatedEpoch != null) {
+        Map formattedMap = convertDateTimeFormat(lastUpdatedEpoch, chosenFormat)
+        
+        if (chosenFormat == "10") {
+            sendIfChanged(name: "lastUpdatedDateTimeText", value: "${lastUpdatedEpoch}")
+        } else {
+            sendIfChanged(name: "lastUpdatedDateTimeText", value: formattedMap.dateTime)
+        }
+    }
+
+    // 9. Date-Only Attributes Auto-Formatting
+    logDebug "Section 9: Formatting all properties ending in 'Date' via convertDateTimeFormat..."
+    String chosenDateForm = settings.DateForm ?: "1"
+    
+    device.properties.supportedAttributes.each { attr ->
+        String attrName = attr.name
+        if (attrName.endsWith("Date")) {
+            def epochValue = device.currentValue(attrName)
+            if (epochValue != null) {
+                String targetTextAttribute = "${attrName}Text"
+                
+                if (chosenDateForm == "10") {
+                    sendIfChanged(name: targetTextAttribute, value: "${epochValue}")
+                } else {
+                    Map formattedMap = convertDateTimeFormat(epochValue, chosenDateForm)
+                    sendIfChanged(name: targetTextAttribute, value: formattedMap.date)
+                }
+            }
+        }
+    }
+
+    // 10. Time-Only Attributes Auto-Formatting
+    logDebug "Section 10: Formatting all properties ending in 'Time' via convertDateTimeFormat..."
+    String chosenTimeForm = settings.TimeForm ?: "1"
+    
+    device.properties.supportedAttributes.each { attr ->
+        String attrName = attr.name
+        // Filter out variables that don't conform to standard epoch numeric conversions
+        if (attrName.endsWith("Time") && !attrName.contains("DateTime")) {
+            def epochValue = null
+            
+            // Re-route target epoch extraction paths based on twilight variables context
+            if (attrName == "currentTwilightBeginTime") {
+                epochValue = state.twilightBeginEpoch ?: device.currentValue(attrName)
+            }
+            else if (attrName == "currentTwilightEndTime") {
+                epochValue = state.twilightEndEpoch ?: device.currentValue(attrName)
+            }
+			else if (attrName == "currentSolarNoonTime") {
+                epochValue = state.solarNoonEpoch ?: device.currentValue(attrName)
+            }
+            else {
+                epochValue = device.currentValue(attrName)
+            }
+            
+            if (epochValue != null) {
+                String targetTextAttribute = "${attrName}Text"
+                
+                if (chosenTimeForm == "10") {
+                    sendIfChanged(name: targetTextAttribute, value: "${epochValue}")
+                } else {
+                    Map formattedMap = convertDateTimeFormat(epochValue, chosenTimeForm)
+                    sendIfChanged(name: targetTextAttribute, value: formattedMap.time)
+                }
+            }
+        }
     }
 }
 

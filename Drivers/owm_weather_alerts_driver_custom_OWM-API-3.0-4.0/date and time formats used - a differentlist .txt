@@ -1,0 +1,10 @@
+        case '1': DTFormat = 'M/d/yyyy h:mm a';  dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
+        case '2': DTFormat = 'M/d/yyyy HH:mm';   dateFormat = 'M/d/yyyy';   timeFormat = 'HH:mm'; break
+        case '3': DTFormat = 'MM/dd/yyyy h:mm a'; dateFormat = 'MM/dd/yyyy'; timeFormat = 'h:mm a'; break
+        case '4': DTFormat = 'MM/dd/yyyy HH:mm';  dateFormat = 'MM/dd/yyyy'; timeFormat = 'HH:mm'; break
+        case '5': DTFormat = 'd/M/yyyy h:mm a';  dateFormat = 'd/M/yyyy';   timeFormat = 'h:mm a'; break
+        case '6': DTFormat = 'd/M/yyyy HH:mm';   dateFormat = 'd/M/yyyy';   timeFormat = 'HH:mm'; break
+        case '7': DTFormat = 'dd/MM/yyyy h:mm a'; dateFormat = 'dd/MM/yyyy'; timeFormat = 'h:mm a'; break
+        case '8': DTFormat = 'dd/MM/yyyy HH:mm';  dateFormat = 'dd/MM/yyyy'; timeFormat = 'HH:mm'; break
+        case '9': DTFormat = 'yyyy/MM/dd HH:mm';  dateFormat = 'yyyy/MM/dd'; timeFormat = 'HH:mm'; break
+        default:  DTFormat = 'M/d/yyyy h:mm a';  dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
