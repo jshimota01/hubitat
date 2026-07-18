@@ -42,11 +42,10 @@
  * 2026-07-18   jshimota    0.3.2   Integrated formatTime and formatDate helpers into handler
  * 2026-07-18   jshimota    0.3.3-4 Minor tweaks
  * 2026-07-18   jshimota    0.3.5   Added JsonSlurper fallback parse and bulletproofed day_length casting
- * 2026-07-18	jshimota	0.3.6-8 Fixed the parser when it errors or comes back as string.
  *
  */
 
-static String version() { return '0.3.8' }
+static String version() { return '0.3.5' }
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.time.*
@@ -168,12 +167,7 @@ void deleteAllCurrentStates() {
     attribs.each { attr ->
         device.deleteCurrentState(attr)
     }
-    
-    // === ADD THESE TWO LINES TEMPORARILY ===
-    device.removeDataValue("sunRiseSet")
-    device.removeDataValue("dayLengthSet")
-    
-    logTrace("All current states and stale device data removed") 
+    logTrace("All current states removed") 
 }
 
 void deleteAllStateVariables() {
@@ -246,165 +240,119 @@ private String formatDate(Date d){
     return sdf.format(d)
 }
 
-private Date parseIsoDate(def value) {
-    if (!value) return null
-    try {
-        return Date.parse("yyyy-MM-dd'T'HH:mm:ssXXX", value.toString())
-    }
-    catch (Exception e) {
-        logDebug("Failed to parse ISO date string [${value}]: ${e.message}")
-        return null
-    }
-}
-
-private int safeInt(def value) {
-    if (value == null) return 0
-
-    if (value instanceof Number)
-        return value.intValue()
-
-    try {
-        return value.toString().trim().toInteger()
-    }
-    catch (Exception ignored) {
-        try {
-            return value.toString().trim().toDouble().intValue()
-        }
-        catch (Exception ignored2) {
-            return 0
-        }
-    }
-}
-
 def sunRiseSetHandler(resp, data) {
-    int status = resp.getStatus()
-    if (!(status >= 200 && status < 300)) {
-        logError("Sunrise-Sunset API returned HTTP status ${status}")
-        return
-    }
-    def results = null
-
-    try {
-        // Normal Hubitat parsing
-        results = resp.getJson()?.results
-
-        // Some firmware versions leave the JSON in resp.data
-        if (!results && resp.data) {
-            if (resp.data instanceof Map) {
-                results = resp.data.results
+    if(resp.getStatus() == 200 || resp.getStatus() == 207) {
+        def sunRiseSet = null
+        
+        try {
+            // Attempt standard parsing match
+            sunRiseSet = resp.getJson()?.results
+            
+            // Hardened string fallback rule if API content-type headers fail
+            if (!sunRiseSet && resp.data) {
+                logDebug("resp.getJson() was empty or unparsed. Forcing JsonSlurper parse text routine on raw payload payload.")
+                def parser = new JsonSlurper()
+                def rawJson = parser.parseText(resp.data)
+                sunRiseSet = rawJson?.results
             }
-            else if (resp.data instanceof String) {
-                results = new JsonSlurper().parseText(resp.data)?.results
-            }
+        } catch (Exception e) {
+            logError("Critical Exception caught while trying to deserialize API response payload: ${e.message}")
+            return
         }
-    }
-    catch (Exception e) {
-        logError("Unable to parse Sunrise-Sunset response: ${e.message}")
-        return
-    }
-    if (!results) {
-        logError("Sunrise-Sunset response contained no results object.")
-        return
-    }
 
-    // Parse API dates
-    Date sRise    = parseIsoDate(results.sunrise)
-    Date sSet     = parseIsoDate(results.sunset)
-    Date sNoon    = parseIsoDate(results.solar_noon)
-    Date civBeg   = parseIsoDate(results.civil_twilight_begin)
-    Date civEnd   = parseIsoDate(results.civil_twilight_end)
-    Date nautBeg  = parseIsoDate(results.nautical_twilight_begin)
-    Date nautEnd  = parseIsoDate(results.nautical_twilight_end)
-    Date astroBeg = parseIsoDate(results.astronomical_twilight_begin)
-    Date astroEnd = parseIsoDate(results.astronomical_twilight_end)
+        if (!sunRiseSet) {
+            logError("API returned clean response but programmatic payload maps are missing or null.")
+            return
+        }
 
-    if (!sRise || !sSet) {
-        logError("API did not return valid sunrise/sunset times.")
-        return
-    }
+        // Safely Parse Dates
+        def isoFormat = "yyyy-MM-dd'T'HH:mm:ssXXX"
+        Date sRise   = new Date().parse(isoFormat, sunRiseSet.sunrise)
+        Date sSet    = new Date().parse(isoFormat, sunRiseSet.sunset)
+        Date sNoon   = new Date().parse(isoFormat, sunRiseSet.solar_noon)
+        Date civBeg  = new Date().parse(isoFormat, sunRiseSet.civil_twilight_begin)
+        Date civEnd  = new Date().parse(isoFormat, sunRiseSet.civil_twilight_end)
+        Date nautBeg = new Date().parse(isoFormat, sunRiseSet.nautical_twilight_begin)
+        Date nautEnd = new Date().parse(isoFormat, sunRiseSet.nautical_twilight_end)
+        Date astroBeg= new Date().parse(isoFormat, sunRiseSet.astronomical_twilight_begin)
+        Date astroEnd= new Date().parse(isoFormat, sunRiseSet.astronomical_twilight_end)
 
-    Date usedTwilightBegin
-    Date usedTwilightEnd
-
-    switch (twilightChoice?.toString()) {
-
-        case "2":
+        // Evaluate Twilight Choice Selections Dynamically
+        Date usedTwilightBegin
+        Date usedTwilightEnd
+        String choice = twilightChoice?.toString() ?: "1"
+        if (choice == "2") {
             usedTwilightBegin = nautBeg
-            usedTwilightEnd   = nautEnd
-            break
-
-        case "3":
+            usedTwilightEnd = nautEnd
+        } else if (choice == "3") {
             usedTwilightBegin = astroBeg
-            usedTwilightEnd   = astroEnd
-            break
-
-        default:
+            usedTwilightEnd = astroEnd
+        } else {
             usedTwilightBegin = civBeg
-            usedTwilightEnd   = civEnd
-            break
+            usedTwilightEnd = civEnd
+        }
+
+        // Setup formatted string structures via helpers
+        String formattedUsedTwilightBegin = formatTime(usedTwilightBegin)
+        String formattedUsedLocalSunrise  = formatTime(sRise)
+        String formattedUsedSolarNoon     = formatTime(sNoon)
+        String formattedUsedLocalSunset   = formatTime(sSet)
+        String formattedUsedTwilightEnd   = formatTime(usedTwilightEnd)
+        
+        // Use Local Variables instead of Driver State Storage
+        String usedTwilightBeginLocalVar = formatDate(usedTwilightBegin)
+        String usedTwilightEndLocalVar   = formatDate(usedTwilightEnd)
+        String localSunriseLocalVar       = formatDate(sRise)
+        String localSunsetLocalVar        = formatDate(sSet)
+
+        def overrideLatitudeLocalVar = settings.overrideLatitude ?: location.latitude
+        def overrideLongitudeLocalVar = settings.overrideLongitude ?: location.longitude
+        String overrideDateLocalVar = getTargetDate()
+        String overrideTimeZoneLocalVar = settings.overrideTimeZone ?: location.timeZone?.ID
+
+        long localSrEpoch = sRise.getTime()
+        long localSsEpoch = sSet.getTime()
+
+        // Hardened conversion logic handling float-strings or raw strings safely
+        int totalSeconds = 0
+        if (sunRiseSet.day_length != null) {
+            totalSeconds = sunRiseSet.day_length.toString().trim().toDouble().intValue()
+        }
+        int hours = totalSeconds / 3600
+        int minutes = (totalSeconds % 3600) / 60
+        int seconds = totalSeconds % 60
+        String formattedDay_Length = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+        logDebug("Calculated Twilight Values: Begin=${usedTwilightBeginLocalVar}, End=${usedTwilightEndLocalVar}. Note: Drivers cannot set Global Variables directly.")
+
+        // Fire stringified clean event values to device dashboard interfaces using local variables
+        sendIfChanged(name: 'localSrEpoch', value: localSrEpoch)
+        sendIfChanged(name: 'localSsEpoch', value: localSsEpoch)
+        sendIfChanged(name: 'localSunrise', value: localSunriseLocalVar)        
+        sendIfChanged(name: 'localSunset' , value: localSunsetLocalVar)
+        sendIfChanged(name: 'localSolarNoon', value: formatDate(sNoon))
+        sendIfChanged(name: 'localCivilTwilightBegin', value: formatDate(civBeg))
+        sendIfChanged(name: 'localCivilTwilightEnd', value: formatDate(civEnd))
+        sendIfChanged(name: 'localNauticalTwilightBegin', value: formatDate(nautBeg))
+        sendIfChanged(name: 'localNauticalTwilightEnd', value: formatDate(nautEnd))
+        sendIfChanged(name: 'localAstronomicalTwilightBegin', value: formatDate(astroBeg))
+        sendIfChanged(name: 'localAstronomicalTwilightEnd', value: formatDate(astroEnd))
+        sendIfChanged(name: 'usedLatitude', value: overrideLatitudeLocalVar)
+        sendIfChanged(name: 'usedLongitude', value: overrideLongitudeLocalVar)
+        sendIfChanged(name: 'usedDate', value: overrideDateLocalVar)
+        sendIfChanged(name: 'usedTimeZone', value: overrideTimeZoneLocalVar)
+        sendIfChanged(name: 'usedTwilightBegin', value: usedTwilightBeginLocalVar)
+        sendIfChanged(name: 'usedTwilightEnd', value: usedTwilightEndLocalVar)
+        
+        sendIfChanged(name: 'formattedUsedTwilightBegin', value: formattedUsedTwilightBegin)
+        sendIfChanged(name: 'formattedUsedLocalSunrise', value: formattedUsedLocalSunrise)
+        sendIfChanged(name: 'formattedUsedSolarNoon', value: formattedUsedSolarNoon)
+        sendIfChanged(name: 'formattedUsedLocalSunset', value: formattedUsedLocalSunset)
+        sendIfChanged(name: 'formattedUsedTwilightEnd', value: formattedUsedTwilightEnd)
+        sendIfChanged(name: 'localDayLength', value: formattedDay_Length)   
+    } else { 
+        logError("Sunrise-sunset api poll did not return data. Status Code: ${resp.getStatus()}") 
     }
-
-    // Format strings
-    String formattedUsedTwilightBegin = formatTime(usedTwilightBegin)
-    String formattedUsedLocalSunrise  = formatTime(sRise)
-    String formattedUsedSolarNoon     = formatTime(sNoon)
-    String formattedUsedLocalSunset   = formatTime(sSet)
-    String formattedUsedTwilightEnd   = formatTime(usedTwilightEnd)
-    String usedTwilightBeginString = formatDate(usedTwilightBegin)
-    String usedTwilightEndString   = formatDate(usedTwilightEnd)
-    String localSunriseString = formatDate(sRise)
-    String localSunsetString  = formatDate(sSet)
-
-    long sunriseEpoch = sRise.time
-    long sunsetEpoch  = sSet.time
-
-    int totalSeconds = safeInt(results.day_length)
-
-	int hours   = (totalSeconds / 3600) as Integer
-	int minutes = ((totalSeconds % 3600) / 60) as Integer
-	int seconds = (totalSeconds % 60) as Integer
-
-	String formattedDayLength = String.format("%02d:%02d:%02d", hours, minutes, seconds)
-
-    String usedLatitude  = settings.overrideLatitude ?: location.latitude
-    String usedLongitude = settings.overrideLongitude ?: location.longitude
-    String usedDate      = getTargetDate()
-    String usedTimeZone  = settings.overrideTimeZone ?: location.timeZone?.ID
-
-    logDebug("Calculated Twilight Values: Begin=${usedTwilightBeginString}, End=${usedTwilightEndString}")
-
-    sendIfChanged(name: "localSrEpoch", value: sunriseEpoch)
-    sendIfChanged(name: "localSsEpoch", value: sunsetEpoch)
-    sendIfChanged(name: "localSunrise", value: localSunriseString)
-    sendIfChanged(name: "localSunset", value: localSunsetString)
-    sendIfChanged(name: "localSolarNoon", value: formatDate(sNoon))
-    sendIfChanged(name: "localCivilTwilightBegin", value: formatDate(civBeg))
-    sendIfChanged(name: "localCivilTwilightEnd", value: formatDate(civEnd))
-    sendIfChanged(name: "localNauticalTwilightBegin", value: formatDate(nautBeg))
-    sendIfChanged(name: "localNauticalTwilightEnd", value: formatDate(nautEnd))
-    sendIfChanged(name: "localAstronomicalTwilightBegin", value: formatDate(astroBeg))
-    sendIfChanged(name: "localAstronomicalTwilightEnd", value: formatDate(astroEnd))
-    sendIfChanged(name: "usedLatitude", value: usedLatitude)
-    sendIfChanged(name: "usedLongitude", value: usedLongitude)
-    sendIfChanged(name: "usedDate", value: usedDate)
-    sendIfChanged(name: "usedTimeZone", value: usedTimeZone)
-    sendIfChanged(name: "usedTwilightBegin", value: usedTwilightBeginString)
-    sendIfChanged(name: "usedTwilightEnd", value: usedTwilightEndString)
-    sendIfChanged(name: "formattedUsedTwilightBegin", value: formattedUsedTwilightBegin)
-    sendIfChanged(name: "formattedUsedLocalSunrise", value: formattedUsedLocalSunrise)
-    sendIfChanged(name: "formattedUsedSolarNoon", value: formattedUsedSolarNoon)
-    sendIfChanged(name: "formattedUsedLocalSunset", value: formattedUsedLocalSunset)
-    sendIfChanged(name: "formattedUsedTwilightEnd", value: formattedUsedTwilightEnd)
-    sendIfChanged(name: "localDayLength", value: formattedDayLength)
-
-    // === FORCE CLEAR CACHED AND MEMORY VARIABLES ===
-    results = null
-    if (resp.metaClass.respondsTo(resp, "clear")) { 
-        try { resp.clear() } catch (Exception ignored) {} 
-    }
-    resp = null
-    
-    logDebug("Memory clean-up triggered: API response and results object discarded.")
 }
 
 void disableDebugLogging() {
@@ -416,15 +364,7 @@ void disableDebugLogging() {
 private void logMessage(String level, String msg) {
     String prefKey = level == "info" ? "logEnable" : "${level}Enable"
     if (settings[prefKey] == true || level == "warn" || level == "error") {
-        String formattedMsg = "Twilight Parser Driver${level == 'warn' ? ' WARNING' : level == 'error' ? ' ERROR' : ''}: ${msg}"
-        
-        switch(level) {
-            case "error": log.error(formattedMsg); break
-            case "warn":  log.warn(formattedMsg);  break
-            case "info":  log.info(formattedMsg);  break
-            case "debug": log.debug(formattedMsg); break
-            case "trace": log.trace(formattedMsg); break
-        }
+        log."${level}" "Twilight Parser Driver${level == 'warn' ? ' WARNING' : level == 'error' ? ' ERROR' : ''}: ${msg}"
     }
 }
 

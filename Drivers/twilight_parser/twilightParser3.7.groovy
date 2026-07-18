@@ -42,11 +42,11 @@
  * 2026-07-18   jshimota    0.3.2   Integrated formatTime and formatDate helpers into handler
  * 2026-07-18   jshimota    0.3.3-4 Minor tweaks
  * 2026-07-18   jshimota    0.3.5   Added JsonSlurper fallback parse and bulletproofed day_length casting
- * 2026-07-18	jshimota	0.3.6-8 Fixed the parser when it errors or comes back as string.
+ * 2026-07-18	jshimota	0.3.6-7 Fixed the parser when it errors or comes back as string.
  *
  */
 
-static String version() { return '0.3.8' }
+static String version() { return '0.3.7' }
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.time.*

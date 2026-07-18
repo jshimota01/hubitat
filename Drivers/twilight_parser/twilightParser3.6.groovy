@@ -42,11 +42,10 @@
  * 2026-07-18   jshimota    0.3.2   Integrated formatTime and formatDate helpers into handler
  * 2026-07-18   jshimota    0.3.3-4 Minor tweaks
  * 2026-07-18   jshimota    0.3.5   Added JsonSlurper fallback parse and bulletproofed day_length casting
- * 2026-07-18	jshimota	0.3.6-8 Fixed the parser when it errors or comes back as string.
  *
  */
 
-static String version() { return '0.3.8' }
+static String version() { return '0.3.5' }
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.time.*
@@ -168,12 +167,7 @@ void deleteAllCurrentStates() {
     attribs.each { attr ->
         device.deleteCurrentState(attr)
     }
-    
-    // === ADD THESE TWO LINES TEMPORARILY ===
-    device.removeDataValue("sunRiseSet")
-    device.removeDataValue("dayLengthSet")
-    
-    logTrace("All current states and stale device data removed") 
+    logTrace("All current states removed") 
 }
 
 void deleteAllStateVariables() {
@@ -248,13 +242,7 @@ private String formatDate(Date d){
 
 private Date parseIsoDate(def value) {
     if (!value) return null
-    try {
-        return Date.parse("yyyy-MM-dd'T'HH:mm:ssXXX", value.toString())
-    }
-    catch (Exception e) {
-        logDebug("Failed to parse ISO date string [${value}]: ${e.message}")
-        return null
-    }
+    return Date.parse("yyyy-MM-dd'T'HH:mm:ssXXX", value.toString())
 }
 
 private int safeInt(def value) {
@@ -277,19 +265,24 @@ private int safeInt(def value) {
 }
 
 def sunRiseSetHandler(resp, data) {
+
     int status = resp.getStatus()
+
     if (!(status >= 200 && status < 300)) {
         logError("Sunrise-Sunset API returned HTTP status ${status}")
         return
     }
+
     def results = null
 
     try {
+
         // Normal Hubitat parsing
         results = resp.getJson()?.results
 
         // Some firmware versions leave the JSON in resp.data
         if (!results && resp.data) {
+
             if (resp.data instanceof Map) {
                 results = resp.data.results
             }
@@ -297,17 +290,20 @@ def sunRiseSetHandler(resp, data) {
                 results = new JsonSlurper().parseText(resp.data)?.results
             }
         }
+
     }
     catch (Exception e) {
         logError("Unable to parse Sunrise-Sunset response: ${e.message}")
         return
     }
+
     if (!results) {
         logError("Sunrise-Sunset response contained no results object.")
         return
     }
 
     // Parse API dates
+
     Date sRise    = parseIsoDate(results.sunrise)
     Date sSet     = parseIsoDate(results.sunset)
     Date sNoon    = parseIsoDate(results.solar_noon)
@@ -345,13 +341,16 @@ def sunRiseSetHandler(resp, data) {
     }
 
     // Format strings
+
     String formattedUsedTwilightBegin = formatTime(usedTwilightBegin)
     String formattedUsedLocalSunrise  = formatTime(sRise)
     String formattedUsedSolarNoon     = formatTime(sNoon)
     String formattedUsedLocalSunset   = formatTime(sSet)
     String formattedUsedTwilightEnd   = formatTime(usedTwilightEnd)
+
     String usedTwilightBeginString = formatDate(usedTwilightBegin)
     String usedTwilightEndString   = formatDate(usedTwilightEnd)
+
     String localSunriseString = formatDate(sRise)
     String localSunsetString  = formatDate(sSet)
 
@@ -360,11 +359,12 @@ def sunRiseSetHandler(resp, data) {
 
     int totalSeconds = safeInt(results.day_length)
 
-	int hours   = (totalSeconds / 3600) as Integer
-	int minutes = ((totalSeconds % 3600) / 60) as Integer
-	int seconds = (totalSeconds % 60) as Integer
-
-	String formattedDayLength = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    String formattedDayLength = String.format(
+        "%02d:%02d:%02d",
+        totalSeconds / 3600,
+        (totalSeconds % 3600) / 60,
+        totalSeconds % 60
+    )
 
     String usedLatitude  = settings.overrideLatitude ?: location.latitude
     String usedLongitude = settings.overrideLongitude ?: location.longitude
@@ -375,36 +375,35 @@ def sunRiseSetHandler(resp, data) {
 
     sendIfChanged(name: "localSrEpoch", value: sunriseEpoch)
     sendIfChanged(name: "localSsEpoch", value: sunsetEpoch)
+
     sendIfChanged(name: "localSunrise", value: localSunriseString)
     sendIfChanged(name: "localSunset", value: localSunsetString)
     sendIfChanged(name: "localSolarNoon", value: formatDate(sNoon))
+
     sendIfChanged(name: "localCivilTwilightBegin", value: formatDate(civBeg))
     sendIfChanged(name: "localCivilTwilightEnd", value: formatDate(civEnd))
+
     sendIfChanged(name: "localNauticalTwilightBegin", value: formatDate(nautBeg))
     sendIfChanged(name: "localNauticalTwilightEnd", value: formatDate(nautEnd))
+
     sendIfChanged(name: "localAstronomicalTwilightBegin", value: formatDate(astroBeg))
     sendIfChanged(name: "localAstronomicalTwilightEnd", value: formatDate(astroEnd))
+
     sendIfChanged(name: "usedLatitude", value: usedLatitude)
     sendIfChanged(name: "usedLongitude", value: usedLongitude)
     sendIfChanged(name: "usedDate", value: usedDate)
     sendIfChanged(name: "usedTimeZone", value: usedTimeZone)
+
     sendIfChanged(name: "usedTwilightBegin", value: usedTwilightBeginString)
     sendIfChanged(name: "usedTwilightEnd", value: usedTwilightEndString)
+
     sendIfChanged(name: "formattedUsedTwilightBegin", value: formattedUsedTwilightBegin)
     sendIfChanged(name: "formattedUsedLocalSunrise", value: formattedUsedLocalSunrise)
     sendIfChanged(name: "formattedUsedSolarNoon", value: formattedUsedSolarNoon)
     sendIfChanged(name: "formattedUsedLocalSunset", value: formattedUsedLocalSunset)
     sendIfChanged(name: "formattedUsedTwilightEnd", value: formattedUsedTwilightEnd)
-    sendIfChanged(name: "localDayLength", value: formattedDayLength)
 
-    // === FORCE CLEAR CACHED AND MEMORY VARIABLES ===
-    results = null
-    if (resp.metaClass.respondsTo(resp, "clear")) { 
-        try { resp.clear() } catch (Exception ignored) {} 
-    }
-    resp = null
-    
-    logDebug("Memory clean-up triggered: API response and results object discarded.")
+    sendIfChanged(name: "localDayLength", value: formattedDayLength)
 }
 
 void disableDebugLogging() {
@@ -416,15 +415,7 @@ void disableDebugLogging() {
 private void logMessage(String level, String msg) {
     String prefKey = level == "info" ? "logEnable" : "${level}Enable"
     if (settings[prefKey] == true || level == "warn" || level == "error") {
-        String formattedMsg = "Twilight Parser Driver${level == 'warn' ? ' WARNING' : level == 'error' ? ' ERROR' : ''}: ${msg}"
-        
-        switch(level) {
-            case "error": log.error(formattedMsg); break
-            case "warn":  log.warn(formattedMsg);  break
-            case "info":  log.info(formattedMsg);  break
-            case "debug": log.debug(formattedMsg); break
-            case "trace": log.trace(formattedMsg); break
-        }
+        log."${level}" "Twilight Parser Driver${level == 'warn' ? ' WARNING' : level == 'error' ? ' ERROR' : ''}: ${msg}"
     }
 }
 

@@ -1,13 +1,13 @@
 {
   "packageName": "Twilight Parser",
   "author": "James Shimota",
-  "version": "0.3.4",
+  "version": "0.3.8",
   "minimumHEVersion": "2.3.8",
   "dateReleased": "2024-11-10",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/twilight_parser/README.md",
   "communityLink": "",
   "licenseFile": "",
-  "releaseNotes": "0.2.0 - Numerous improvements\nFirst official release\n0.2.1-0.2.7 maintenance\n02.8-.3.4 AI enhancements and bug fixes",
+  "releaseNotes": "0.2.0 - Numerous improvements\nFirst official release\n0.2.1-0.2.7 maintenance\n02.8-.3.8 AI enhancements and bug fixes",
   "drivers": [
     {
       "id": "5100366c-5d71-5555-5072-53af559c30e9",
@@ -16,7 +16,7 @@
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/twilight_parser/twilightParser.groovy",
       "required": false,
       "oauth": false,
-      "version": "0.3.4"
+      "version": "0.3.8"
     }
   ]
 }
