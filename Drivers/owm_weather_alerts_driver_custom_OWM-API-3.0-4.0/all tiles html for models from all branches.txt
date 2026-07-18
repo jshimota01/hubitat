@@ -1,0 +1,71 @@
+Tile - 2.5/3.0/4.0 OWM -Dundee Weather 2.5/3.0/4.0 (13) details 
+alertTile
+<div>No Weather Alerts for Dundee, OR<br><a style="font-style:italic">No current weather alerts for this area</a><br><a href="https://openweathermap.org/city/5724352" target="_blank"><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/OWM.png" style="height:2em"></a> @ 10:42 AM</div>
+
+threedayfcstTile
+<style type="text/css">.cI{width:55%}.cIb{height:80%}tr:nth-child(3){vertical-align:bottom}tr:first-child{font-size:.6rem}td:first-child{font-size:.5rem}tr:last-child{font-size:.4rem}</style><table style="text-align:center;display:inline-table;width: 100%;height: 92%;font-size:.6rem"><tbody><tr><td><b>Dundee, OR</b></td><td>Today</td><td>Sunday</td><td>Monday</td></tr><tr><td>Now 71°F<br>Feels 70°F</td><td><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/32.png"></td><td><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/32.png"></td><td><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/26.png"></td></tr><tr><td></td><td>Clear sky</td><td>Clear sky</td><td>Overcast clouds</td></tr><tr><td>Low High</td><td> 54°F  81°F</td><td> 56°F  83°F</td><td> 60°F  90°F</td></tr><tr><td>PoP Precip</td><td>0% None</td><td>0% None</td><td>0% None</td></tr><tr><td colspan="4" style="font-size: 6px;">HTML length = 992 chrs</td></tr></tbody></table>
+
+
+
+TIle 2.5/3.0 
+AlertTile
+<div>No Weather Alerts for Dundee, OR<br><a style="font-style:italic">No current weather alerts for this area</a><br><a href="https://openweathermap.org/city/5724352" target="_blank"><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/OWM.png" style="height:2em"></a> @ 8:47 AM</div>
+
+myTile
+<div><style type="text/css">.cI{height:45%}.cIb{height:80%}</style><table style="text-align:center;display:inline"><tbody><tr><td><b>Dundee, OR</b></td></tr><tr><td>Clear sky</td></tr><tr><td> 64°F<img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/32.png">Feels like  64°F</td></tr><tr style="font-size:85%"><td>༄ North-Northeast @   3 MPH, gusts @   3 MPH</td></tr><tr style="font-size:80%"><td>⏲   30 inHg 💦 72% ☂ 0% 🪣 None<br>☀ 5:41 AM ☽ 8:55 PM<a href="https://openweathermap.org/city/5724352" target="_blank"><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/OWM.png" style="height:2em"></a> @ 8:47 AM</td></tr></tbody></table></div>
+
+threedayfcstTile
+<div><style type="text/css">.cI{width:55%}.cIb{height:80%}tr:nth-child(3){vertical-align:bottom}tr:first-child{font-size:.6rem}td:first-child{font-size:.5rem}tr:last-child{font-size:.4rem}</style><table style="text-align:center;display:inline-table;width: 100%;height: 92%;font-size:.6rem"><tbody><tr><td><b>Dundee, OR</b></td><td>Today</td><td>Sunday</td><td>Monday</td></tr><tr><td>Now 64°F<br>Feels 64°F</td><td><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/32.png"></td><td><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/32.png"></td><td><img class="cI" src="http://192.168.1.12/just_for_icons/icons/OWM/26.png"></td></tr><tr><td></td><td>Clear sky</td><td>Clear sky</td><td>Overcast clouds</td></tr><tr><td>High Low</td><td> 81°F  55°F</td><td> 83°F  56°F</td><td> 90°F  60°F</td></tr><tr><td>PoP Precip</td><td>0% None</td><td>0% None</td><td>0% None</td></tr><tr><td colspan="4" style="font-size: 6px;">HTML length = 991 chrs</td></tr></tbody></table></div>
+
+Tile Multi 1.0 Weather Driver
+alertTile
+<div><div style="text-align:center;">No active weather alerts from<br>Source: OpenWeatherMap</div><div style="text-align:center; margin-top:5px; font-size:0.8em;"><img src="http://192.168.1.12/just_for_icons/icons/OWM/OWM.png" style="max-width:25px; max-height:25px; vertical-align:middle; margin-right:5px;">Updated 03:00</div></div>
+
+currentTile
+<div style="font-family: system-ui, -apple-system, sans-serif; padding: 12px; background: rgba(15, 23, 42, 0.65); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); color: #f8fafc; max-width: 320px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); margin: auto;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <div style="font-size: 1.15rem; font-weight: 700; letter-spacing: -0.025em; line-height: 1.25;">Dundee</div>
+      <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 2px;">Clear Sky</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px; text-align: right;">
+      <img src="http://192.168.1.12/just_for_icons/icons/OWM/31.png" style="width: 48px; height: 48px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" alt="Weather Icon">
+      <div style="font-size: 1.85rem; font-weight: 800; tracking: -0.05em; line-height: 1;">57.24<span style="font-size: 1.1rem; font-weight: 500; vertical-align: top;">°F</span></div>
+    </div>
+  </div>
+  
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px; font-size: 0.75rem; text-align: center;">
+    <div>
+      <div style="opacity: 0.6; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Feels Like</div>
+      <div style="font-weight: 600; font-size: 0.85rem;">56.66°F</div>
+    </div>
+    <div>
+      <div style="opacity: 0.6; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Humidity</div>
+      <div style="font-weight: 600; font-size: 0.85rem;">85%</div>
+    </div>
+    <div>
+      <div style="opacity: 0.6; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Wind</div>
+      <div style="font-weight: 600; font-size: 0.85rem; white-space: nowrap;">1.01 mph</div>
+    </div>
+    <div>
+      <div style="opacity: 0.6; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Pressure</div>
+      <div style="font-weight: 600; font-size: 0.85rem; white-space: nowrap;">30.06 inHg</div>
+    </div>
+    <div>
+      <div style="opacity: 0.6; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">UV Index</div>
+      <div style="font-weight: 600; font-size: 0.85rem;">0</div>
+    </div>
+    <div>
+      <div style="opacity: 0.6; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Lux</div>
+      <div style="font-weight: 600; font-size: 0.85rem; white-space: nowrap;">5</div>
+    </div>
+  </div>
+  
+  <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.7rem; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 8px; opacity: 0.75;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>☀️ 05:41</span>
+      <span>🌙 20:54</span>
+    </div>
+    <div style="font-size: 0.65rem; font-style: italic;">Refreshed 03:00</div>
+  </div>
+</div>
