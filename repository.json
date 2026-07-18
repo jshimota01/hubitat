@@ -52,6 +52,13 @@
 			"description": "A Zigbee Thermostat driver specific to the Centralite Pearl Thermostat device, (aka Centralite model 3157100). Driver includes FanCirculate feature and accounts for thermostat hardware lack of Auto mode "
 		  },
 		  {
+			"name": "Twilight Parser",
+			"category": "Control",
+			"tags": [ "Dashboards", "Monitoring",  "Driver", "Date", "Timers", "Virtual", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/twilight_parser/packageManifest.json",
+			"description": "A virtual device driver that seperates allows for accurate twilight date and time components into chunks.  Useful for lighting and night activities "
+		  },
+		  {
 			"name": "Inverse Link Two Switches",
 			"category": "Convenience",
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
