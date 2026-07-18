@@ -36,17 +36,11 @@
  * 2026-07-18	jshimota	0.2.6	fixed odd string being stored incorrectly found with dev info driver
  * 2026-07-18	jshimota	0.2.7	bug hunt, problems with date storage payloads
  * 2026-07-18   jshimota    0.2.8   Refactored out state variables to local variables only
- * 2026-07-18   jshimota    0.2.9   Refactored all sendEvent calls to sendIfChanged
- * 2026-07-18   jshimota    0.3.0   Migrated logging statements to new dynamic logger routines
- * 2026-07-18   jshimota    0.3.1   Refactored redundant date parsing to use getTargetDate() helper
- * 2026-07-18   jshimota    0.3.2   Integrated formatTime and formatDate helpers into handler
- * 2026-07-18   jshimota    0.3.3-4 Minor tweaks
  *
  */
 
-static String version() { return '0.3.4' }
+static String version() { return '0.2.8' }
 import java.text.SimpleDateFormat
-import java.util.Locale
 import java.time.*
 
 metadata {
@@ -78,12 +72,12 @@ metadata {
         attribute "localAstronomicalTwilightBegin",  "string"
         attribute "localAstronomicalTwilightEnd",    "string"
 
-		attribute "usedLongitude", 					"string"
-		attribute "usedLatitude", 					"string"
-		attribute "usedDate", 						"string"
-		attribute "usedTimeZone", 					"string"
         attribute "usedTwilightBegin",               "string"
         attribute "usedTwilightEnd",                 "string"
+        attribute "usedLatitude",                    "string"
+        attribute "usedLongitude",                   "string"
+        attribute "usedDate",                        "string"
+        attribute "usedTimeZone",                    "string"
         attribute "localSrEpoch",                    "number"
         attribute "localSsEpoch",                    "number"
              
@@ -92,10 +86,10 @@ metadata {
     }
 
     preferences {
-        input name: 'overrideDate', type: 'date', title: 'Override Date', description: 'Override Date to be calculated (leave blank for today)', required: false           
-        input name: 'overrideLatitude', type: 'text', title: 'Latitude', description: 'Override Latitude (leave blank for hub value)', required: false
-        input name: 'overrideLongitude', type: 'text', title: 'Longitude', description: 'Override Longitude (leave blank for hub value)', required: false
-        input name: 'overrideTimeZone', type: 'text', title: 'Timezone', description: 'Override Timezone (leave blank for hub value)', required: false
+        input name: 'usedDate', type: 'date', title: 'Override Date', description: 'Override Date to be calculated (leave blank for today)', required: false           
+        input name: 'usedLatitude', type: 'text', title: 'Latitude', description: 'Override Latitude (leave blank for hub value)', required: false
+        input name: 'usedLongitude', type: 'text', title: 'Longitude', description: 'Override Longitude (leave blank for hub value)', required: false
+        input name: 'usedTimeZone', type: 'text', title: 'Timezone', description: 'Override Timezone (leave blank for hub value)', required: false
         input name: 'useCDate', type: 'bool', title: 'Use Current Date', description: "Disable to use Override Date (Default is enabled)", required: false, defaultValue: true
         input name: "twilightChoice", type: "enum", multiple: false, options: [["1":"Civil"],["2":"Nautical"],["3":"Astronomical"]], title: "Twilight Value Used", description: "Sets twilight pair used for main value (default is Civil)", defaultValue: "1", required: true
             
@@ -110,34 +104,33 @@ metadata {
 
 void updated() {
     unschedule()
-    if (settings.debugEnable) runIn(1800, disableDebugLogging) 
-    logTrace("${device.displayName} : Updated has run")
-    logTrace("${device.displayName} : twilightChoice set to ${twilightChoice}")
+    if (settings.debugEnable) runIn(1800, logsOff) 
+    if (settings.traceEnable) log.trace "${device.displayName} : Updated has run"
+    if (settings.traceEnable) log.trace "${device.displayName} : twilightChoice set to ${twilightChoice}"
     if (autoUpdate) {
         schedUpdate()
     }
 }
 
-void installed(){
-    logInfo("Installed")
-    updated()
+void installed() {
+    if (settings.traceEnable) log.trace "${device.displayName} : Installed"
     refresh()
 }
 
 void uninstalled() {
-    logTrace("${device.displayName} : Uninstalled")
+    if (settings.traceEnable) log.trace "${device.displayName} : Uninstalled"
 }
 
 def schedUpdate() {
     if (autoUpdate) {
-        logInfo("${device.displayName} : Scheduling update sequence initialization.")
+        if (logEnable) log.info "${device.displayName} : Scheduling update sequence initialization."
         runIn(5, "mySchedule")
     }
 }
 
 def mySchedule() {
     String interval = autoUpdateInterval?.toString()
-    logDebug("${device.displayName} : Configuring Cron for interval: ${interval}")
+    if (settings.debugEnable) log.debug "${device.displayName} : Configuring Cron for interval: ${interval}"
     
     switch(interval) {
         case "1":
@@ -157,7 +150,12 @@ def mySchedule() {
 }        
         
 void parse(String description) {
-    logTrace("${device.displayName} : Description is $description")
+    if (settings.traceEnable) log.trace "${device.displayName} : Description is $description"
+}
+
+void logsOff() {
+    log.warn "debug logging disabled..."
+    device.updateSetting("debugEnable", [value: "false", type: "bool"])
 }
    
 void deleteAllCurrentStates() {
@@ -165,38 +163,45 @@ void deleteAllCurrentStates() {
     attribs.each { attr ->
         device.deleteCurrentState(attr)
     }
-    logTrace("All current states removed") 
+    if (settings.traceEnable) log.trace "All current states removed" 
 }
 
 void deleteAllStateVariables() {
     state.clear()
-    logTrace("${device.displayName} : All state variables removed") 
+    if (settings.traceEnable) log.trace "${device.displayName} : All state variables removed" 
 }
 
 void refresh() {
     pollSunRiseSet()
-    logInfo("${device.displayName} : Refresh triggered.")  
+    if (logEnable) log.info "${device.displayName} : Refresh triggered."  
 }
 
 void poll() {
     pollSunRiseSet()
-    logInfo("${device.displayName} : Poll triggered.")
+    if (logEnable) log.info "${device.displayName} : Poll triggered."
 }
 
 def pollSunRiseSet() {
-    def lat = settings.overrideLatitude ?: location.latitude
-    def lng = settings.overrideLongitude ?: location.longitude
-    def tz = settings.overrideTimeZone ?: location.timeZone?.ID
+    def lat = usedLatitude ?: location.latitude
+    def lng = usedLongitude ?: location.longitude
+    def tz = usedTimeZone ?: location.timeZone?.ID
     
     if (!lat || !lng) {
-        logError("${device.displayName} : Cannot poll api. Missing Latitude/Longitude configuration values.")
+        log.error "${device.displayName} : Cannot poll api. Missing Latitude/Longitude configuration values."
         return
     }
 
-    String targetDate = getTargetDate()
+    def targetDate
+    if (useCDate || !usedDate) { 
+        def sdf = new SimpleDateFormat("yyyy-MM-dd")  
+        sdf.setTimeZone(location.timeZone)
+        targetDate = sdf.format(new Date(now()))
+    } else {
+        targetDate = usedDate
+    }
 
     def requestParams = [ uri: "https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&tzid=${tz}&date=${targetDate}&formatted=0" ]
-    logInfo("SunRiseSet execution targeting API request date: ${targetDate}")
+    if (logEnable) log.info "SunRiseSet execution targeting API request date: ${targetDate}"
     
     asynchttpGet("sunRiseSetHandler", requestParams)
 }
@@ -213,36 +218,15 @@ private void sendIfChanged(Map args) {
         Map eventMap = [name: args.name, value: args.value, descriptionText: "Attribute ${args.name} changed to ${args.value}"]
         if (args.unit) eventMap.unit = args.unit
         sendEvent(eventMap)
-        logDebug("Event triggered: ${args.name} -> ${args.value}")
+        logDebug "Event triggered: ${args.name} -> ${args.value}"
     }
-}
-
-private String getTargetDate(){
-    if(useCDate || !settings.overrideDate){
-        SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd")
-        sdf.setTimeZone(location.timeZone)
-        return sdf.format(new Date())
-    }
-    return settings.overrideDate
-}
-
-private String formatTime(Date d){
-    SimpleDateFormat sdf=new SimpleDateFormat("h:mm a",Locale.US)
-    sdf.setTimeZone(location.timeZone)
-    return sdf.format(d).toLowerCase()
-}
-
-private String formatDate(Date d){
-    SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss",Locale.US)
-    sdf.setTimeZone(location.timeZone)
-    return sdf.format(d)
 }
 
 def sunRiseSetHandler(resp, data) {
     if(resp.getStatus() == 200 || resp.getStatus() == 207) {
         def sunRiseSet = resp.getJson()?.results
         if (!sunRiseSet) {
-            logError("API returned clean 200 response but empty payload fields.")
+            log.error "API returned clean 200 response but empty payload fields."
             return
         }
 
@@ -262,6 +246,7 @@ def sunRiseSetHandler(resp, data) {
         Date usedTwilightBegin
         Date usedTwilightEnd
         String choice = twilightChoice?.toString() ?: "1"
+
         if (choice == "2") {
             usedTwilightBegin = nautBeg
             usedTwilightEnd = nautEnd
@@ -273,26 +258,40 @@ def sunRiseSetHandler(resp, data) {
             usedTwilightEnd = civEnd
         }
 
-        // Setup formatted string structures via helpers
-        String formattedUsedTwilightBegin = formatTime(usedTwilightBegin)
-        String formattedUsedLocalSunrise  = formatTime(sRise)
-        String formattedUsedSolarNoon     = formatTime(sNoon)
-        String formattedUsedLocalSunset   = formatTime(sSet)
-        String formattedUsedTwilightEnd   = formatTime(usedTwilightEnd)
+        // Setup Date formatters for display outputs
+        def dTTimeHourMinAPattern = new SimpleDateFormat('h:mm a')
+        dTTimeHourMinAPattern.setTimeZone(location.timeZone)
+        
+        def displayFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+        displayFormat.setTimeZone(location.timeZone)
+
+        String formattedUsedTwilightBegin = dTTimeHourMinAPattern.format(usedTwilightBegin).toLowerCase(Locale.US) 
+        String formattedUsedLocalSunrise  = dTTimeHourMinAPattern.format(sRise).toLowerCase(Locale.US)
+        String formattedUsedSolarNoon     = dTTimeHourMinAPattern.format(sNoon).toLowerCase(Locale.US)
+        String formattedUsedLocalSunset   = dTTimeHourMinAPattern.format(sSet).toLowerCase(Locale.US)
+        String formattedUsedTwilightEnd   = dTTimeHourMinAPattern.format(usedTwilightEnd).toLowerCase(Locale.US)
         
         // Use Local Variables instead of Driver State Storage
-        String usedTwilightBeginLocalVar = formatDate(usedTwilightBegin)
-        String usedTwilightEndLocalVar   = formatDate(usedTwilightEnd)
-        String localSunriseLocalVar       = formatDate(sRise)
-        String localSunsetLocalVar        = formatDate(sSet)
+        String localSunriseLocalVar = displayFormat.format(sRise)
+        String localSunsetLocalVar  = displayFormat.format(sSet)
+        String usedTwilightBeginLocalVar = displayFormat.format(usedTwilightBegin)
+        String usedTwilightEndLocalVar = displayFormat.format(usedTwilightEnd)
 
-        def overrideLatitudeLocalVar = settings.overrideLatitude ?: location.latitude
-        def overrideLongitudeLocalVar = settings.overrideLongitude ?: location.longitude
-        String overrideDateLocalVar = getTargetDate()
-        String overrideTimeZoneLocalVar = settings.overrideTimeZone ?: location.timeZone?.ID
+        def usedLatitudeLocalVar = usedLatitude ?: location.latitude
+        def usedLongitudeLocalVar = usedLongitude ?: location.longitude
+
+        String usedDateLocalVar
+        if (useCDate || !usedDate) { 
+            def sdf = new SimpleDateFormat("yyyy-MM-dd")  
+            sdf.setTimeZone(location.timeZone)
+            usedDateLocalVar = sdf.format(new Date(now()))
+        } else {
+            usedDateLocalVar = usedDate
+        }
 
         long localSrEpoch = sRise.getTime()
         long localSsEpoch = sSet.getTime()
+        String usedTimeZoneLocalVar = usedTimeZone ?: location.timeZone?.ID
 
         // Safe conversion of day_length calculation to Integer/String formatting
         int totalSeconds = 0
@@ -304,54 +303,36 @@ def sunRiseSetHandler(resp, data) {
         int seconds = totalSeconds % 60
         String formattedDay_Length = String.format("%02d:%02d:%02d", hours, minutes, seconds)
 
-        logDebug("Calculated Twilight Values: Begin=${usedTwilightBeginLocalVar}, End=${usedTwilightEndLocalVar}. Note: Drivers cannot set Global Variables directly.")
+        if (settings.debugEnable) {
+            log.debug "Calculated Twilight Values: Begin=${usedTwilightBeginLocalVar}, End=${usedTwilightEndLocalVar}. Note: Drivers cannot set Global Variables directly."
+        }
 
         // Fire stringified clean event values to device dashboard interfaces using local variables
-        sendIfChanged(name: 'localSrEpoch', value: localSrEpoch)
-        sendIfChanged(name: 'localSsEpoch', value: localSsEpoch)
-        sendIfChanged(name: 'localSunrise', value: localSunriseLocalVar)        
-        sendIfChanged(name: 'localSunset' , value: localSunsetLocalVar)
-        sendIfChanged(name: 'localSolarNoon', value: formatDate(sNoon))
-        sendIfChanged(name: 'localCivilTwilightBegin', value: formatDate(civBeg))
-        sendIfChanged(name: 'localCivilTwilightEnd', value: formatDate(civEnd))
-        sendIfChanged(name: 'localNauticalTwilightBegin', value: formatDate(nautBeg))
-        sendIfChanged(name: 'localNauticalTwilightEnd', value: formatDate(nautEnd))
-        sendIfChanged(name: 'localAstronomicalTwilightBegin', value: formatDate(astroBeg))
-        sendIfChanged(name: 'localAstronomicalTwilightEnd', value: formatDate(astroEnd))
-        sendIfChanged(name: 'usedLatitude', value: overrideLatitudeLocalVar)
-        sendIfChanged(name: 'usedLongitude', value: overrideLongitudeLocalVar)
-        sendIfChanged(name: 'usedDate', value: overrideDateLocalVar)
-        sendIfChanged(name: 'usedTimeZone', value: overrideTimeZoneLocalVar)
-        sendIfChanged(name: 'usedTwilightBegin', value: usedTwilightBeginLocalVar)
-        sendIfChanged(name: 'usedTwilightEnd', value: usedTwilightEndLocalVar)
+        sendEvent(name: 'localSrEpoch', value: localSrEpoch)
+        sendEvent(name: 'localSsEpoch', value: localSsEpoch)
+        sendEvent(name: 'localSunrise', value: localSunriseLocalVar)        
+        sendEvent(name: 'localSunset' , value: localSunsetLocalVar)
+        sendEvent(name: 'localSolarNoon', value: displayFormat.format(sNoon))
+        sendEvent(name: 'localCivilTwilightBegin', value: displayFormat.format(civBeg))
+        sendEvent(name: 'localCivilTwilightEnd', value: displayFormat.format(civEnd))
+        sendEvent(name: 'localNauticalTwilightBegin', value: displayFormat.format(nautBeg))
+        sendEvent(name: 'localNauticalTwilightEnd', value: displayFormat.format(nautEnd))
+        sendEvent(name: 'localAstronomicalTwilightBegin', value: displayFormat.format(astroBeg))
+        sendEvent(name: 'localAstronomicalTwilightEnd', value: displayFormat.format(astroEnd))
+        sendEvent(name: 'usedLatitude', value: usedLatitudeLocalVar)
+        sendEvent(name: 'usedLongitude', value: usedLongitudeLocalVar)
+        sendEvent(name: 'usedDate', value: usedDateLocalVar)
+        sendEvent(name: 'usedTimeZone', value: usedTimeZoneLocalVar)
+        sendEvent(name: 'usedTwilightBegin', value: usedTwilightBeginLocalVar)
+        sendEvent(name: 'usedTwilightEnd', value: usedTwilightEndLocalVar)
         
-        sendIfChanged(name: 'formattedUsedTwilightBegin', value: formattedUsedTwilightBegin)
-        sendIfChanged(name: 'formattedUsedLocalSunrise', value: formattedUsedLocalSunrise)
-        sendIfChanged(name: 'formattedUsedSolarNoon', value: formattedUsedSolarNoon)
-        sendIfChanged(name: 'formattedUsedLocalSunset', value: formattedUsedLocalSunset)
-        sendIfChanged(name: 'formattedUsedTwilightEnd', value: formattedUsedTwilightEnd)
-        sendIfChanged(name: 'localDayLength', value: formattedDay_Length)   
+        sendEvent(name: 'formattedUsedTwilightBegin', value: formattedUsedTwilightBegin)
+        sendEvent(name: 'formattedUsedLocalSunrise', value: formattedUsedLocalSunrise)
+        sendEvent(name: 'formattedUsedSolarNoon', value: formattedUsedSolarNoon)
+        sendEvent(name: 'formattedUsedLocalSunset', value: formattedUsedLocalSunset)
+        sendEvent(name: 'formattedUsedTwilightEnd', value: formattedUsedTwilightEnd)
+        sendEvent(name: 'localDayLength', value: formattedDay_Length)   
     } else { 
-        logError("Sunrise-sunset api poll did not return data. Status Code: ${resp.getStatus()}") 
+        log.error "Sunrise-sunset api poll did not return data. Status Code: ${resp.getStatus()}" 
     }
 }
-
-void disableDebugLogging() {
-    logWarn("30 minutes have elapsed. Automatically disabling debug logging.")
-    device.updateSetting("debugEnable", [type: "bool", value: false])
-}
-
-// Unified dynamic logger helper mapping
-private void logMessage(String level, String msg) {
-    // Standardizing preference selection map checks to match standard driver preference naming keys
-    String prefKey = level == "info" ? "logEnable" : "${level}Enable"
-    if (settings[prefKey] == true || level == "warn" || level == "error") {
-        log."${level}" "Twilight Parser Driver${level == 'warn' ? ' WARNING' : level == 'error' ? ' ERROR' : ''}: ${msg}"
-    }
-}
-
-private void logInfo(String msg)  { logMessage("info", msg) }
-private void logDebug(String msg) { logMessage("debug", msg) }
-private void logTrace(String msg) { logMessage("trace", msg) }
-private void logWarn(String msg)  { logMessage("warn", msg) }
-private void logError(String msg) { logMessage("error", msg) }
