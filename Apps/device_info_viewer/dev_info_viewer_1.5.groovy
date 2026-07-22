@@ -16,11 +16,13 @@
 2026-01-25: Changed device names to hot links to the corresponding Hubitat device page
 2026-07-18: Added device label column next to device name
 2026-07-19: repair device label not showing associated name
+2026-07-20: added option to include ALL devices (defaults to things that only have Refresh - thats why list isn't complete)
+2026-07-20: Refactored to default to ALL devices (capability.*) enabled
 */
 
 definition(
     name: "Device Information Viewer",
-    namespace: "Ver. 1.4",
+    namespace: "Ver. 1.5",
     author: "Custom",
     description: "View and export device current states, device data, and device details as HTML table or CSV",
     category: "Utility",
@@ -38,7 +40,14 @@ preferences {
 def mainPage() {
     dynamicPage(name: "mainPage", title: "Device Information Viewer", install: true, uninstall: true) {
         section("Device Selection") {
-            input "selectedDevices", "capability.refresh", title: "Choose Devices", multiple: true, required: false
+            // Defaulted to true so capability.* is active by default
+            input "includeAllDevices", "bool", title: "Show ALL devices inlcuding Groups and Virtual in pick list below.", defaultValue: true, submitOnChange: true
+            
+            // Evaluates includeAllDevices setting; defaults to capability.* when null/true
+            def showAll = (settings.includeAllDevices != null) ? settings.includeAllDevices : true
+            def capType = showAll ? "capability.*" : "capability.refresh"
+            
+            input "selectedDevices", capType, title: "Choose Devices", multiple: true, required: false
         }
         
         section("Data to Include") {

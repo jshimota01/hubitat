@@ -1,0 +1,7 @@
+direct icons from OWM:
+https://openweathermap.org/payload/api/media/file/
+eg https://openweathermap.org/payload/api/media/file/11d.png
+
+ALTERNATIVE ICONS from https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
+(uses a redirect from tinyURL.)
+eg  https://tinyurl.com/icnqz/39.png
