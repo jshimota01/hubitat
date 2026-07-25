@@ -35,8 +35,10 @@
 	v2.2.0	07/17/26	jshimota	basepath modifications
 	v2.1.0	07/15/26	jshimota	start point
 **/
-* * * ORIGNAL DRIVER HEADING TEXT - ABRIDGED
-/* OpenWeatherMap Weather-Alerts Driver ...
+
+/*	* * * ORIGNAL DRIVER HEADING TEXT - ABRIDGED
+
+    OpenWeatherMap Weather-Alerts Driver ...
 
 	This driver has morphed many, many times, so the genesis is very blurry now.  It stated as a WeatherUnderground
 	driver, then when they restricted their API it morphed into an APIXU driver.  When APIXU ceased it became a
@@ -85,7 +87,7 @@
 =========================================================================================================
 */
 
-static String version()    {  return '0.2.4.0'  }
+static String version()    {  return '2.4.0'  }
 
 metadata {
     definition(

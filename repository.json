@@ -64,6 +64,13 @@
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/packageManifest.json",
 			"description": "A Parent App with children to set two switches to always be inversed to each other.  Can be disabled with its own switch.  Useful for folks who hate boolean! "
+		  },
+		  {
+			"name": "OpenWeatherMap Multi-API Weather Driver ",
+			"category": "Control",
+			"tags": [ "Weather", "Virtual", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/packageManifest.json",
+			"description": "A virtual device driver for weather. Includes multiple tiles, including Alerts and Moon Phase.  Has detailed Sun Altitude and Azimuth and Illuminance for use with blinds. High precision temp, barometer, rainfall and UVI. Forecasted weather data included for next 3 days"
 		  }
 	]
 	
