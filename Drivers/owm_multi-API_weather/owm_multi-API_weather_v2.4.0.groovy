@@ -1,6 +1,7 @@
-/**
- * OpenWeatherMap Multi-Version Weather Driver 2.0 (2.5 / 3.0 / 4.0)
+//**
+ * OpenWeatherMap Multi-API Weather Driver
  * Platform: Hubitat Elevation
+ * Compatible with One Call API 2.5, 3.0, and 4.0 Keys
  * Capabilities: Temperature, Illuminance, Barometric Pressure, Relative Humidity, Ultraviolet Index
  
 	Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except
@@ -85,8 +86,14 @@
 */
 
 static String version()    {  return '0.2.4.0'  }
+
 metadata {
-    definition(name: "OpenWeatherMap Multi-Version Weather Driver 2.0", namespace: "jshimota", author: "James Shimota") {
+    definition(
+            name: "OpenWeatherMap Multi-API Weather Driver",
+            namespace: "jshimota",
+            author: "James Shimota",
+            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/owm_multi-API_weather.groovy"
+    ) {
         capability "Sensor"
         capability "Refresh"
         capability "Initialize"

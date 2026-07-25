@@ -1,0 +1,22 @@
+{
+  "packageName": "OpenWeatherMap Multi-API Weather Driver",
+  "author": "James Shimota",
+  "version": "2.4.0",
+  "minimumHEVersion": "2.4.4.156",
+  "dateReleased": "2026-07-25",
+  "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/README.md",
+  "communityLink": "https://community.hubitat.com/t/release-openweathermap-multi-api-weather-driver/165312",
+  "licenseFile": "",
+  "releaseNotes": "2.4.0 Initial Release",
+  "drivers": [
+    {
+      "id": "21ee366c-1c81-435f-9072-6300949c35e9",
+      "name": "OpenWeatherMap Multi-API Weather Driver",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/owm_multi-API_weather.groovy",
+      "required": true,
+      "oauth": false,
+      "version": "2.4.0"
+    }
+  ]
+}
