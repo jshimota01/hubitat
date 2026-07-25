@@ -1,4 +1,4 @@
-//**
+/**
  * OpenWeatherMap Multi-API Weather Driver
  * Platform: Hubitat Elevation
  * Compatible with One Call API 2.5, 3.0, and 4.0 Keys
@@ -13,7 +13,7 @@
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
 	
-	*/
+*/
 /**
 	This is a complete rewrite of the original driver done by James Shimota.  This driver is designed to fit 
 	a number of needs and does both Tile generation for dashboards AND attributes useful for functions within Hubitat Elevation Rules
