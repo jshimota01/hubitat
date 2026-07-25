@@ -30,7 +30,6 @@
 	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
 	
 	VERSIONS:
-	v2.4.1	07/25/26	jshimota	Added button to allow a user to clear all schedules to help people converting
 	v2.4.0	07/25/26	jshimota	Initial public release
 	v2.3.0	07/20/26	jshimota	Integrated Moon Phase
 	v2.2.0	07/17/26	jshimota	basepath modifications
@@ -88,7 +87,7 @@
 =========================================================================================================
 */
 
-static String version()    {  return '2.4.1'  }
+static String version()    {  return '2.4.0'  }
 
 metadata {
     definition(

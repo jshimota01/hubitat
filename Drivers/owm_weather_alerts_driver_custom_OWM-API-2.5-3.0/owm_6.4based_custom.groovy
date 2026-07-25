@@ -1,7 +1,45 @@
-/*
-	OpenWeatherMap-Alerts Weather Driver (CUSTOM)
-	Import URL: https://raw.githubusercontent.com/HubitatCommunity/OpenWeatherMap-Alerts-Weather-Driver/master/OpenWeatherMap-Alerts%2520Weather%2520Driver.groovy
-	Copyright 2020 @Matthew (Scottma61)
+/**
+ * OpenWeatherMap Multi-API Weather Driver
+ * Platform: Hubitat Elevation
+ * Compatible with One Call API 2.5, 3.0, and 4.0 Keys
+ * Capabilities: Temperature, Illuminance, Barometric Pressure, Relative Humidity, Ultraviolet Index
+ 
+	Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except
+	in compliance with the License. You may obtain a copy of the License at:
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+	for the specific language governing permissions and limitations under the License.
+	
+**/
+/**
+	This is a complete rewrite of the original driver done by James Shimota.  This driver is designed to fit 
+	a number of needs and does both Tile generation for dashboards AND attributes useful for functions within Hubitat Elevation Rules
+	and other apps by the community.  It was original written with the intent of staying a private code work, but I felt
+	that there may be value to others in the community.
+	The original was title Weather-Alerts and was very Alert tile centric I felt.  It also relied on multiple sources such 
+	as OpenWeatherMaps (OWM) and Natiion Weather Service (NWS).  The data returned on NWS was frequently bad and not accurate for 
+	my location - I'm in the farm country of Oregon and that created a problem since the City would often say 'local area' instead
+	of my actual city!
+	
+	Icons and Images - there are multiple sources of images used in this driver.  The original base path is the OWM API,
+	but the base path can also use the Alternate Path which defaults to the Hubitat Public space.  In addition, there are 
+	images from the an app written previously for the Moon Phase, and that also includes a dynamic 'shading' svg if desired.
+	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
+	
+	VERSIONS:
+	v2.4.1	07/25/26	jshimota	added clear schedules button for people converting
+	v2.4.0	07/25/26	jshimota	Initial public release
+	v2.3.0	07/20/26	jshimota	Integrated Moon Phase
+	v2.2.0	07/17/26	jshimota	basepath modifications
+	v2.1.0	07/15/26	jshimota	start point
+**/
+
+/*	* * * ORIGNAL DRIVER HEADING TEXT - ABRIDGED
+
+    OpenWeatherMap Weather-Alerts Driver ...
 
 	This driver has morphed many, many times, so the genesis is very blurry now.  It stated as a WeatherUnderground
 	driver, then when they restricted their API it morphed into an APIXU driver.  When APIXU ceased it became a
@@ -20,20 +58,7 @@
 	  of https://www.deviantart.com/vclouds/art/VClouds-Weather-Icons-179152045.
 	- @storageanarchy for his Dark Sky Icon mapping and some new icons to compliment the Vclouds set.
 	- @nh.schottfam for lots of code clean up and optimizations.
-
-	In addition to all the cloned code from the Hubitat community, I have heavily modified/created new
-	code myself @Matthew (Scottma61) with lots of help from the Hubitat community.  If you believe you
-	should have been acknowledged or received attribution for a code contribution, I will happily do so.
-	While I compiled and orchestrated the driver, very little is actually original work of mine.
-
-	This driver is free to use.  I do not accept donations. Please feel free to contribute to those
-	mentioned here if you like this work, as it would not have been possible without them.
-
-	This driver is intended to pull weather data from OpenWeatherMap.org (https://OpenWeatherMap.org). You will need your
-	OpenWeatherMap API key to use the data from that site.  It also pulls in weather alerts from the Nation Weather
-	Service's API (weather.gov).  At the present time there is no API required for consume Alert data.
-
-	The driver exposes both metric and imperial measurements for you to select from.
+ .....
 
 	Licensed under the Apache License, Version 2.0 (the 'License'); you may not use this file except
 	in compliance with the License. You may obtain a copy of the License at:
@@ -43,1914 +68,2255 @@
 	Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
 	on an 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
 	for the specific language governing permissions and limitations under the License.
-
-	Last Update 01/23/2023
-	{ Left room below to document version changes...}
-
-    V0.6.4	01/23/2023	Bug fix for wind_cardinal that is creating a "No Data" response w/ 3rd party tile apps. (jas custom html tile)
-    V0.6.3	01/05/2023	Bug fix for myTile not showing icon when neither the 'Three day Forecast Tile' nor the 'Forecast High/Low Temperatures' Optional attributes are selected.
-    V0.6.2	08/23/2022	Added user selection of 2.5 or 3.5 OWM API Key; Moved Schedule Change notice to Extended Logging.
-    V0.6.1	08/22/2022	Removed the sunrise-sunset.org poll.
-    V0.6.0	08/20/2022	More corrections to sunrise/sunset data when when there is a Sunrise-Sunset.org failure.
-    V0.5.9	07/28/2022	Code clean-up and optimization (Thanks @nh.schottfam).
-    V0.5.8	07/26/2022	Fallback to hub location defaults and estimates for Sunrise-Sunset.org failure.
-    V0.5.7  06/12/2022  Both MyTile and the Three day Forecast Tile use the Icon and Text selected in the 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile' option.
-    V0.5.6	06/11/2022	Corrected 3 day tile icon to honor user's selection of Current or Forecast icon.
-    V0.5.5	06/10/2022	Corrected PoP1 & PoP2 from not displaying when extended precipitation forcast was selected.
-    V0.5.4	04/17/2022	Fallback for Sunrise-Sunset.org failure.
-	V0.5.3	08/11/2021	Exposed cloud coverage forecasts.
-	V0.5.2	01/26/2021	Corrected a display issue on Alerts.
-	V0.5.1	12/12/2020	Changes to dahboard tile logo/hyperlinks when using weather.gov for alerts and there is an alert.
-	V0.5.0	12/08/2020	Bug fix for 'forecast_textn' optional attributes.
-	V0.4.9	12/03/2020	New tinyurl for icons.  Added tinyurl for weather.gov alert poll.
-	V0.4.8	12/01/2020	Added ability to select Weather Alert source (none/OWM/Weather.gov {US Only}).
-	V0.4.7	11/26/2020	Bug fixes.  Fix timeouts on http calls (by @nh.schottfam).
-	V0.4.6	11/06/2020	Refactored the dashboard tiles.
-	V0.4.5	10/31/2020	Tweaked threedayfcstTile for small screens.
-	V0.4.4	10/30/2020	More code cleanups/reductions/optimizations by @nh.schottfam.
-	V0.4.3	10/29/2020	Bug fixes and the usual code cleanup/reduction/optimizations by @nh.schottfam.
-	V0.4.2	10/29/2020	Yet another Precip bux fix.
-	V0.4.1	10/29/2020	Move today's precip back to 'Daily'.  More bux fixes.
-	V0.4.0	10/28/2020	More Bux fixes for new Probability of Precipitation (PoP) from OWM.
-	V0.3.9	10/28/2020	Bux fixes for new Probability of Precipitation (PoP) from OWM.
-	V0.3.8	10/28/2020	Added Probability of Precipitation (PoP) from OWM.  Bug fixes and code and string reductions by @nh.schottfam).
-	V0.3.7	10/27/2020	Bug fixes.
-	V0.3.6	10/27/2020	Removed '+' from attribute names.  Three Day Tile now has optional 'Low/High' or 'High/Low' setting.
-	V0.3.5	10/25/2020	Bug fixes for null JSON returns.
-	V0.3.4	10/24/2020	Added indicator of multiple alerts in tiles. Minor bug fixes (by @nh.schottfam).
-	V0.3.3	10/23/2020	Code optimizations and minor bug fixes (by @nh.schottfam).
-	V0.3.2	10/22/2020	Removed 'NWS' from driver name, minor bug fixes.
-	V0.3.1	10/21/2020	Improved OWM URLs in the dashboard tiles to pull in location's city code (if available).
-	V0.3.0	10/21/2020	Better OWM URLs in the dashboard tiles.
+	.
+	.
+	.
+    V0.6.8	08/31/2023	Added pull request from @nh.schottfam to display sun 'altitude' & 'azimuth' as stand-alone optional attributes. Code cleanups.
+	.
+	.
+	.
 	V0.2.9	10/20/2020	Correcting some Tile displays from the last update.
 	V0.2.8	10/20/2020	Pulling Alerts from OWM instead of NWS.
-	V0.2.7	10/19/2020	Added forecast 'Morn', 'Day', 'Eve' and 'Night' temperatures for current day and tomorrow.
-	V0.2.6	10/07/2020	Change to use asynchttp for NWS alerts (by @nh.schottfam).
-	V0.2.5	10/02/2020	More string constant optimizations (by @nh.schottfam)
-	V0.2.4	09/27/2020	Fix to allow for use of multiple virtual devices, More string constant optimizations (by @nh.schottfam)
-	V0.2.3	09/24/2020	More string constant optimizations, and removal of white space characters (by @nh.schottfam)
-	V0.2.2	09/23/2020	Removing 'urgency' restrictions from alerts poll
-	V0.2.1	09/22/2020	Added forecast icon url attributes for tomorrow and day-after-tomorrow
-	V0.2.0	09/21/2020	Added forecast High/Low temp attributes for tomorrow and day-after-tomorrow
-	V0.1.9	09/16/2020	Removing 'severity' and 'certainty' restrictions from alerts poll
-	V0.1.8	09/13/2020	Re-worked Alerts to not be dependent on api.weather.gov returning a valid response code
-	V0.1.7	09/12/2020	Remove most DB accesses and string cleanup (by @nh.schottfam)
-	V0.1.6	09/08/2020	Restoring 'certainty' to weather.gov alert poll
-	V0.1.5	09/08/2020	Removed 'certainty' from weather.gov alert poll
-	V0.1.4	09/07/2020	Bug fix for NullPointerException on line 580
-	V0.1.3	09/05/2020	Improved Alert handling for dashboard tiles, again, various bug fixes
-	V0.1.2	07/02/2020	Bug fix sync MyTile and weatherSummary tiles upon alert update
-	V0.1.1	06/06/2020	Bug fix to exclude minutely and hourly data in poll
-	V0.1.0	05/07/2020	Improved Alert handling for dashboard tiles, various bug fixes
-	V0.0.9	04/24/2020	Continue to work on improving null handling, various bug fixes
-	V0.0.8	4/23/2020-2	Numerous bug fixes, better handling where alerts are not available, handling nulls
-	V0.0.7	04/23/2020	Numerous bug fixes, better handling where alerts are not available
-	V0.0.6	04/20/2020	Refactored much of the code, added Hubitat Package Manager compatibility
+	.
+	.
+	.
 	V0.0.5	04/19/2020	More code cleanup and optimizations (Thanks @nh.schottfam!)
 	V0.0.4	04/18/2020	Corrected forecast icon to always be 'day' instead of current time
 	V0.0.3	04/18/2020	More fixes on Alerts, mapped condition_code, weatherIcon(s)
 	V0.0.2	04/17/2020	Fixed Alerts on myTile and alertTile, Capitalized condition_text
 	V0.0.1	04/17/2020	Initial conversion from Dark Sky to OWM
 =========================================================================================================
-**ATTRIBUTES CAUTION**
-The way the 'optional' attributes work:
- - Initially, only the optional attributes selected will show under 'Current States' and will be available
-	in dashboard.
- - Once an attribute has been selected it too will show under 'Current States' and be available in dashboard.
-	<*** HOWEVER ***> If you ever de-select the optional attribute, it will still show under 'Current States'
-	and will still show as an attribute for dashboards **BUT IT'S DATA WILL NO LONGER BE REFRESHED WITH DATA
-	POLLS**.  This means what is shown on the 'Current States' and dashboard tiles for de-selected attributes
-	may not be current valid data.
- - To my knowledge, the only way to remove the de-selected attribute from 'Current States' and not show it as
-	available in the dashboard is to delete the virtual device and create a new one AND DO NOT SELECT the
-	attribute you do not want to show.
 */
 
-//file:noinspection GroovyUnusedAssignment
-//file:noinspection SpellCheckingInspection
-//file:noinspection unused
-//file:noinspection GroovyAssignabilityCheck
-//file:noinspection GrDeprecatedAPIUsage
-
-static String version()	{  return '0.6.4'  }
-import groovy.transform.Field
+static String version()    {  return '2.4.1'  }
 
 metadata {
-	definition (name: 'OpenWeatherMap-Alerts Weather Driver (CUSTOM)',
-		namespace: 'JSHIMOTA',
-		author: 'Scottma61',
-		importUrl: 'https://raw.githubusercontent.com/HubitatCommunity/OpenWeatherMap-Alerts-Weather-Driver/master/OpenWeatherMap-Alerts%2520Weather%2520Driver.groovy') {
-
-		capability 'Sensor'
-		capability 'Temperature Measurement'
-		capability 'Illuminance Measurement'
-		capability 'Relative Humidity Measurement'
-		capability 'Pressure Measurement'
-		capability 'Ultraviolet Index'
-
-		capability 'Refresh'
-
-		attributesMap.each {
-			k, v -> if (v.ty)	attribute k, v.ty
-		}
-//	The following attributes may be needed for dashboards that require these attributes,
-//	so they are alway available and shown by default.
-		attribute 'city', sSTR			//Hubitat  OpenWeather  SharpTool.io  SmartTiles
-		attribute 'feelsLike', sNUM		//SharpTool.io  SmartTiles
-		attribute 'forecastIcon', sSTR	//SharpTool.io
-		attribute 'localSunrise', sSTR	//SharpTool.io  SmartTiles
-		attribute 'localSunset', sSTR	//SharpTool.io  SmartTiles
-		attribute 'percentPrecip', sNUM	//SharpTool.io  SmartTiles
-		attribute 'pressured', sSTR		//UNSURE SharpTool.io  SmartTiles
-		attribute 'weather', sSTR		//SharpTool.io  SmartTiles
-		attribute 'weatherIcon', sSTR	//SharpTool.io  SmartTiles
-		attribute 'weatherIcons', sSTR	//Hubitat  openWeather
-		attribute 'wind', sNUM			//SharpTool.io
-		attribute 'windDirection', sNUM	//Hubitat  OpenWeather
-		attribute 'windSpeed', sNUM		//Hubitat  OpenWeather
-
-//	The attributes below are sub-groups of optional attributes.  They need to be listed here to be available
-//alert
-		attribute 'alert', sSTR
-		attribute 'alertTile', sSTR
-		attribute 'alertDescr', sSTR
-		attribute 'alertSender', sSTR
-
-//threedayTile
-		attribute 'threedayfcstTile', sSTR
-
-//fcstHighLow
-		attribute 'forecastHigh', sNUM
-		attribute 'forecastHigh1', sNUM
-		attribute 'forecastHigh2', sNUM
-		attribute 'forecastLow', sNUM
-		attribute 'forecastLow1', sNUM
-		attribute 'forecastLow2', sNUM
-		attribute 'forecastMorn', sNUM
-		attribute 'forecastDay', sNUM
-		attribute 'forecastEve', sNUM
-		attribute 'forecastNight', sNUM
-		attribute 'forecastMorn1', sNUM
-		attribute 'forecastDay1', sNUM
-		attribute 'forecastEve1', sNUM
-		attribute 'forecastNight1', sNUM
-		attribute 'forecast_text1', sSTR
-		attribute 'forecast_text2', sSTR
-		attribute 'condition_icon_url1', sSTR
-		attribute 'condition_icon_url2', sSTR
-
-//controlled with localSunrise
-		attribute 'tw_begin', sSTR
-		attribute 'sunriseTime', sSTR
-		attribute 'noonTime', sSTR
-		attribute 'sunsetTime', sSTR
-		attribute 'tw_end', sSTR
-
-//obspoll
-		attribute 'last_poll_Forecast', sSTR // time the poll was initiated
-		attribute 'last_observation_Forecast', sSTR  // datestamp of the forecast observation
-
-//precipExtended
-		attribute 'rainTomorrow', sNUM
-		attribute 'rainDayAfterTomorrow', sNUM
-        attribute 'Precip0', sNUM
-        attribute 'Precip1', sNUM
-        attribute 'Precip2', sNUM
-        attribute 'PoP1', sNUM
-        attribute 'PoP2', sNUM
-
-//cloudExtended
-		attribute 'cloudToday', sNUM
-		attribute 'cloudTomorrow', sNUM
-		attribute 'cloudDayAfterTomorrow', sNUM
-
-		command 'pollData'
-	}
-
-	preferences() {
-		String settingDescr = settingEnable ? '<br><i>Hide many of the optional attributes to reduce the clutter, if needed, by turning OFF this toggle.</i><br>' : '<br><i>Many optional attributes are available to you, if needed, by turning ON this toggle.</i><br>'
-		section('Query Inputs'){
-			input 'apiKey', 'text', required: true, title: 'Type OpenWeatherMap.org API Key Here', defaultValue: null
-            input 'apiVer', 'bool', required: true, title: 'API Key Version (2.5 = OFF;   3.0 = ON)', defaultValue: false
-			input 'city', 'text', required: true, defaultValue: 'City or Location name forecast area', title: 'City name'
-			input 'pollIntervalForecast', 'enum', title: 'External Source Poll Interval (daytime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
-			input 'pollIntervalForecastnight', 'enum', title: 'External Source Poll Interval (nighttime)', required: true, defaultValue: '3 Hours', options: ['Manual Poll Only', '2 Minutes', '5 Minutes', '10 Minutes', '15 Minutes', '30 Minutes', '1 Hour', '3 Hours']
-			input 'txtEnable', 'bool', title: 'Enable Extended Logging', description: '<i>Extended logging will turn off automatically after 30 minutes.</i>', required: true, defaultValue: false
-			input 'alertSource', 'enum', required: true, defaultValue: sONE, title: 'Weather Alert Source<br>0=None 1=OWM or 2=Weather.gov (US only)', options: [0:sZERO, 1:sONE, 2:sTWO]
-			input 'tempFormat', 'enum', required: true, defaultValue: 'Fahrenheit (°F)', title: 'Display Unit - Temperature: Fahrenheit (°F) or Celsius (°C)',  options: ['Fahrenheit (°F)', 'Celsius (°C)']
-			input 'TWDDecimals', 'enum', required: true, defaultValue: sZERO, title: 'Display decimals for Temperature & Wind Speed', options: [0:sZERO, 1:sONE, 2:'2', 3:'3', 4:'4']
-			input 'RDecimals', 'enum', required: true, defaultValue: sZERO, title: 'Display decimals for Precipitation', options: [0:sZERO, 1:sONE, 2:'2', 3:'3', 4:'4']
-			input 'PDecimals', 'enum', required: true, defaultValue: sZERO, title: 'Display decimals for Pressure', options: [0:sZERO, 1:sONE, 2:'2', 3:'3', 4:'4']
-			input 'datetimeFormat', 'enum', required: true, defaultValue: sONE, title: 'Display Unit - Date-Time Format',  options: [1:'m/d/yyyy 12 hour (am|pm)', 2:'m/d/yyyy 24 hour', 3:'mm/dd/yyyy 12 hour (am|pm)', 4:'mm/dd/yyyy 24 hour', 5:'d/m/yyyy 12 hour (am|pm)', 6:'d/m/yyyy 24 hour', 7:'dd/mm/yyyy 12 hour (am|pm)', 8:'dd/mm/yyyy 24 hour', 9:'yyyy/mm/dd 24 hour']
-			input 'distanceFormat', 'enum', required: true, defaultValue: 'Miles (mph)', title: 'Display Unit - Distance/Speed: Miles, Kilometers, knots or meters',  options: ['Miles (mph)', 'Kilometers (kph)', 'knots', 'meters (m/s)']
-			input 'pressureFormat', 'enum', required: true, defaultValue: 'Inches', title: 'Display Unit - Pressure: Inches or Millibar/Hectopascal',  options: ['Inches', 'Millibar', 'Hectopascal']
-			input 'rainFormat', 'enum', required: true, defaultValue: 'Inches', title: 'Display Unit - Precipitation: Inches or Millimeters',  options: ['Inches', 'Millimeters']
-			input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
-//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-			input 'iconLocation', 'text', required: true, defaultValue: 'https://tinyurl.com/icnqz/', title: 'Alternative Icon Location:'
-			input 'iconType', 'bool', title: 'Condition Icon/Text for current day on MyTile & Three Day Forecast Tile: On=Current or Off=Forecast', required: true, defaultValue: false
-			input 'altCoord', 'bool', required: true, defaultValue: false, title: "Override Hub's location coordinates"
-			if (altCoord) {
-				input 'altLat', sSTR, title: 'Override location Latitude', required: true, defaultValue: location.latitude.toString(), description: '<br>Enter location Latitude<br>'
-				input 'altLon', sSTR, title: 'Override location Longitude', required: true, defaultValue: location.longitude.toString(), description: '<br>Enter location Longitude<br>'
-			}
-			input 'settingEnable', 'bool', title: '<b>Display All Optional Attributes</b>', description: settingDescr, defaultValue: true
-	//build a Selector for each mapped Attribute or group of attributes
-			attributesMap.each {
-				keyname, attribute ->
-				if (settingEnable) {
-					input keyname+'Publish', 'bool', title: attribute.t, required: true, defaultValue: attribute.defa, description: sBR+(String)attribute.d+sBR
-					if(keyname == 'threedayTile') input 'threedayLH', 'bool', title: 'Three Day Temp Display', description: '<br>High/Low: On or Low/High: Off<br>', required: true, defaultValue: false
-					if(keyname == 'weatherSummary') input 'summaryType', 'bool', title: 'Full Weather Summary', description: '<br>Full: on or short: off summary?<br>', required: true, defaultValue: false
-				}
-			}
-			if (settingEnable) {
-				input 'windPublish', 'bool', title: 'Wind Speed', required: true, defaultValue: sFLS, description: '<br>Display wind speed<br>'
-			}
-		}
-	}
-}
-
-@Field static final String sNULL=(String)null
-@Field static final String sAB='<a>'
-@Field static final String sACB='</a>'
-@Field static final String sCSPAN='</span>'
-@Field static final String sBR='<br>'
-@Field static final String sBLK=''
-@Field static final String sSPC=' '
-@Field static final String sRB='>'
-@Field static final String sCOMMA=','
-@Field static final String sMINUS='-'
-@Field static final String sCOLON=':'
-@Field static final String sZERO='0'
-@Field static final String sONE='1'
-@Field static final String sTWO='2'
-@Field static final String sDOT='.'
-@Field static final String sICON='iconLocation'
-@Field static final String sTMETR='tMetric'
-@Field static final String sDMETR='dMetric'
-@Field static final String sPMETR='pMetric'
-@Field static final String sRMETR='rMetric'
-@Field static final String sTEMP='temperature'
-@Field static final String sSUMLST='Summary_last_poll_time'
-@Field static final String sTRU='true'
-@Field static final String sFLS='false'
-@Field static final String sNPNG='na.png'
-@Field static final String s11D='11d.png'
-@Field static final String s11N='11n.png'
-@Field static final String sCTS='chancetstorms'
-@Field static final String sNCTS='nt_chancetstorms'
-@Field static final String sRAIN='rain'
-@Field static final String sNRAIN='nt_rain'
-@Field static final String sPCLDY='partlycloudy'
-@Field static final String sNPCLDY='nt_partlycloudy'
-@Field static final String s23='23.png'
-@Field static final String s9='9.png'
-@Field static final String s39='39.png'
-@Field static final String sDF='°F'
-@Field static final String sIMGS5='<img class="cI" src='
-@Field static final String sIMGS8='<img class="cIb" src='
-@Field static final String sTD='<td>'
-@Field static final String sTR='<tr><td>'
-@Field static final String sSTR='string'
-@Field static final String sNUM='number'
-@Field static final String sNCWA='No current weather alerts for this area'
-
-// <<<<<<<<<< Begin Sunrise-Sunset Poll Routines >>>>>>>>>>
-void pollSunRiseSet() {
-	if(ifreInstalled()) { updated(); return }
-	String currDate = new Date().format('yyyy-MM-dd', TimeZone.getDefault())
-	TimeZone tZ= TimeZone.getDefault()
-    String tfmt1='HH:mm'
-    Date tsunrise= todaysSunrise
-    Date tsunset= todaysSunset
-    myUpdData('riseTime', tsunrise.format(tfmt1, tZ))
-    myUpdData('noonTime', new Date(tsunrise.getTime() + ((tsunset.getTime() - tsunrise.getTime()).intdiv(2))).format(tfmt1, tZ))
-    myUpdData('setTime', tsunset.format(tfmt1, tZ))
-    myUpdData('tw_begin', new Date(tsunrise.getTime() - (25*60*1000)).format(tfmt1, tZ)) // 25 minutes before sunrise
-    myUpdData('tw_end', new Date(tsunset.getTime() + (25*60*1000)).format(tfmt1, tZ)) // 25 minutes after sunset
-    myUpdData('localSunset', tsunset.format(myGetData('timeFormat'), tZ))
-    myUpdData('localSunrise', tsunrise.format(myGetData('timeFormat'), tZ))
-    myUpdData('riseTime1', new Date(tsunrise.getTime() + (60*60*24*1000)).format(tfmt1, tZ))
-    myUpdData('riseTime2', new Date(tsunrise.getTime() + (60*60*24*1000*2)).format(tfmt1, tZ))
-    myUpdData('setTime1', new Date(tsunset.getTime() + (60*60*24*1000)).format(tfmt1, tZ))
-    myUpdData('setTime2', new Date(tsunset.getTime() + (60*60*24*1000*2)).format(tfmt1, tZ))
-}
-// >>>>>>>>>> End Sunrise-Sunset Routines <<<<<<<<<<
-
-// <<<<<<<<<< Begin OWM Poll Routines >>>>>>>>>>
-void pollOWM() {
-	if(ifreInstalled()) { updated(); return }
-	if( apiKey == null ) {
-		LOGWARN('OpenWeatherMap API Key not found.  Please configure in preferences.')
-		return
-	}
-
-/*  for testing a different Lat/Lon location uncommnent the two lines below */
-//	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
-//	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-
-	Map ParamsOWM
-	ParamsOWM = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey, timeout: 20 ]
-	LOGINFO('Poll OpenWeatherMap.org: ' + ParamsOWM)
-	asynchttpGet('pollOWMHandler', ParamsOWM)
-}
-
-void pollOWMHandler(resp, data) {
-	LOGINFO('Polling OpenWeatherMap.org')
-	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/onecall?lat=' + (String)altLat + '&lon=' + (String)altLon + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + (String)apiKey)
-		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
-	}else{
-		Map owm = parseJson(resp.data)
-		LOGINFO('OpenWeatherMap Data: ' + owm.toString())
-		if(ifreInstalled()) { updated(); return }
-		if(owm.toString()==sNULL) {
-			pauseExecution(1000)
-			pollOWM()
-			return
-		}
-		Date fotime = (owm?.current?.dt==null) ? new Date() : new Date((Long)owm.current.dt * 1000L)
-		myUpdData('fotime', fotime.toString())
-		Date futime = new Date()
-		myUpdData('futime', futime.toString())
-		TimeZone tZ= TimeZone.getDefault()
-		myUpdData(sSUMLST, futime.format(myGetData('timeFormat'), tZ).toString())
-		myUpdData('Summary_last_poll_date', futime.format(myGetData('dateFormat'), tZ).toString())
-		myUpdData('currDate', new Date().format('yyyy-MM-dd', tZ))
-		myUpdData('currTime', new Date().format('HH:mm', tZ))
-		if(myGetData('riseTime') <= myGetData('currTime') && myGetData('setTime') >= myGetData('currTime')) {
-			myUpdData('is_day', sTRU)
-		}else{
-			myUpdData('is_day', sFLS)
-		}
-		if(myGetData('currTime') < myGetData('tw_begin') || myGetData('currTime') > myGetData('tw_end')) {
-			myUpdData('is_light', sFLS)
-		}else{
-			myUpdData('is_light', sTRU)
-		}
-		if(myGetData('is_light') != myGetData('is_lightOld')) {
-			if(myGetData('is_light')==sTRU) {
-				LOGINFO(' Switching to Daytime schedule.')
-			}else{
-				LOGINFO(' Switching to Nighttime schedule.')
-			}
-			initialize_poll()
-			myUpdData('is_lightOld', myGetData('is_light'))
-		}
-// >>>>>>>>>> End Setup Global Variables <<<<<<<<<<
-
-// <<<<<<<<<< Begin Process Standard Weather-Station Variables (Regardless of Forecast Selection)  >>>>>>>>>>
-		Integer mult_twd = myGetData('mult_twd')==sNULL ? 1 : myGetData('mult_twd').toInteger()
-		Integer mult_p = myGetData('mult_p')==sNULL ? 1 : myGetData('mult_p').toInteger()
-		Integer mult_r = myGetData('mult_r')==sNULL ? 1 : myGetData('mult_r').toInteger()
-		String ddisp_twd = myGetData('ddisp_twd')==sNULL ? '%3.0f' : myGetData('ddisp_twd')
-
-		Boolean isF = myGetData(sTMETR) == sDF
-
-		BigDecimal t_dew = owm?.current?.dew_point
-		myUpdData('dewpoint', adjTemp(t_dew, isF, mult_twd))
-		myUpdData('humidity', (Math.round((owm?.current?.humidity==null ? 0.00 : owm.current.humidity.toBigDecimal()) * 10) / 10).toString())
-
-		BigDecimal t_press = owm?.current?.pressure==null ? 0.00 : owm.current.pressure.toBigDecimal()
-		if(myGetData(sPMETR) == 'inHg') {
-			t_press = Math.round(t_press * 0.029529983071445 * mult_p) / mult_p
-		}else{
-			t_press = Math.round(t_press * mult_p) / mult_p
-		}
-		myUpdData('pressure', t_press.toString())
-
-		myUpdData(sTEMP, adjTemp(owm?.current?.temp, isF, mult_twd))
-
-		String w_string_bft,w_bft_icon
-		w_string_bft=sNULL
-		w_bft_icon=sNULL
-		BigDecimal t_ws = owm?.current?.wind_speed==null ? 0.00 : owm.current.wind_speed.toBigDecimal()
-		if(t_ws < 1.0) {
-			w_string_bft = 'Calm'; w_bft_icon = 'wb0.png'
-		}else if(t_ws < 4.0) {
-			w_string_bft = 'Light air'; w_bft_icon = 'wb1.png'
-		}else if(t_ws < 8.0) {
-			w_string_bft = 'Light breeze'; w_bft_icon = 'wb2.png'
-		}else if(t_ws < 13.0) {
-			w_string_bft = 'Gentle breeze'; w_bft_icon = 'wb3.png'
-		}else if(t_ws < 19.0) {
-			w_string_bft = 'Moderate breeze'; w_bft_icon = 'wb4.png'
-		}else if(t_ws < 25.0) {
-			w_string_bft = 'Fresh breeze'; w_bft_icon = 'wb5.png'
-		}else if(t_ws < 32.0) {
-			w_string_bft = 'Strong breeze'; w_bft_icon = 'wb6.png'
-		}else if(t_ws < 39.0) {
-			w_string_bft = 'High wind, moderate gale, near gale'; w_bft_icon = 'wb7.png'
-		}else if(t_ws < 47.0) {
-			w_string_bft = 'Gale, fresh gale'; w_bft_icon = 'wb8.png'
-		}else if(t_ws < 55.0) {
-			w_string_bft = 'Strong/severe gale'; w_bft_icon = 'wb9.png'
-		}else if(t_ws < 64.0) {
-			w_string_bft = 'Storm, whole gale'; w_bft_icon = 'wb10.png'
-		}else if(t_ws < 73.0) {
-			w_string_bft = 'Violent storm'; w_bft_icon = 'wb11.png'
-		}else if(t_ws >= 73.0) {
-			w_string_bft = 'Hurricane force'; w_bft_icon = 'wb12.png'
-		}
-		myUpdData('wind_string_bft', w_string_bft)
-		myUpdData('wind_bft_icon', w_bft_icon)
-
-		BigDecimal t_wd,t_wg
-		t_wd = owm?.current?.wind_speed==null ? 0.00 : owm.current.wind_speed.toBigDecimal()
-		t_wg = owm?.current?.wind_gust==null ? t_wd : owm.current.wind_gust.toBigDecimal()
-		if(myGetData(sDMETR) == 'MPH') {
-			t_wd = Math.round(t_wd * mult_twd) / mult_twd
-			t_wg = Math.round(t_wg * mult_twd) / mult_twd
-		} else if(myGetData(sDMETR) == 'KPH') {
-			t_wd = Math.round(t_wd * 1.609344 * mult_twd) / mult_twd
-			t_wg = Math.round(t_wg * 1.609344 * mult_twd) / mult_twd
-		} else if(myGetData(sDMETR) == 'knots') {
-			t_wd = Math.round(t_wd * 0.868976 * mult_twd) / mult_twd
-			t_wg = Math.round(t_wg * 0.868976 * mult_twd) / mult_twd
-		}else{  //  this leave only m/s
-			t_wd = Math.round(t_wd * 0.44704 * mult_twd) / mult_twd
-			t_wg = Math.round(t_wg * 0.44704 * mult_twd) / mult_twd
-		}
-		myUpdData('wind', t_wd.toString())
-		myUpdData('wind_gust', t_wg.toString())
-
-		BigDecimal twb = owm?.current?.wind_deg==null ? 0.00 : owm.current.wind_deg.toBigDecimal()
-		myUpdData('wind_degree', twb.toInteger().toString())
-		String w_cardinal,w_direction
-		w_cardinal=sNULL
-		w_direction=sNULL
-		if(twb < 11.25) {
-			w_cardinal = 'N'; w_direction = 'North'
-		}else if(twb < 33.75) {
-			w_cardinal = 'NNE'; w_direction = 'North-Northeast'
-		}else if(twb < 56.25) {
-			w_cardinal = 'NE';  w_direction = 'Northeast'
-		}else if(twb < 78.75) {
-			w_cardinal = 'ENE'; w_direction = 'East-Northeast'
-		}else if(twb < 101.25) {
-			w_cardinal = 'E'; w_direction = 'East'
-		}else if(twb < 123.75) {
-			w_cardinal = 'ESE'; w_direction = 'East-Southeast'
-		}else if(twb < 146.25) {
-			w_cardinal = 'SE'; w_direction = 'Southeast'
-		}else if(twb < 168.75) {
-			w_cardinal = 'SSE'; w_direction = 'South-Southeast'
-		}else if(twb < 191.25) {
-			w_cardinal = 'S'; w_direction = 'South'
-		}else if(twb < 213.75) {
-			w_cardinal = 'SSW'; w_direction = 'South-Southwest'
-		}else if(twb < 236.25) {
-			w_cardinal = 'SW'; w_direction = 'Southwest'
-		}else if(twb < 258.75) {
-			w_cardinal = 'WSW'; w_direction = 'West-Southwest'
-		}else if(twb < 281.25) {
-			w_cardinal = 'W'; w_direction = 'West'
-		}else if(twb < 303.75) {
-			w_cardinal = 'WNW'; w_direction = 'West-Northwest'
-		}else if(twb < 326.25) {
-			w_cardinal = 'NW'; w_direction = 'Northwest'
-		}else if(twb < 348.75) {
-			w_cardinal = 'NNW'; w_direction = 'North-Northwest'
-		}else if(twb >= 348.75) {
-			w_cardinal = 'N'; w_direction = 'North'
-		}
-		myUpdData('wind_direction', w_direction)
-		myUpdData('wind_cardinal', w_cardinal)
-		myUpdData('wind_string', w_string_bft + ' from the ' + myGetData('wind_direction') + (myGetDataBD('wind') < 1.0 ? sBLK: ' at ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + myGetData(sDMETR)))
-// >>>>>>>>>> End Process Standard Weather-Station Variables (Regardless of Forecast Selection)  <<<<<<<<<<
-
-		Integer cloudCover = owm?.current?.clouds==null ? 1 : owm.current.clouds <= 1 ? 1 : owm.current.clouds
-		myUpdData('cloud', cloudCover.toString())
-		myUpdData('vis', (myGetData(sDMETR)!='MPH' ? Math.round(owm?.current?.visibility==null ? 0.01 : owm.current.visibility.toBigDecimal() * 0.001 * mult_twd) / mult_twd : Math.round(owm?.current?.visibility==null ? 0.00 : owm.current.visibility.toBigDecimal() * 0.0006213712 * mult_twd) / mult_twd).toString())
-
-		List owmCweat = owm?.current?.weather
-		myUpdData('condition_id', owmCweat==null || owmCweat[0]?.id==null ? '999' : owmCweat[0].id.toString())
-		myUpdData('condition_code', getCondCode(myGetData('condition_id').toInteger(), myGetData('is_day')))
-		myUpdData('OWN_icon', owmCweat == null || owmCweat[0]?.icon==null ? (myGetData('is_day')==sTRU ? '50d' : '50n') : owmCweat[0].icon)
-
-		List<Map> owmDaily
-		owmDaily = owm?.daily != null && ((List)owm.daily)[0]?.weather != null ? ((List)owm?.daily)[0].weather : null
-		myUpdData('forecast_id', owmDaily==null || owmDaily[0]?.id==null ? '999' : owmDaily[0].id.toString())
-		myUpdData('forecast_code', getCondCode(myGetData('forecast_id').toInteger(), sTRU))
-		myUpdData('forecast_text', owmDaily==null || owmDaily[0]?.description==null ? 'Unknown' : owmDaily[0].description.capitalize())
-
-        myUpdData('condition_text', myGetData('iconType')== sTRU ? (owmCweat==null || owmCweat[0]?.description==null ? 'Unknown' : owmCweat[0].description.capitalize()): (owm?.daily==null || owm?.daily[0]?.weather[0]?.description==null ? 'Unknown' : owm.daily[0].weather[0].description.capitalize()))
+    definition(
+            name: "OpenWeatherMap Multi-API Weather Driver",
+            namespace: "jshimota",
+            author: "James Shimota",
+            importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/owm_multi-API_weather.groovy"
+    ) {
+        capability "Sensor"
+        capability "Refresh"
+        capability "Initialize"
         
-		owmDaily = owm?.daily != null ? (List)owm.daily : null
-		BigDecimal t_p0 = (owmDaily==null || !owmDaily[0]?.rain ? 0.00 : owmDaily[0].rain.toBigDecimal()) + (owmDaily==null || !owmDaily[0]?.snow ? 0.00 : owmDaily[0].snow.toBigDecimal())
-		myUpdData('rainToday', (Math.round((myGetData(sRMETR) == 'in' ? t_p0 * 0.03937008 : t_p0) * mult_r) / mult_r).toString())
-		myUpdData('PoP', (!owmDaily[0].pop ? 0 : Math.round(owmDaily[0].pop.toBigDecimal() * 100.toInteger())).toString())
-		myUpdData('percentPrecip', myGetData('PoP'))
+        // - Core Capabilities
+        capability "TemperatureMeasurement"
+        capability "IlluminanceMeasurement"
+        capability "PressureMeasurement"
+        capability "RelativeHumidityMeasurement"
+        capability "UltravioletIndex"
 
-		if(owmDaily && (threedayTilePublish || precipExtendedPublish || myTilePublish)) {
-			BigDecimal t_p1 = (owmDaily==null || !owmDaily[1]?.rain ? 0.00 : owmDaily[1].rain.toBigDecimal()) + (owmDaily==null || !owmDaily[1]?.snow ? 0.00 : owmDaily[1].snow.toBigDecimal())
-			BigDecimal t_p2 = (owmDaily==null || !owmDaily[2]?.rain ? 0.00 : owmDaily[2].rain.toBigDecimal()) + (owmDaily==null || !owmDaily[2]?.snow ? 0.00 : owmDaily[2].snow.toBigDecimal())
-			myUpdData('Precip0', (Math.round((myGetData(sRMETR) == 'in' ? t_p0 * 0.03937008 : t_p0) * mult_r) / mult_r).toString())
-			myUpdData('Precip1', (Math.round((myGetData(sRMETR) == 'in' ? t_p1 * 0.03937008 : t_p1) * mult_r) / mult_r).toString())
-			myUpdData('Precip2', (Math.round((myGetData(sRMETR) == 'in' ? t_p2 * 0.03937008 : t_p2) * mult_r) / mult_r).toString())
-			myUpdData('PoP1', (!owmDaily[1].pop ? 0 : Math.round(owmDaily[1].pop.toBigDecimal() * 100.toInteger())).toString())
-			myUpdData('PoP2', (!owmDaily[2].pop ? 0 : Math.round(owmDaily[2].pop.toBigDecimal() * 100.toInteger())).toString())
-		}
+        // - Custom Driver Attributes
+        attribute "betwixt", "string"
+        attribute "overrideCity", "string"
+        attribute "overrideLongitude", "number"
+        attribute "overrideLatitude", "number"
+        attribute "pressureUnit", "string"
+        attribute "temperatureUnit", "string"
+        attribute "windSpeedUnit", "string"
+        attribute "illuminanceUnit", "string"
+        attribute "humidityUnit", "string"
+        
+        // - Api specific response attributes
+        attribute "apiTimezone", "string"
+        attribute "apiTimezoneOffset", "number"
+        attribute "apiLatitude", "number"
+        attribute "apiLongitude", "number"
+        
+        // - Alert attributes
+        attribute "currentAlert", "string"
+        attribute "currentAlertDesc", "string"
+        attribute "currentAlertSender", "string"
+        attribute "currentAlertDescFull", "string"
+        
+        // - Calculated Solar Angles attributes
+        attribute "altitude", "number"
+        attribute "azimuth", "number"
+        attribute "altitudeText", "string"
+        attribute "azimuthText", "string"
 
-		if(owmDaily && cloudExtendedPublish) {
-			myUpdData('Cloud0', (owmDaily[0].clouds==null ? 1 : owmDaily[0].clouds <= 1 ? 1 : owmDaily[0].clouds).toString())
-			myUpdData('Cloud1', (owmDaily[1].clouds==null ? 1 : owmDaily[1].clouds <= 1 ? 1 : owmDaily[1].clouds).toString())
-			myUpdData('Cloud2', (owmDaily[2].clouds==null ? 1 : owmDaily[2].clouds <= 1 ? 1 : owmDaily[2].clouds).toString())
-		}
+        // - Current unique attributes
+        attribute "currentSnow", "number"
+        attribute "currentRain", "number"
+        attribute "currentFeelsLike", "number"
+        attribute "currentTemperature", "number"
 
-		String imgT1=(myGetData(sICON).toLowerCase().contains('://github.com/') && myGetData(sICON).toLowerCase().contains('/blob/master/') ? '?raw=true' : sBLK)
-		if(owmDaily && owmDaily[1] && owmDaily[2]) {
-            String tmpImg0= myGetData(sICON) + (myGetData('iconType')== sTRU ? getImgName(myGetData('condition_id').toInteger(), myGetData('is_day')) : getImgName(myGetData('forecast_id').toInteger(), myGetData('is_day'))) + imgT1
-//			String tmpImg0= myGetData(sICON) + getImgName((!owmDaily[0].weather[0].id ? 999 : owmDaily[0].weather[0].id.toInteger()), sTRU) + imgT1
-			String tmpImg1= myGetData(sICON) + getImgName((!owmDaily[1].weather[0].id ? 999 : owmDaily[1].weather[0].id.toInteger()), sTRU) + imgT1
-			String tmpImg2= myGetData(sICON) + getImgName((!owmDaily[2].weather[0].id ? 999 : owmDaily[2].weather[0].id.toInteger()), sTRU) + imgT1
+        // - Current unique derived attributes
+        attribute "currentHumidityText", "string"
+        attribute "currentIlluminanceText", "string"
+        attribute "currentPressureText", "string"
+        attribute "currentTemperatureText", "string"
+        attribute "currentWindSpeedDescText", "string"
+        attribute "currentSnowText", "string"
+        attribute "currentRainText", "string"
+        attribute "currentVisibility", "number"
+        attribute "currentTwilightBeginTime", "number"
+        attribute "currentSolarNoonTime", "number"
+        attribute "currentTwilightEndTime", "number"
+        attribute "currentIsDay", "enum", ["true","false"]
+        attribute "currentWindDirCardinal", "string"
+        attribute "currentWindDirFull", "string"
+        attribute "currentWindDirImageUrl", "string"
+        attribute "currentWindDirectionIcon", "string"
+        attribute "currentTwilightBeginTimeText", "string"
+        attribute "currentSolarNoonTimeText", "string"
+        attribute "currentTwilightEndTimeText", "string"
+        attribute "currentVisibilityText", "string"
+        attribute "currentWeatherSummary", "string"
+        attribute "currentWindSummaryText", "string"
 
+        // - Current Condition attributes
+        attribute "currentConditionCode", "number"
+        attribute "currentConditionType", "string"
+        attribute "currentConditionTypeDesc", "string"
+        attribute "currentConditionIcon", "string"
+        
+        // - Current Condition derived attribute
+        attribute "currentConditionAltIcon", "string"
+        attribute "currentConditionIconImg", "string"
+		attribute "currentConditionTypeAltDesc", "string"
 
-			if(threedayTilePublish || myTilePublish || fcstHighLowPublish) {
-				myUpdData('day1', owmDaily[1]?.dt==null ? sBLK : new Date((Long)owmDaily[1].dt * 1000L).format('EEEE'))
-				myUpdData('day2', owmDaily[2]?.dt==null ? sBLK : new Date((Long)owmDaily[2].dt * 1000L).format('EEEE'))
-				myUpdData('is_day1', sTRU)
-				myUpdData('is_day2', sTRU)
-				myUpdData('forecast_id1', owmDaily[1]?.weather[0]?.id==null ? '999' : owmDaily[1].weather[0].id.toString())
-				myUpdData('forecast_code1', getCondCode(myGetData('forecast_id1').toInteger(), sTRU))
-				myUpdData('forecast_text1', owmDaily[1]?.weather[0]?.description==null ? 'Unknown' : owmDaily[1].weather[0].description.capitalize())
+        // - Current attributes (commonly found in both current and forecast)
+        attribute "currentSunriseTime", "number"
+        attribute "currentSunsetTime", "number"
+        attribute "currentIlluminance", "number"
+        attribute "currentPressure", "number"
+        attribute "currentHumidity", "number"
+        attribute "currentDewPoint", "number"
+        attribute "currentUVI", "number"
+        attribute "currentCloudPCT", "number"
+        attribute "currentWindGust", "number"
+        attribute "currentWindDeg", "number"
+        attribute "currentWindSpeed", "number"    
+        attribute "currentWindSpeedText", "string"        
+        attribute "currentSunriseTimeText", "string"
+        attribute "currentSunsetTimeText", "string"
+        
+        // - Forecast today unique attributes
+        attribute "todaySunriseTime", "number"
+        attribute "todaySunsetTime", "number"
+        attribute "todayMoonriseTime", "number"
+        attribute "todayMoonsetTime", "number"
+        attribute "todayMoonPhase", "number"
+        attribute "todaySummary", "string"
+        attribute "todayTempMin", "number"
+        attribute "todayTempNight", "number"
+        attribute "todayTempMax", "number"
+        attribute "todayTempEve", "number"
+        attribute "todayTempMorn", "number"
+        attribute "todayTempDay", "number"
+        attribute "todayFeelsLikeDay", "number"
+        attribute "todayFeelsLikeNight", "number"
+        attribute "todayFeelsLikeEve", "number"
+        attribute "todayFeelsLikeMorn", "number"
+        attribute "todayPressure", "number"
+        attribute "todayHumidity", "number"
+        attribute "todayDewPoint", "number"
+        attribute "todayWindGust", "number"
+        attribute "todayWindDeg", "number"
+        attribute "todayWindSpeed", "number"
+        attribute "todayWindSpeedText", "string"
+        attribute "todayWindSpeedDescText", "string"
+        attribute "todayCloudPCT", "number"
+        attribute "todayPOP", "number"
+        attribute "todayUVI", "number"
+        attribute "todaySunriseTimeText", "string"
+        attribute "todaySunsetTimeText", "string"
+        attribute "todayMoonriseTimeText", "string"
+        attribute "todayMoonsetTimeText", "string"
+                
+        // - Forecast tomorrow unique attributes
+        attribute "tomSunriseTime", "number"
+        attribute "tomSunsetTime", "number"
+        attribute "tomMoonriseTime", "number"
+        attribute "tomMoonsetTime", "number"
+        attribute "tomMoonPhase", "number"
+        attribute "tomSummary", "string"
+        attribute "tomTempMin", "number"
+        attribute "tomTempNight", "number"
+        attribute "tomTempMax", "number"
+        attribute "tomTempEve", "number"
+        attribute "tomTempMorn", "number"
+        attribute "tomTempDay", "number"
+        attribute "tomFeelsLikeDay", "number"
+        attribute "tomFeelsLikeNight", "number"
+        attribute "tomFeelsLikeEve", "number"
+        attribute "tomFeelsLikeMorn", "number"
+        attribute "tomPressure", "number"
+        attribute "tomHumidity", "number"
+        attribute "tomDewPoint", "number"
+        attribute "tomWindGust", "number"
+        attribute "tomWindDeg", "number"
+        attribute "tomWindSpeed", "number"
+        attribute "tomWindSpeedText", "string"
+        attribute "tomWindSpeedDescText", "string"
+        attribute "tomCloudPCT", "number"
+        attribute "tomPOP", "number"
+        attribute "tomUVI", "number"
+        attribute "tomSunriseTimeText", "string"
+        attribute "tomSunsetTimeText", "string"
+        attribute "tomMoonriseTimeText", "string"
+        attribute "tomMoonsetTimeText", "string"
 
-				myUpdData('forecast_id2', owmDaily[2]?.weather[0]?.id==null ? '999' : owmDaily[2].weather[0].id.toString())
-				myUpdData('forecast_code2', getCondCode(myGetData('forecast_id2').toInteger(), sTRU))
-				myUpdData('forecast_text2', owmDaily[2]?.weather[0]?.description==null ? 'Unknown' : owmDaily[2].weather[0].description.capitalize())
+        // - Forecast tomorrow dayafter unique attributes
+        attribute "tdaSunriseTime", "number"
+        attribute "tdaSunsetTime", "number"
+        attribute "tdaMoonriseTime", "number"
+        attribute "tdaMoonsetTime", "number"
+        attribute "tdaMoonPhase", "number"
+        attribute "tdaSummary", "string"
+        attribute "tdaTempMin", "number"
+        attribute "tdaTempNight", "number"
+        attribute "tdaTempMax", "number"
+        attribute "tdaTempEve", "number"
+        attribute "tdaTempMorn", "number"
+        attribute "tdaTempDay", "number"
+        attribute "tdaFeelsLikeDay", "number"
+        attribute "tdaFeelsLikeNight", "number"
+        attribute "tdaFeelsLikeEve", "number"
+        attribute "tdaFeelsLikeMorn", "number"
+        attribute "tdaPressure", "number"
+        attribute "tdaHumidity", "number"
+        attribute "tdaDewPoint", "number"
+        attribute "tdaWindGust", "number"
+        attribute "tdaWindDeg", "number"
+        attribute "tdaWindSpeed", "number"
+        attribute "tdaWindSpeedText", "string"
+        attribute "tdaWindSpeedDescText", "string"
+        attribute "tdaCloudPCT", "number"
+        attribute "tdaPOP", "number"
+        attribute "tdaUVI", "number"
+        attribute "tdaSunriseTimeText", "string"
+        attribute "tdaSunsetTimeText", "string"
+        attribute "tdaMoonriseTimeText", "string"
+        attribute "tdaMoonsetTimeText", "string"
 
-				myUpdData('forecastHigh1', adjTemp(owmDaily[1]?.temp?.max, isF, mult_twd))
-				myUpdData('forecastHigh2', adjTemp(owmDaily[2]?.temp?.max, isF, mult_twd))
-
-				myUpdData('forecastLow1', adjTemp(owmDaily[1]?.temp?.min, isF, mult_twd))
-				myUpdData('forecastLow2', adjTemp(owmDaily[2]?.temp?.min, isF, mult_twd))
-				myUpdData('forecastMorn', adjTemp(owmDaily[0]?.temp?.morn, isF, mult_twd))
-				myUpdData('forecastDay', adjTemp(owmDaily[0]?.temp?.day, isF, mult_twd))
-				myUpdData('forecastEve', adjTemp(owmDaily[0]?.temp?.eve, isF, mult_twd))
-				myUpdData('forecastNight', adjTemp(owmDaily[0]?.temp?.night, isF, mult_twd))
-
-				myUpdData('forecastMorn1', adjTemp(owmDaily[1]?.temp?.morn, isF, mult_twd))
-				myUpdData('forecastDay1', adjTemp(owmDaily[1]?.temp?.day, isF, mult_twd))
-				myUpdData('forecastEve1', adjTemp(owmDaily[1]?.temp?.eve, isF, mult_twd))
-				myUpdData('forecastNight1', adjTemp(owmDaily[1]?.temp?.night, isF, mult_twd))
-
-				myUpdData('imgName0', sIMGS5 + tmpImg0 + sRB) // For daily forecasted condition text for 'Today' 
-				myUpdData('imgName1', sIMGS5 + tmpImg1 + sRB)
-				myUpdData('imgName2', sIMGS5 + tmpImg2 + sRB)
-			}
-			if(condition_icon_urlPublish) {
-				sendEvent(name: 'condition_icon_url1', value: tmpImg1)
-				sendEvent(name: 'condition_icon_url2', value: tmpImg2)
-			}else{
-				device.deleteCurrentState('condition_icon_url1')
-				device.deleteCurrentState('condition_icon_url2')
-			}
-
-		}
-		myUpdData('forecastHigh', adjTemp(owmDaily[0]?.temp?.max, isF, mult_twd))
-		myUpdData('forecastLow', adjTemp(owmDaily[0]?.temp?.min, isF, mult_twd))
-		if(precipExtendedPublish){
-			myUpdData('rainTomorrow', myGetData('Precip1'))
-			myUpdData('rainDayAfterTomorrow', myGetData('Precip2'))
-		}else{
-			device.deleteCurrentState('rainTomorrow')
-			device.deleteCurrentState('rainDayAfterTomorrow')
-		}
-
-		if(cloudExtendedPublish){
-			myUpdData('cloudToday', myGetData('Cloud0'))
-			myUpdData('cloudTomorrow', myGetData('Cloud1'))
-			myUpdData('cloudDayAfterTomorrow', myGetData('Cloud2'))
-		}else{
-			device.deleteCurrentState('cloudToday')
-			device.deleteCurrentState('cloudTomorrow')
-			device.deleteCurrentState('cloudDayAfterTomorrrow')
-		}
-
-		updateLux(false)
-		myUpdData('ultravioletIndex', (owm?.current?.uvi==null ? 0.00 : owm.current.uvi.toBigDecimal()).toString())
-
-		myUpdData('feelsLike', adjTemp(owm?.current?.feels_like, isF, mult_twd))
-
-		if(alertPublish) {
-			if(alertSource==sTWO) {
-/*  for testing a different Lat/Lon location uncommnent the two lines below */
-//	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
-//	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-				pollWDG()
-			}
-			if((alertSource==sZERO) || (!owm.alerts && alertSource==sONE) || (myGetData('curAl')==sNCWA && alertSource==sTWO)) {
-				clearAlerts()
-			}else{
-				if(alertSource==sONE) {
-					Map owmAlerts0= owm?.alerts ? owm.alerts[0] : null
-					String curAl = owmAlerts0?.event==null ? sNCWA : owmAlerts0.event.replaceAll('\n', sSPC).replaceAll('[{}\\[\\]]', sBLK)
-					String curAlSender = owmAlerts0?.sender_name==null ? sNULL : owmAlerts0.sender_name.replaceAll('\n',sSPC).replaceAll('[{}\\[\\]]', sBLK)
-					String curAlDescr = owmAlerts0?.description==null ? sNULL : owmAlerts0.description.replaceAll('\n',sSPC).replaceAll('[{}\\[\\]]', sBLK).take(1024)
-					if(curAl==sNCWA) {
-						clearAlerts()
-					}else{
-						Integer alertCnt = 0
-						for(Integer i = 1;i<10;i++) {
-							if(owm?.alerts[i]?.event!=null) {
-								alertCnt = i
-							}
-						}
-						myUpdData('alertCnt', alertCnt.toString())
-					}
-					myUpdData('alert', curAl + (myGetData('alertCnt') != sZERO ? ' +' + myGetData('alertCnt') : sBLK))
-					myUpdData('curAlSender', curAlSender)
-					myUpdData('curAlDescr', curAlDescr)
-					LOGINFO('OWM Weather Alert: ' + curAl + '; Description: ' + curAlDescr.length() + ' ' +curAlDescr)
-					myUpdData('alertTileLink', '<a style="font-style:italic;color:red" href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">'+myGetData('alert')+sACB)
-					myUpdData('alertLink',  '<a style="font-style:italic;color:red">'+myGetData('alert')+sACB)
-				}else{
-/*  for testing a different Lat/Lon location uncommnent the two lines below */
-//	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
-//	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-					myUpdData('alert', myGetData('curAl') + (myGetData('alertCnt') != sZERO ? ' +' + myGetData('alertCnt') : sBLK))
-// https://tinyurl.com/zznws points to https://forecast.weather.gov/MapClick.php
-					myUpdData('alertTileLink', '<a style="font-style:italic;color:red" href="https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon +'" target=\'_blank\'>'+myGetData('alert')+sACB)
-					myUpdData('alertLink',  '<a style="font-style:italic;color:red">'+myGetData('alert')+sACB)
-					if(myGetData('curAl')==sNCWA) {
-						clearAlerts()
-					}
-				}
-				myUpdData('noAlert',sFLS)
-				myUpdData('alertDescr', myGetData('curAlDescr'))
-				myUpdData('alertSender', myGetData('curAlSender'))
-				myUpdData('possAlert', sTRU)
-			}
-			//  <<<<<<<<<< Begin Built alertTile >>>>>>>>>>
-			String alertTile
-			alertTile = (myGetData('alert')== sNCWA ? 'No Weather Alerts for ' : 'Weather Alert for ') + myGetData('city') + (myGetData('alertSender')==null || myGetData('alertSender')==sSPC ? '' : ' issued by ' + myGetData('alertSender')) + sBR
-			alertTile+= myGetData('alertTileLink') + sBR
-			if(alertSource==sONE) {
-				alertTile+= '<a href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
-			}else{
-				if(alertSource==sTWO) {
-					alertTile+= '<a href=https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'NWS_240px.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
-				}
-			}
-			myUpdData('alertTile', alertTile)
-			sendEvent(name: 'alert', value: myGetData('alert'))
-			sendEvent(name: 'alertDescr', value: myGetData('alertDescr'))
-			sendEvent(name: 'alertSender', value: myGetData('alertSender'))
-			sendEvent(name: 'alertTile', value: myGetData('alertTile'))
-			//  >>>>>>>>>> End Built alertTile <<<<<<<<<<
-		}
-// >>>>>>>>>> End Setup Forecast Variables <<<<<<<<<<
-
-		// <<<<<<<<<< Begin Icon Processing  >>>>>>>>>>
-		String imgName = (myGetData('iconType')== sTRU ? getImgName(myGetData('condition_id').toInteger(), myGetData('is_day')) : getImgName(myGetData('forecast_id').toInteger(), myGetData('is_day')))
-		sendEventPublish(name: 'condition_icon', value: sIMGS5 + myGetData(sICON) + imgName + imgT1 + sRB)
-		sendEventPublish(name: 'condition_iconWithText', value: sIMGS5 + myGetData(sICON) + imgName + imgT1 + sRB+ sBR + myGetData('condition_text'))
-		sendEventPublish(name: 'condition_icon_url', value: myGetData(sICON) + imgName + imgT1)
-		myUpdData('condition_icon_url', myGetData(sICON) + imgName + imgT1)
-		sendEventPublish(name: 'condition_icon_only', value: imgName.split('/')[-1].replaceFirst('\\?raw=true',sBLK))
-	// >>>>>>>>>> End Icon Processing <<<<<<<<<<
-		PostPoll()
-	}
-}
-// >>>>>>>>>> End OpenWeatherMap Poll Routine <<<<<<<<<<
-
-// <<<<<<<<<< Begin polling weather.gov for Alerts >>>>>>>>>>
-void pollWDG() {
-/*  for testing a different Lat/Lon location uncommnent the two lines below */
-//	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
-//	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-	Map wdgParams = [ uri: 'https://api.weather.gov/alerts/active?status=actual&message_type=alert,update&point=' + altLat + ',' + altLon,
-		requestContentType:'application/json',
-		contentType:'application/json',
-		timeout: 20
-	]
-	LOGINFO('Poll api.weather.gov/alerts/active: ' + wdgParams)
-	asynchttpGet('pollWDGHandler', wdgParams)
-}
-
-void pollWDGHandler(resp, data) {
-	LOGINFO('Polling weather.gov')
-	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-		LOGWARN('Calling https://api.weather.gov/alerts/active?status=actual&message_type=alert,update&point=' + altLat + ',' + altLon)
-		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
-	}else{
-		Map wdg = parseJson(resp.data)
-		myUpdData('wdg', wdg.toString())
-		LOGINFO('weather.gov Data: ' + wdg.toString())
-		if(wdg.toString()==sNULL) {
-			pauseExecution(1000)
-			pollWDG()
-			return
-		}
-		myUpdData('curAl', wdg?.features[0]?.properties?.event == null ? sNCWA : wdg.features[0].properties.event.replaceAll('\n', sSPC).replaceAll('[{}\\[\\]]', sBLK))
-		myUpdData('curAlSender', wdg?.features[0]?.properties?.senderName==null ? sNULL : ((String)wdg.features[0].properties.senderName).replaceAll('\n',sSPC).replaceAll('[{}\\[\\]]', sBLK))
-		myUpdData('curAlDescr', wdg?.features[0]?.properties?.description==null ? sNULL : ((String)wdg.features[0].properties.description).replaceAll('\n',sSPC).replaceAll('[{}\\[\\]]', sBLK).take(1024))
-		Integer alertCnt = 0
-		for(Integer i = 1;i<10;i++) {
-			if(wdg?.features[i]?.properties?.event!=null) {
-				alertCnt = i
-			}
-		}
-		myUpdData('alertCnt', alertCnt.toString())
-	}
-}
-// >>>>>>>>>> End polling weather.gov for Alerts <<<<<<<<<<
-
-static String adjTemp(temp, Boolean isF, Integer mult_twd){
-	BigDecimal t_fl
-	t_fl = temp==null ? 0.00 : temp.toBigDecimal()
-	if(!isF) t_fl = (t_fl - 32.0) / 1.8
-	t_fl = Math.round(t_fl * mult_twd) / mult_twd
-	return t_fl.toString()
-}
-
-void clearAlerts(){
-	myUpdData('noAlert',sTRU)
-	myUpdData('alert', sNCWA)
-	myUpdData('alertDescr', sNCWA)
-	myUpdData('alertSender', sSPC)
-	String al3 = '<a style="font-style:italic">'
-	myUpdData('alertTileLink', al3+myGetData('alert')+sACB)
-	myUpdData('alertLink', sAB + myGetData('condition_text') + sACB)
-	myUpdData('possAlert', sFLS)
-}
-
-
-@Field static Map<String,Map> dataStoreFLD=[:]
-
-void myUpdData(String key, String val){
-	String mc=device.id.toString()
-	Map<String,String> myV
-	myV=dataStoreFLD[mc]
-	myV= myV!=null ? myV : [:]
-	myV[key]=val
-	dataStoreFLD[mc]=myV
-	//removeDataValue(key) // THIS SHOULD BE REMOVED AT SOME POINT
-}
-
-BigDecimal myGetDataBD(String key){
-	String ret= myGetData(key)
-	return ret!=sNULL ? ret.toBigDecimal() : 0.0
-}
-
-String myGetData(String key){
-	String mc=device.id.toString()
-	Map<String,String> myV
-	myV=dataStoreFLD[mc]
-	myV= myV!=null ? myV : [:]
-	if(myV[key]) return (String)myV[key]
-	else return sNULL
-}
-
-static String dumpListDesc(data, Integer level, List<Boolean> lastLevel, String listLabel, Boolean html=false){
-	String str
-	str=sBLK
-	Integer cnt
-	cnt=1
-	List<Boolean> newLevel=lastLevel
-
-	List list1=data?.collect{it}
-	Integer sz=(Integer)list1.size()
-	list1?.each{ par ->
-		Integer t0=cnt-1
-		String myStr="${listLabel}[${t0}]".toString()
-		if(par instanceof Map){
-			Map newmap=[:]
-			newmap[myStr]=(Map)par
-			Boolean t1= cnt==sz
-			newLevel[level]=t1
-			str += dumpMapDesc(newmap, level, newLevel, !t1, html)
-		}else if(par instanceof List || par instanceof ArrayList){
-			Map newmap=[:]
-			newmap[myStr]=par
-			Boolean t1= cnt==sz
-			newLevel[level]=t1
-			str += dumpMapDesc(newmap, level, newLevel, !t1, html)
-		}else{
-			String lineStrt='\n'
-			for(Integer i=0; i<level; i++){
-				lineStrt += (i+1<level)? (!lastLevel[i] ? '     │' : '      '):'      '
-			}
-			lineStrt += (cnt==1 && sz>1)? '┌─ ':(cnt<sz ? '├─ ' : '└─ ')
-			if(html)str += '<span>'
-			str += "${lineStrt}${listLabel}[${t0}]: ${par} (${getObjType(par)})".toString()
-			if(html)str += sCSPAN
-		}
-		cnt=cnt+1
-	}
-	return str
-}
-
-static String dumpMapDesc(data, Integer level, List<Boolean> lastLevel, Boolean listCall=false, Boolean html=false){
-	String str
-	str=sBLK
-	Integer cnt
-	cnt=1
-	Integer sz=data?.size()
-	data?.each{ par ->
-		String lineStrt
-		List<Boolean> newLevel=lastLevel
-		Boolean thisIsLast= cnt==sz && !listCall
-		if(level>0){
-			newLevel[(level-1)]=thisIsLast
-		}
-		Boolean theLast
-		theLast=thisIsLast
-		if(level==0){
-			lineStrt='\n\n • '
-		}else{
-			theLast= theLast && thisIsLast
-			lineStrt='\n'
-			for(Integer i=0; i<level; i++){
-				lineStrt += (i+1<level)? (!newLevel[i] ? '     │' : '      '):'      '
-			}
-			lineStrt += ((cnt<sz || listCall) && !thisIsLast) ? '├─ ' : '└─ '
-		}
-		String objType=getObjType(par.value)
-		if(par.value instanceof Map){
-			if(html)str += '<span>'
-			str += "${lineStrt}${(String)par.key}: (${objType})".toString()
-			if(html)str += sCSPAN
-			newLevel[(level+1)]=theLast
-			str += dumpMapDesc((Map)par.value, level+1, newLevel, false, html)
-		}
-		else if(par.value instanceof List || par.value instanceof ArrayList){
-			if(html)str += '<span>'
-			str += "${lineStrt}${(String)par.key}: [${objType}]".toString()
-			if(html)str += sCSPAN
-			newLevel[(level+1)]=theLast
-			str += dumpListDesc(par.value, level+1, newLevel, sBLK, html)
-		}
-		else{
-			if(html)str += '<span>'
-			str += "${lineStrt}${(String)par.key}: (${par.value}) (${objType})".toString()
-			if(html)str += sCSPAN
-		}
-		cnt=cnt+1
-	}
-	return str
-}
-
-static String myObj(obj){
-	if(obj instanceof String){return sSTR}
-	else if(obj instanceof Map){return 'Map'}
-	else if(obj instanceof List){return 'List'}
-	else if(obj instanceof ArrayList){return 'ArrayList'}
-	else if(obj instanceof Integer){return 'Int'}
-	else if(obj instanceof BigInteger){return 'BigInt'}
-	else if(obj instanceof Long){return 'Long'}
-	else if(obj instanceof Boolean){return 'Bool'}
-	else if(obj instanceof BigDecimal){return 'BigDec'}
-	else if(obj instanceof Float){return 'Float'}
-	else if(obj instanceof Byte){return 'Byte'}
-	else{ return 'unknown'}
-}
-
-static String getObjType(obj){
-	return "<span style='color:orange'>"+myObj(obj)+sCSPAN
-}
-
-static String getMapDescStr(data){
-	String str
-	List<Boolean> lastLevel=[true]
-	str=dumpMapDesc(data, 0, lastLevel, false, true)
-	return str!=sBLK ? str:'No Data was returned'
-}
-
-def pageDump(){
-	String mc=device.id.toString()
-	Map myV
-	myV=dataStoreFLD[mc]
-	myV= myV!=null ? myV : [:]
-	String message=getMapDescStr(myV)
-	log.info message
-}
-
-
-// >>>>>>>>>> Begin Lux Processing <<<<<<<<<<
-void updateLux(Boolean pollAgain=true) {
-	if(ifreInstalled()) { updated(); return }
-	LOGINFO('Calling UpdateLux(' + pollAgain + ')')
-	if(pollAgain) {
-		String curTime = new Date().format('HH:mm', TimeZone.getDefault())
-		String newLight
-		if(curTime < myGetData('tw_begin') || curTime > myGetData('tw_end')) {
-			newLight =  sFLS
-		}else{
-			newLight =  sTRU
-		}
-		if(newLight != myGetData('is_lightOld') || myGetData('condition_id')==sNULL || myGetData('cloud')==sNULL) {
-			pollOWM()
-			return
-		}
-	}
-	def (Long lux, String bwn) = estimateLux(myGetData('condition_id').toInteger(), myGetData('cloud').toInteger())
-	myUpdData('illuminance', (!lux) ? sZERO : lux.toString())
-	myUpdData('illuminated', String.format('%,4d', (!lux) ? 0 : lux).toString())
-	myUpdData('bwn', bwn)
-	if(pollAgain) PostPoll()
-}
-// >>>>>>>>>> End Lux Processing <<<<<<<<<<
-
-// <<<<<<<<<< Begin Post-Poll Routines >>>>>>>>>>
-void PostPoll() {
-	if(ifreInstalled()) { updated(); return }
-	Integer mult_twd = myGetData('mult_twd')==sNULL ? 1 : myGetData('mult_twd').toInteger()
-	String ddisp_twd = myGetData('ddisp_twd')==sNULL ? '%3.0f' : myGetData('ddisp_twd')
-	String ddisp_p = myGetData('ddisp_p')==sNULL ? '%4.0f' : myGetData('ddisp_p')
-	String ddisp_r = myGetData('ddisp_r')==sNULL ? '%2.0f' : myGetData('ddisp_r')
-
-	String tfmt='yyyy-MM-dd\'T\'HH:mm:ssXXX'
-	String tfmt1=myGetData('timeFormat')
-    if(localSunrisePublish){  // don't bother setting these values if it's not enabled
-        sendEvent(name: 'tw_begin', value: myGetData('tw_begin'))
-        sendEvent(name: 'sunriseTime', value: myGetData('riseTime'))
-        sendEvent(name: 'noonTime', value: myGetData('noonTime'))
-        sendEvent(name: 'sunsetTime', value: myGetData('setTime'))
-        sendEvent(name: 'tw_end', value: myGetData('tw_end'))
-    }else{
-        device.deleteCurrentState('tw_begin')
-        device.deleteCurrentState('sunriseTime')
-        device.deleteCurrentState('noonTime')
-        device.deleteCurrentState('sunsetTime')
-        device.deleteCurrentState('tw_end')
-    }
-    if(dashSharpToolsPublish || dashSmartTilesPublish || localSunrisePublish) {
-        sendEvent(name: 'localSunset', value: myGetData('localSunset')) // only needed for certain dashboards
-        sendEvent(name: 'localSunrise', value: myGetData('localSunrise')) // only needed for certain dashboards
-    }else{
-        device.deleteCurrentState('localSunset')
-        device.deleteCurrentState('localSunrise')
-    }
-
-/*  Capability Data Elements */
-	sendEvent(name: 'humidity', value: myGetDataBD('humidity'), unit: '%')
-	sendEvent(name: 'illuminance', value: myGetData('illuminance').toInteger(), unit: 'lx')
-	sendEvent(name: 'pressure', value: myGetDataBD('pressure'), unit: myGetData(sPMETR))
-	if(dashSharpToolsPublish || dashSmartTilesPublish){
-		sendEvent(name: 'pressured', value: String.format(ddisp_p, myGetDataBD('pressure')), unit: myGetData(sPMETR))
-	}else{
-		device.deleteCurrentState('pressured')
-	}
-	String tmetr= myGetData(sTMETR)
-	sendEvent(name: sTEMP, value: myGetDataBD(sTEMP), unit: tmetr)
-	sendEvent(name: 'ultravioletIndex', value: myGetDataBD('ultravioletIndex'), unit: 'uvi')
-	sendEvent(name: 'feelsLike', value: myGetDataBD('feelsLike'), unit: tmetr)
-
-/*  'Required for Dashboards' Data Elements */
-	if(dashHubitatOWMPublish || dashSharpToolsPublish || dashSmartTilesPublish) {
-		sendEvent(name: 'city', value: myGetData('city'))
-	}else{
-		device.deleteCurrentState('city')
-	}
-	if(dashSharpToolsPublish) {
-		sendEvent(name: 'forecastIcon', value: getCondCode(myGetData('condition_id').toInteger(), myGetData('is_day')))
-	}else{
-		device.deleteCurrentState('forecastIcon')
-	}
-	if(dashSharpToolsPublish || dashSmartTilesPublish || rainTodayPublish) {
-		sendEvent(name: 'rainToday', value: myGetDataBD('rainToday'), unit: myGetData(sRMETR))
-	}else{
-		device.deleteCurrentState('rainToday')
-	}
-	if(dashSharpToolsPublish || dashSmartTilesPublish || percentPrecipPublish) {
-		sendEvent(name: 'percentPrecip', value: myGetData('percentPrecip').toInteger())
-	}else{
-		device.deleteCurrentState('percentPrecip')
-	}
-	if(dashSharpToolsPublish || dashSmartTilesPublish) {
-		sendEvent(name: 'weather', value: myGetData('condition_text'))
-	}else{
-		device.deleteCurrentState('weather')
-	}
-	if(dashSharpToolsPublish || dashSmartTilesPublish) {
-		sendEvent(name: 'weatherIcon', value: getCondCode(myGetData('condition_id').toInteger(), myGetData('is_day')))
-	}else{
-		device.deleteCurrentState('weatherIcon')
-	}
-	if(dashHubitatOWMPublish) {
-		sendEvent(name: "weatherIcons", value: myGetData('OWN_icon'))
-	}else{
-		device.deleteCurrentState('weatherIcons')
-	}
-	if(dashHubitatOWMPublish || dashSharpToolsPublish || windPublish) {
-		sendEvent(name: 'wind', value: myGetDataBD('wind'), unit: myGetData(sDMETR))
-	}else{
-		device.deleteCurrentState('wind')
-	}
-	if(dashHubitatOWMPublish) {
-		sendEvent(name: 'windSpeed', value: myGetDataBD('wind'), unit: myGetData(sDMETR))
-	}else{
-		device.deleteCurrentState('windSpeed')
-	}
-	if(dashHubitatOWMPublish) {
-		sendEvent(name: 'windDirection', value: myGetData('wind_degree').toInteger(), unit: 'DEGREE')
-	}else{
-		device.deleteCurrentState('windDirection')
-	}
-
-/*  Selected optional Data Elements */
-	sendEventPublish(name: 'betwixt', value: myGetData('bwn'))
-	sendEventPublish(name: 'cloud', value: myGetData('cloud').toInteger(), unit: '%')
-	sendEventPublish(name: 'condition_code', value: myGetData('condition_code'))
-	sendEventPublish(name: 'condition_text', value: myGetData('condition_text'))
-	sendEventPublish(name: 'dewpoint', value: myGetDataBD('dewpoint'), unit: tmetr)
-
-	sendEventPublish(name: 'forecast_code', value: myGetData('forecast_code'))
-	if(forecast_textPublish) {
-		sendEventPublish(name: 'forecast_text', value: myGetData('forecast_text'))
-		sendEvent(name: 'forecast_text1', value: myGetData('forecast_text1'))
-		sendEvent(name: 'forecast_text2', value: myGetData('forecast_text2'))
-	}else{
-		device.deleteCurrentState('forecast_text1')
-		device.deleteCurrentState('forecast_text2')
-	}
-	if(fcstHighLowPublish){ // don't bother setting these values if it's not enabled
-		sendEvent(name: 'forecastHigh', value: myGetDataBD('forecastHigh'), unit: tmetr)
-		sendEvent(name: 'forecastHigh1', value: myGetDataBD('forecastHigh1'), unit: tmetr)
-		sendEvent(name: 'forecastHigh2', value: myGetDataBD('forecastHigh2'), unit: tmetr)
-		sendEvent(name: 'forecastLow', value: myGetDataBD('forecastLow'), unit: tmetr)
-		sendEvent(name: 'forecastLow1', value: myGetDataBD('forecastLow1'), unit: tmetr)
-		sendEvent(name: 'forecastLow2', value: myGetDataBD('forecastLow2'), unit: tmetr)
-		sendEvent(name: 'forecastMorn', value: myGetDataBD('forecastMorn'), unit: tmetr)
-		sendEvent(name: 'forecastDay', value: myGetDataBD('forecastDay'), unit: tmetr)
-		sendEvent(name: 'forecastEve', value: myGetDataBD('forecastEve'), unit: tmetr)
-		sendEvent(name: 'forecastNight', value: myGetDataBD('forecastNight'), unit: tmetr)
-		sendEvent(name: 'forecastMorn1', value: myGetDataBD('forecastMorn1'), unit: tmetr)
-		sendEvent(name: 'forecastDay1', value: myGetDataBD('forecastDay1'), unit: tmetr)
-		sendEvent(name: 'forecastEve1', value: myGetDataBD('forecastEve1'), unit: tmetr)
-		sendEvent(name: 'forecastNight1', value: myGetDataBD('forecastNight1'), unit: tmetr)
-	}else{
-		device.deleteCurrentState('forecastHigh')
-		device.deleteCurrentState('forecastHigh1')
-		device.deleteCurrentState('forecastHigh2')
-		device.deleteCurrentState('forecastLow')
-		device.deleteCurrentState('forecastLow1')
-		device.deleteCurrentState('forecastLow2')
-		device.deleteCurrentState('forecastMorn')
-		device.deleteCurrentState('forecastDay')
-		device.deleteCurrentState('forecastEve')
-		device.deleteCurrentState('forecastNight')
-		device.deleteCurrentState('forecastMorn1')
-		device.deleteCurrentState('forecastDay1')
-		device.deleteCurrentState('forecastEve1')
-		device.deleteCurrentState('forecastNight1')
-	}
-	sendEventPublish(name: 'illuminated', value: myGetData('illuminated') + ' lx')
-	sendEventPublish(name: 'is_day', value: myGetData('is_day'))
-
-	if(obspollPublish){  // don't bother setting these values if it's not enabled
-		TimeZone tZ= TimeZone.getDefault()
-		sendEvent(name: 'last_poll_Forecast', value: new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('futime')).format(myGetData('dateFormat'), tZ) + ', ' + new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('futime')).format(tfmt1, tZ))
-		sendEvent(name: 'last_observation_Forecast', value: new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('fotime')).format(myGetData('dateFormat'), tZ) + ', ' + new Date().parse('EEE MMM dd HH:mm:ss z yyyy', myGetData('fotime')).format(tfmt1, tZ))
-	}else{
-		device.deleteCurrentState('last_poll_Forecast')
-		device.deleteCurrentState('last_observation_Forecast')
-	}
-
-	if(precipExtendedPublish){ // don't bother setting these values if it's not enabled
-		sendEvent(name: 'rainTomorrow', value: myGetDataBD('rainTomorrow'), unit: myGetData(sRMETR))
-		sendEvent(name: 'rainDayAfterTomorrow', value: myGetDataBD('rainDayAfterTomorrow'), unit: myGetData(sRMETR))
-        sendEvent(name: 'PoP1', value: myGetData('PoP1').toInteger())
-        sendEvent(name: 'PoP2', value: myGetData('PoP2').toInteger())
-	}else{
-		device.deleteCurrentState('rainTomorrow')
-		device.deleteCurrentState('rainDayAfterTomorrow')
-		device.deleteCurrentState('PoP1')
-		device.deleteCurrentState('PoP2')
-	}
-	if(cloudExtendedPublish){ // don't bother setting these values if it's not enabled
-		sendEvent(name: 'cloudToday', value: myGetData('cloudToday').toInteger(), unit: '%')
-		sendEvent(name: 'cloudTomorrow', value: myGetData('cloudTomorrow').toInteger(), unit: '%')
-		sendEvent(name: 'cloudDayAfterTomorrow', value: myGetData('cloudDayAfterTomorrow').toInteger(), unit: '%')
-	}else{
-		device.deleteCurrentState('cloudToday')
-		device.deleteCurrentState('cloudTomorrow')
-		device.deleteCurrentState('cloudDayAfterTomorrrow')
-	}
-
-	sendEventPublish(name: 'vis', value: Math.round(myGetDataBD('vis') * mult_twd) / mult_twd, unit: (myGetData(sDMETR)=='MPH' ? 'miles' : 'kilometers'))
-	sendEventPublish(name: 'wind_degree', value: myGetData('wind_degree').toInteger(), unit: 'DEGREE')
-	sendEventPublish(name: 'wind_direction', value: myGetData('wind_direction'))
-	sendEventPublish(name: 'wind_cardinal', value: myGetData('wind_cardinal'))
-	sendEventPublish(name: 'wind_gust', value: myGetDataBD('wind_gust'), unit: myGetData(sDMETR))
-	sendEventPublish(name: 'wind_string', value: myGetData('wind_string'))
-
-	buildweatherSummary()
-
-	String OWMIcon
-	String OWMText
-	if((alertSource==sZERO) || (alertSource==sONE) || (myGetData('curAl')==sNCWA && alertSource==sTWO)) {
-		OWMIcon = '<a href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
-		OWMText = '<a href="https://openweathermap.org" target="_blank">OpenWeatherMap.org</a> @ ' + myGetData(sSUMLST)
-	}else{
-		OWMIcon = '<a href="https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'NWS_240px.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
-		OWMText = '<a href="https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon + '" target="_blank">Weather.gov</a> @ ' + myGetData(sSUMLST)
-	}
-//  <<<<<<<<<< Begin Built 3dayfcstTile >>>>>>>>>>
-	if(threedayTilePublish) {
-		Boolean gitclose = (myGetData(sICON).toLowerCase().contains('://github.com/')) && (myGetData(sICON).toLowerCase().contains('/blob/master/'))
-		String iconClose = (gitclose ? '?raw=true>' : sRB)
+        // - Forecast unique derived attributes
+        attribute "todayWindDirCardinal", "string"
+        attribute "tomWindDirCardinal", "string"
+        attribute "tdaWindDirCardinal", "string"
+        attribute "todayWindDirFull", "string"
+        attribute "tomWindDirFull", "string"
+        attribute "tdaWindDirFull", "string"
+        attribute "todayWindDirImageUrl", "string"
+        attribute "tomWindDirImageUrl", "string"
+        attribute "tdaWindDirImageUrl", "string"
+        attribute "todayWindDirectionIcon", "string"
+        attribute "tomWindDirectionIcon", "string"
+        attribute "tdaWindDirectionIcon", "string"
+        attribute "todayDate", "number"
+        attribute "tomDate", "number"
+        attribute "tdaDate", "number"
+        attribute "todayDateText", "string"
+        attribute "tomDateText", "string"
+        attribute "tdaDateText", "string"
+        attribute "todayMoonPhaseText", "string"
+        attribute "tomMoonPhaseText", "string"
+        attribute "tdaMoonPhaseText", "string"
 		
-		//  [orig] String my3day
-		//  [orig] my3day = '<style type="text/css">.cI{height:45%}.cIb{height:80%}</style>'
-		// String my3day = '<style type="text/css">.cI{width:75%}.cIb{height:80%}*{font-size: unset !important}tr:nth-child(3){vertical-align:bottom}</style>'
-		String my3day = '<style type="text/css">.cI{width:55%}.cIb{height:80%}tr:nth-child(3){vertical-align:bottom}tr:first-child{font-size:.6rem}td:first-child{font-size:.5rem}tr:last-child{font-size:.4rem}</style>'
+		// - Moon Phase attributes
+        attribute "todayMoonPhaseSvgImage", "string"
+        attribute "tomMoonPhaseSvgImage", "string"
+        attribute "tdaMoonPhaseSvgImage", "string"
+        attribute "todayMoonPhasePngImageUrl", "string"
+        attribute "tomMoonPhasePngImageUrl", "string"
+        attribute "tdaMoonPhasePngImageUrl", "string"
+		attribute "todayMoonPhaseEmojiIcon", "string"
+		attribute "tomMoonPhaseEmojiIcon", "string"
+		attribute "tdaMoonPhaseEmojiIcon", "string"
+		
+		// - Wind Direction Emoji Attributes
+        attribute "currentWindDirectionEmojiIcon", "string"
+        attribute "todayWindDirectionEmojiIcon", "string"
+        attribute "tomWindDirectionEmojiIcon", "string"
+        attribute "tdaWindDirectionEmojiIcon", "string"
+
+		// - Forecast Weather Condition Attributes
+		attribute "todayConditionCode", "number"
+		attribute "todayConditionType", "string"
+		attribute "todayConditionTypeDesc", "string"
+		attribute "todayConditionTypeAltDesc", "string"
+		attribute "todayConditionIcon", "string"
+		attribute "todayConditionAltIcon", "string"
+
+		attribute "tomConditionCode", "number"
+		attribute "tomConditionType", "string"
+		attribute "tomConditionTypeDesc", "string"
+		attribute "tomConditionTypeAltDesc", "string" 
+		attribute "tomConditionIcon", "string"
+		attribute "tomConditionAltIcon", "string"
+
+		attribute "tdaConditionCode", "number"
+		attribute "tdaConditionType", "string"
+		attribute "tdaConditionTypeDesc", "string"
+		attribute "tdaConditionTypeAltDesc", "string"
+		attribute "tdaConditionIcon", "string"
+		attribute "tdaConditionAltIcon", "string"
+
+		// - Tiles
+        attribute "currentAlertTile", "string"
+        attribute "3DayForecastTile", "string"
+        attribute "currentTile", "string"
+		attribute "currentMoonPhaseTile", "string"
         
-		//  [orig] my3day += '<table style="text-align:center;display:inline">'
-		my3day += '<table style="text-align:center;display:inline-table;width: 100%;height: 92%;font-size:.6rem">'
+        command "clearAllDriverStates"
+        command "clearAllAttributes"
+		command "clearAllSchedules"
+        command "pollOWM"
+    }
+
+    preferences {
+        input name: "apiKey", type: "text", title: "API Key", description: "Enter your OpenWeatherMap API Key here<br><b>Required by OpenWeatherMaps</b>", required: true
+        input name: "apiSelection", type: "enum", title: "API Version", options: ["2.5": "One Call 2.5 (Obsolete!)","3.0": "One Call 3.0", "4.0": "One Call 4.0"], defaultValue: "3.0", description: "Select your API Key version here<br><b>Required by OpenWeatherMaps</b><br><i>*Note: 2.5 API is now obsolete as of June 2024</i><br><i>*Note: 4.0 API key uses 3.0 API poll method</i>", required: true
         
-		my3day += sTR
-		my3day += '<B>' + myGetData('city') +'</B>'
-		my3day += sTD+'Today'
-		my3day += sTD + myGetData('day1')
-		my3day += sTD + myGetData('day2')
-		my3day += sTR
-		my3day += 'Now' + String.format(ddisp_twd, myGetDataBD(sTEMP)) + tmetr + sBR + 'Feels' + String.format(ddisp_twd, myGetDataBD('feelsLike')) + tmetr
-		my3day += sTD + myGetData('imgName0')
-		my3day += sTD + myGetData('imgName1')
-		my3day += sTD + myGetData('imgName2')
-		my3day += sTR
-		my3day += sTD + myGetData('condition_text')
-		my3day += sTD + myGetData('forecast_text1')
-		my3day += sTD + myGetData('forecast_text2')
-		my3day += sTR
-		if(myGetData('threedayLH')==sFLS){
-			my3day += 'Low High'
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow1')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh1')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastLow2')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastHigh2')) + tmetr
-		}else{
-			my3day += 'High Low'
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh1')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow1')) + tmetr
-			my3day += sTD + String.format(ddisp_twd, myGetDataBD('forecastHigh2')) + tmetr + sSPC + String.format(ddisp_twd, myGetDataBD('forecastLow2')) + tmetr
-		}
-		my3day += sTR
-		my3day += 'PoP Precip'
-		my3day += sTD + myGetData('PoP') + '% ' + (myGetDataBD('Precip0') > 0 ? String.format(ddisp_r, myGetDataBD('Precip0')) + myGetData(sRMETR) : 'None')
-		my3day += sTD + myGetData('PoP1') + '% ' + (myGetDataBD('Precip1') > 0 ? String.format(ddisp_r, myGetDataBD('Precip1')) + myGetData(sRMETR) : 'None')
-		my3day += sTD + myGetData('PoP2') + '% ' + (myGetDataBD('Precip2') > 0 ? String.format(ddisp_r, myGetDataBD('Precip2')) + myGetData(sRMETR) : 'None')
-		my3day += '<tr style="font-size:85%">' + '<td  colspan="4">'
-		my3day += sIMGS8 + myGetData(sICON) + 'wsr.png' + iconClose + myGetData('localSunrise') + sSPC + sIMGS8 + myGetData(sICON) + 'wss.png' + iconClose + myGetData('localSunset') + sSPC + 'HTML length = ' + (my3day.length() + OWMIcon.length()+13) + ' chrs'
+        // Optional City field that dynamically overrides latitude/longitude if populated
+        input name: "overrideCity", type: "text", title: "Base Override - City", description: "Optional - Will attempt to geo lookup and override <b>ALL</b> latitude/longitude values<br><b>Default:(empty)</b><br><i>EG: Portland, OR or London, UK.<br>*Note: Overrides Latitude/Longitude parameters of Hub <b>AND</b> values configured below</i>", required: false
+		
+		// Optional Image location overrides
+        input name: "altIconLoc", type: "text", title: "Base Override - Icon Location", description: "Optional - Icon Source Location:<br><i>blank for default OWM location<br>https://tinyurl.com/icnqz/ (Which redirects directly to the<br>Hubitat Community Weather Icons repository)</i>", required: false
+        input name: "altMoonPhaseImagePath", type: "text", title: "Base Override - Moon Phase Image Location", description: "Optional - Moon Phase Image Source Location:<br><i>blank for default Moon Phase Image location<br>https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/<br>(Supplied by @thebearmay of the Hubitat community who wrote & maintains the original MoonPhase Tile driver)</i>", required: false
+        input name: "altWindDirectionImageLoc", type: "text", title: "Base Override - Wind Direction Image Location", description: "Optional - Wind Direction Image Source Location:<br><i>If not used, Wind Direction icons are used</i>", required: false
+        
+        // Need to look into this to see why it was implemented - I am not using it
+        // input 'luxjitter', 'bool', title: 'Use lux jitter control (rounding)?', required: true, defaultValue: false
+        
+        input name: "overrideLatitude", type: "decimal", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
+        input name: "overrideLongitude", type: "decimal", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
+        input name: "altIconsEnable", type: "bool", title: "Base Override - Use Alternative Icons?", description: "Turn ON to use alternate icons (found in csv map within the driver), or OFF to use the standard OpenWeatherMap icons<br><b>Base Override - Icon Location MUST be filled!</b>", defaultValue: false, required: true
+        
+        // Display Selector Options
+        input name: "precisionHumid", type: "enum", title: "Display Decimal Precision - Humidity", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for humidity readings in logging and tiles<br>Default: <b>0</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "0", required: true
+        input name: "precisionPrecip", type: "enum", title: "Display Decimal Precision - Precipitation", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for rainfall readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "2", required: true
+        input name: "precisionPress", type: "enum", title: "Display Decimal Precision - Pressure", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for barometer readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 30mb,30.5mb, 30.55mb</i>", defaultValue: "2", required: true
+        input name: "precisionSunAngles", type: "enum", title: "Display Decimal Precision - Sun Angles", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for sun angles (altitude and azimuth) readings in logging and tiles<br>Default: <b>0</b><br><i>EG(with Unit): 149°, 149.5°, 149.55°</i>", defaultValue: "0", required: true
+        input name: "precisionTemp", type: "enum", title: "Display Decimal Precision - Temperature", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for temperature readings in logging and tiles<br>Default: <b>2</b><br><i>EG(with Unit): 70°F, 70.3°F, 70.55°F</i>", defaultValue: "2", required: true
+        input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for wind speed readings in logging and tiles<br>Default: <b>2</b><br><i>EG (with Unit): 12 mph, 12.7 mph, 12.77 mph</i>", defaultValue: "2", required: true
+        
+        // Display Options
+        input name: "aPIKeyExposedEnable", type: "bool", title: "Display Options - Expose API Key In Logging?", description: "Enable to show API Key value in log outputs<br>Default: <b>Off</b>", defaultValue: false, required: true
+        
+        // Display Format Selectors
+        input name: "DateTimeForm", type: "enum", title: "Display Format - Date & Time Attributes", options: ["1": "M/d/yyyy h:mm a", "2": "M/d/yyyy HH:mm", "3": "MM/dd/yyyy h:mm a", "4": "MM/dd/yyyy HH:mm", "5": "d/M/yyyy h:mm a", "6": "d/M/yyyy HH:mm", "7": "dd/MM/yyyy h:mm a", "8": "dd/MM/yyyy HH:mm", "9": "yyyy/MM/dd HH:mm", "10": "Unix, UTC (native)"], description: "Choice of date & time format used in tiles and logging for attributes containing both date and time<br>Default: <b>M/d/yyyy h:mm a</b><br><i>EG: 7/12/2026 9:00 AM, 12/7/2026 09:01, 2026/07/12 09:02, 1783859756</i>", defaultValue: "1", required: true
+        input name: "DateForm", type: "enum", title: "Display Format - Date Only Attributes", options: ["1": "M/d/yyyy", "3": "MM/dd/yyyy", "5": "d/M/yyyy", "7": "dd/MM/yyyy", "9": "yyyy/MM/dd", "10": "Unix, UTC (native)"], description: "Choice of date format used in tiles and logging for attribute names containing ONLY date<br>Default: <b>M/d/yyyy</b><br><i>EG: 7/12/2026, 12/7/2026, 2026/07/12, 1783859756</i>", defaultValue: "1", required: true
+        input name: "TimeForm", type: "enum", title: "Display Format - Time Only Attributes", options: ["1": "h:mm a", "2": "HH:mm", "10": "Unix, UTC (native)"], description: "Choice of time format used in tiles and logging for attribute names containing ONLY time<br>Default: <b>h:mm a</b><br><i>EG: 9:00 AM, 13:00, 1783859756</i>", defaultValue: "1", required: true
 
-		// orig if((my3day.length() + OWMIcon.length()+8) < 1025) {
-		// orig 	my3day += OWMIcon
-		// orig }else if((my3day.length() + OWMText.length()+8) < 1025) {
-		// orig 	my3day += OWMText
-		// orig }else{
-		// orig 	my3day += 'OpenWeatherMap.org'
-		// orig }
-		my3day += '</table>'
-		if(my3day.length() > 1024) {
-			LOGWARN('Too much data to display.</br></br>Current threedayfcstTile length (' + my3day.length() + ') exceeds maximum tile length by ' + (my3day.length() - 1024).toString()  + ' characters.')
-		}
-		sendEvent(name: 'threedayfcstTile', value: my3day.take(1024))
-	}else{
-		device.deleteCurrentState('threedayfcstTile')
-	}
-//  >>>>>>>>>> End Built 3dayfcstTile <<<<<<<<<<
-	buildMyText()
+        // Display Unit Selectors
+        input name: "pressureUnit", type: "enum", title: "Display Unit - Barometric Pressure", options: ["hPa": "Hectopascals (hPa)", "inHg": "Inches of Mercury (inHg)", "kPa": "Kilopascals (kPa)", "mb": "Millibar (mb)", "mmHg": "Millimeters of Mercury (mmHg)", "none": "None (No Unit Suffix)"], description: "Choice of barometer unit used in tiles and logging<br>Default: <b>Inches of Mercury (inHg)</b>", defaultValue: "inHg", required: true
+        input name: "humidityUnit", type: "enum", title: "Display Unit - Humidity", options: ["%": "Percent (%)", "%RH": "Percent RH (%RH)", "g/m³": "Absolute Humidity (g/m³)", "g/kg³": "Mixing Ratio (g/kg³)", "none": "None (No Unit Suffix)"], description: "Choice of humidity unit formatting used in tiles and logging<br>Default: <b>Humidity (%)</b>", defaultValue: "%", required: true
+        input name: "illuminanceUnit", type: "enum", title: "Display Unit - Illuminance", options: ["lx": "Lux (lx)", "fc": "Foot-candle (fc)", "ph": "Phot (ph)", "none": "None (No Unit Suffix)"], description: "Choice of illuminance unit used in tiles and logging<br>Default: <b>Lux (lx)</b>", defaultValue: "lx", required: true
+        input name: "precipUnit", type: "enum", title: "Display Unit - Precipitation (Rain/Snow)", options: ["mmHr": "Millimeters per Hour (mmHr)", "inHr": "Inches per Hour (inHr)", "\"": "Inches (\")", "none": "None (No Unit Suffix)"], description: "Choice of precipitation (both rain and snow) unit formatting used in tiles and logging<br>Default: <b>Inches per Hour (inHr)</b>", defaultValue: "inHr", required: true
+        input name: "temperatureUnit", type: "enum", title: "Display Unit - Temperature", options: ["°F": "Fahrenheit (°F)", "°C": "Celsius (°C)", "K": "Kelvin (K)", "none": "None (No Unit Suffix)"], description: "Choice of temperature unit formatting used in tiles and logging<br>Default: <b>Fahrenheit (°F)</b>", defaultValue: "°F", required: true
+        input name: "visibilityUnit", type: "enum", title: "Display Unit - Visibility Distance", options: ["m": "Meters (m)", "miles": "Miles (miles)", "ft": "Feet (ft)", "km": "Kilometers (km)", "none": "None (No Unit Suffix)"], description: "Choice of visibility distance unit used in tiles and logging<br>Default: <b>Miles (miles)</b>", defaultValue: "miles", required: true    
+        input name: "windSpeedUnit", type: "enum", title: "Display Unit - Wind Speed", options: ["mph": "Miles per Hour (mph)", "kmh": "Kilometers per Hour (km/h)", "kt": "Knots (kt)", "ms": "Meters per Second (m/s)", "none": "None (No Unit Suffix)"], description: "Choice of wind speed unit used in tiles and logging<br>Default: <b>Miles per Hour (mph)</b>", defaultValue: "mph", required: true        
+
+        // Polling Option Dropdown Menu
+        input name: "dayInterval", type: "enum", title: "Polling - Daytime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency to OWM during daytime (between sunrise and sunset)<br>Default: <b>30 Minutes</b>", defaultValue: "30", required: true
+        input name: "nightInterval", type: "enum", title: "Polling - Nighttime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency of OWM during nighttime (between sunset and sunrise)<br>Default: <b>1 Hour</b>", defaultValue: "60", required: true
+
+		// Tile Options
+        input name: "displayTileMoonPhaseSVGEnable", type: "bool", title: "Tile - SVG or PNG image use in Moon Phase Tile", description: "Choice of Moon Phase Tile image type. Enabled uses SVG, disabled uses PNG<br>Default: <b>ON</b>", defaultValue: true, required: true
+        input name: "debugTileEnable", type: "bool", title: "Tile - Enable Tile Debug Info", description: "Enable to embed character count string on tiles<br>Default: <b>Off</b>", defaultValue: false, required: true
+
+        // Independent Logging Switches
+        input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
+        input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", description: "Enable to output error activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
+        input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", description: "Enable to output warning activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
+        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", description: "Enable to output debugging activity to log<br>Default: <b>Off</b><br>(Is turned on for 30 minutes after Initialized or first installed)", defaultValue: false, required: true
+        input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", description: "Enable to output tracing activity to log<br>Default: <b>Off</b>", defaultValue: false, required: true
+    }
 }
 
-void buildweatherSummary() {
-	//  <<<<<<<<<< Begin Built Weather Summary text >>>>>>>>>>
-	String ddisp_twd = myGetData('ddisp_twd')==sNULL ? '%3.0f' : myGetData('ddisp_twd')
+def installed() {
+    logInfo "Driver Installed. Turning on initial debug logging for 30 minutes."
+    device.updateSetting("logDebugEnable", [type: "bool", value: true])
+    
+    // Prefill altIconLoc default setting on install
+    if (settings.altIconLoc == null || settings.altIconLoc.trim() == "") {
+        device.updateSetting("altIconLoc", [type: "text", value: "https://tinyurl.com/icnqz/"])
+    }
 
-	if(weatherSummaryPublish){ // don't bother setting these values if it's not enabled
-		String Summary_forecastTemp = ' with a high of ' + String.format(ddisp_twd, myGetDataBD('forecastHigh')) + myGetData(sTMETR) + ' and a low of ' + String.format(ddisp_twd, myGetDataBD('forecastLow')) + myGetData(sTMETR) + '. '
-		String Summary_precip = 'There is a ' + myGetData('percentPrecip') + '% chance of precipitation. '
-		LOGINFO('Summary_precip: ' + Summary_precip)
-		String Summary_vis = 'Visibility is around ' + String.format(ddisp_twd, myGetDataBD('vis')) + (myGetData(sDMETR)=='MPH' ? ' miles.' : ' kilometers.')
-		SummaryMessage((Boolean)settings.summaryType, myGetData('Summary_last_poll_date'), myGetData(sSUMLST), Summary_forecastTemp, Summary_precip, Summary_vis)
-	}
-//  >>>>>>>>>> End Built Weather Summary text <<<<<<<<<<
+    // Push defaults to settings so they display properly on the driver page fields
+    ["humidityUnit": "%RH", "pressureUnit": "inHg", "illuminanceUnit": "lx", "temperatureUnit": "°F", "windSpeedUnit": "mph", "precipUnit": "inHr", "visibilityUnit": "miles"].each { k, v ->
+        if (settings[k] == null) device.updateSetting(k, [type: "enum", value: v])
+        sendIfChanged(name: k, value: v)
+    }
+
+    initialize()
 }
-// >>>>>>>>>> End Post-Poll Routines <<<<<<<<<<
-void buildMyText() {
-	String ddisp_twd = myGetData('ddisp_twd')==sNULL ? '%3.0f' : myGetData('ddisp_twd')
-	String ddisp_p = myGetData('ddisp_p')==sNULL ? '%4.0f' : myGetData('ddisp_p')
-	String ddisp_r = myGetData('ddisp_r')==sNULL ? '%2.0f' : myGetData('ddisp_r')
-//  <<<<<<<<<< Begin Built mytext >>>>>>>>>>
-	String OWMIcon
-	String OWMText
-	if((alertSource==sZERO) || (alertSource==sONE) || (myGetData('curAl')==sNCWA && alertSource==sTWO)) {
-		OWMIcon = '<a href="https://openweathermap.org/city/' + myGetData('OWML') + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
-		OWMText = '<a href="https://openweathermap.org" target="_blank">OpenWeatherMap.org</a> @ ' + myGetData(sSUMLST)
-	}else{
-		OWMIcon = '<a href="https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon + '" target="_blank">' + sIMGS5 + myGetData(sICON) + 'NWS_240px.png style="height:2em"></a> @ ' + myGetData(sSUMLST)
-		OWMText = '<a href="https://tinyurl.com/zznws?lat=' + altLat + '&lon=' + altLon + '" target="_blank">Weather.gov</a> @ ' + myGetData(sSUMLST)
-	}
-	if(myTilePublish) { // don't bother setting these values if it's not enabled
-		Boolean gitclose = (myGetData(sICON).toLowerCase().contains('://github.com/')) && (myGetData(sICON).toLowerCase().contains('/blob/master/'))
-		String iconClose = (gitclose ? '?raw=true>' : sRB)
-		Boolean noAlert = (!alertPublish) ? true : (!myGetData('possAlert') || myGetData('possAlert') == sBLK || myGetData('possAlert') == sFLS)
-		String alertStyleOpen = (noAlert ? sBLK : '<span>')
-		String alertStyleClose = (noAlert ? sBLK : sCSPAN)
 
-		BigDecimal wgust
-		if (myGetDataBD('wind_gust') < 1.0) {
-			wgust = 0.0g
+def updated() {
+    logInfo "Preferences updated. Running initialization ..."
+    
+    // Ensure altIconLoc retains default if cleared by user
+    if (settings.altIconLoc == null || settings.altIconLoc.trim() == "") {
+        device.updateSetting("altIconLoc", [type: "text", value: "https://tinyurl.com/icnqz/"])
+    }
+
+    // Update base paths dynamically on preferences update
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
+    state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
+    state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc) 
+    
+    // --- FORCE REGISTER CORE & SYSTEM ATTRIBUTES ---
+    sendEvent(name: "temperature", value: 0, unit: settings.temperatureUnit ?: "°F")
+    sendEvent(name: "pressure", value: 0, unit: settings.pressureUnit ?: "inHg")
+    sendEvent(name: "illuminance", value: 0, unit: settings.illuminanceUnit ?: "lx")
+    sendEvent(name: "humidity", value: 0, unit: settings.humidityUnit ?: "%")
+    sendEvent(name: "ultravioletIndex", value: 0)
+
+    // Preset placeholder strings to ensure clean execution bounds
+    ["todayMoonPhaseText", "tomMoonPhaseText", "tdaMoonPhaseText"].each { sendIfChanged(name: it, value: "--") }
+
+    // --- CLEAR GEO CACHE TO FORCE RE-EVALUATION IF USER COMES BACK AND CHANGES IT---
+    state.lastOverrideCity = null
+    state.lastOverrideLatitude = null
+    state.lastOverrideLongitude = null
+    state.usedCity = null
+
+    initialize()
+}
+
+def initialize() {
+    logDebug "Clearing all scheduled jobs ..."
+    unschedule()
+    logInfo "Initializing driver ..." 
+  
+    if (logDebugEnable == true) {
+        runIn(1800, "disableDebugLogging")
+    }
+
+    // Initialize asset paths safely as persistent states
+    state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
+    state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc)
+
+    // Mark that we are currently doing our initial setup
+    state.isInitializing = true
+    // Fire the very first poll instantly
+    runIn(1, "scheduledPoll")
+}
+
+void clearAllDriverStates() {
+    logInfo "Clearing all driver states..."
+    // Clears all data stored in the state map
+    state.clear() 
+    logInfo "All states have been cleared."
+}
+
+void clearAllAttributes() {
+    logInfo "Clearing all attributes..."
+    device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
+    logInfo "All attributes have been cleared."
+}
+
+void clearAllSchedules() {
+    logInfo "Clearing all scheduled jobs (including orphaned schedules)..."
+    unschedule()
+    logInfo "All scheduled jobs have been successfully cleared."
+}
+
+def scheduledPoll() {
+    // Scheduled background poll sequence initiated.
+    logDebug "Scheduled background poll sequence initiated."
+    pollOWM("schedule")
+}
+
+def refresh() {
+    // Refresh triggered via schedule or button press.
+    logDebug "Refresh triggered via schedule or button press."
+    
+    // Safety check preference values
+    if (!apiKey) {
+        logWarn "Execution halted: API Key entry is missing!"
+        return
+    }
+    
+    // Execution to owm Poll logic block, alerting that it was invoked by refresh
+    pollOWM("refresh") 
+}
+
+// Add this handler to unpack scheduled runIn calls safely
+void scheduledTextValue(List dataList) {
+    logDebug "Unpacking scheduled calcTextValue arguments safely..."
+    if (dataList && dataList.size() >= 9) {
+        Map currentData = dataList[5] instanceof Map ? dataList[5] : [:]
+        Map todayData   = dataList[6] instanceof Map ? dataList[6] : [:]
+        Map tomData     = dataList[7] instanceof Map ? dataList[7] : [:]
+        Map tdaData     = dataList[8] instanceof Map ? dataList[8] : [:]
+
+        calcTextValue(
+            dataList[0] != null ? dataList[0].toBigDecimal() : null,
+            dataList[1] != null ? dataList[1].toBigDecimal() : null,
+            dataList[2] != null ? dataList[2].toBigDecimal() : null,
+            dataList[3] != null ? dataList[3].toBigDecimal() : null,
+            dataList[4] != null ? dataList[4].toBigDecimal() : null,
+            currentData,
+            todayData,
+            tomData,
+            tdaData
+        )
+        
+        calcMoonPhaseValue(todayData, tomData, tdaData)
+        calcMoonPhaseSvgImage(todayData, tomData, tdaData)
+        
+        generateTiles(currentData, todayData, tomData, tdaData)
+    } else {
+        logWarn "Scheduled calcTextValue skipped: Argument list was incomplete."
+    }
+}
+
+def pollOWM(String type = "manual") {
+    // Evaluation of execution triggers using logInfo
+    switch(type) {
+        case "refresh": logInfo "pollOWM run on manual Refresh"; break
+        case "schedule": logInfo "polling OpenWeatherMaps API on schedule"; break
+        case "manual":
+        default: logInfo "PollOWM run manually"; break
+    }
+
+    // pollOWM triggered. Evaluating location coordinates...
+    logDebug "pollOWM triggered. Evaluating location coordinates..."
+    
+    // Ensure state variables exist by evaluating coordinate overrides
+	calcLonLatCityState()
+    
+    if(state.usedLatitude == null || state.usedLongitude == null) {
+        logWarn "pollOWM aborted: Valid coordinates are missing (Lat: ${state.usedLatitude}, Lon: ${state.usedLongitude})"
+        return
+    }
+
+    BigDecimal currentAlt = calcSunPosition()
+    calcBetwixtState(currentAlt)
+    calcIsDayState(currentAlt)
+    
+    // Resolve paths safely and save them to state before API execution
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
+    state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
+    state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc) // <-- ADD THIS LINE
+    
+    pollOWMAPI()
+}
+
+private void updateDynamicSchedules(long sunriseEpoch, long sunsetEpoch) {
+    // Always clear any previous scheduledPoll jobs to ensure only one is ever pending
+    unschedule("scheduledPoll")
+
+    if (dayInterval == "manual" && nightInterval == "manual") {
+        logInfo "Both daytime and nighttime polling are set to MANUAL. Dynamic scheduling skipped."
+        return
+    }
+
+    long nowTime = now() / 1000L
+    boolean isDay = (nowTime >= sunriseEpoch && nowTime < sunsetEpoch)
+    String currentInterval = isDay ? dayInterval : nightInterval
+
+    int delaySeconds = 0
+
+    if (currentInterval == "manual") {
+        // If the current period is manual, schedule exactly for the next transition boundary
+        if (isDay) {
+            delaySeconds = (int)(sunsetEpoch - nowTime)
+            logDebug "Daytime polling is MANUAL. Scheduling next poll at sunset in ${delaySeconds} seconds."
+        } else {
+            long nextSunrise = (nowTime > sunriseEpoch) ? (sunriseEpoch + 86400) : sunriseEpoch
+            delaySeconds = (int)(nextSunrise - nowTime)
+            logDebug "Nighttime polling is MANUAL. Scheduling next poll at sunrise in ${delaySeconds} seconds."
+        }
+    } else {
+        // Otherwise, simply look up the active period's interval in minutes
+		int intervalMinutes = (currentInterval && currentInterval.isInteger()) ? currentInterval.toInteger() : 30
+        delaySeconds = intervalMinutes * 60
+        logDebug "Scheduling next background poll in ${intervalMinutes} minutes (${delaySeconds} seconds) via runIn."
+    }
+
+    // Guard rail against negative or zero delays
+    if (delaySeconds <= 0) delaySeconds = 1800 
+    runIn(delaySeconds, "scheduledPoll", [overwrite: true])
+}
+
+	// Add this handler to unpack scheduled runIn calls safely
+	// --- Modular Tile Generator Routine ---
+void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
+    String tUnit = settings.temperatureUnit ?: "°F"
+    String wUnit = settings.windSpeedUnit ?: "mph"
+    String cityName = state.usedCity ?: "Local Area"
+    
+    // Helper to overlay debug character count in top-right corner (displays true attribute length minus debug overlay)
+    def appendTileDebug = { String bodyHtml ->
+        if (settings.debugTileEnable != true) return bodyHtml + "</div>"
+        
+        // Calculate exact stored attribute size (bodyHtml + closing tag + badge) minus the 83-char badge overhead
+        int actualContentLen = bodyHtml.length() + 6 
+        
+        String footerStart = "<div style='position:absolute;top:2px;right:4px;font-size:.6em;color:#fff;background:rgba(0,0,0,0.6);padding:1px 4px;border-radius:3px;z-index:99;'>Len:"
+        return bodyHtml + footerStart + "${actualContentLen}</div></div>"
+    }
+
+	// =========================================================================
+    // SECTION 1: currentTile (Hyper-Compressed & Responsive Layout)
+    // =========================================================================
+    def temp, cond, hi, lo, hum, wind, currentIconUrl, feelsLike
+
+    if (currentData && todayData) {
+        temp      = currentData.temp != null ? convertKelvin(currentData.temp) : "--"
+        feelsLike = currentData.feels_like != null ? convertKelvin(currentData.feels_like) : "--"
+        cond      = (currentData.weather && currentData.weather[0]) ? currentData.weather[0].description : "--"
+        hi        = todayData.temp?.max != null ? convertKelvin(todayData.temp.max) : "--"
+        lo        = todayData.temp?.min != null ? convertKelvin(todayData.temp.min) : "--"
+        hum       = currentData.humidity != null ? convertHumidity(currentData.humidity) : "--"
+        wind      = currentData.wind_speed != null ? convertWindSpeed(currentData.wind_speed) : "--"
+    } else {
+        temp      = device.currentValue("currentTemperature") ?: "--"
+        feelsLike = device.currentValue("currentFeelsLike") ?: "--"
+        cond      = device.currentValue("currentConditionTypeDesc") ?: "--"
+        hi        = device.currentValue("todayTempMax") ?: "--"
+        lo        = device.currentValue("todayTempMin") ?: "--"
+        hum       = device.currentValue("currentHumidity") ?: "--"
+        wind      = device.currentValue("currentWindSpeed") ?: "--"
+    }
+
+    currentIconUrl = device.currentValue("currentConditionAltIcon")
+    if (!currentIconUrl) {
+        String iconCode = (currentData.weather && currentData.weather[0]) ? currentData.weather[0].icon : (device.currentValue("currentConditionIcon") ?: "01d")
+        String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
+        currentIconUrl = "${basePath}${iconCode}.png"
+    }
+
+    String windIconDisplay = "💨"
+    if (settings.altIconsEnable == true) {
+        String windIconUrl = device.currentValue("currentWindDirImageUrl") ?: ""
+        if (windIconUrl != "") {
+            windIconDisplay = "<img src='${windIconUrl}' style='height:.9em;vertical-align:middle;margin-right:.1em;'>"
+        }
+    }
+
+    String sT  = (temp instanceof BigDecimal) ? temp.setScale(0, java.math.RoundingMode.HALF_UP) : temp
+    String sFL = (feelsLike instanceof BigDecimal) ? feelsLike.setScale(0, java.math.RoundingMode.HALF_UP) : feelsLike
+    String sH  = (hi instanceof BigDecimal) ? hi.setScale(0, java.math.RoundingMode.HALF_UP) : hi
+    String sL  = (lo instanceof BigDecimal) ? lo.setScale(0, java.math.RoundingMode.HALF_UP) : lo
+    String sW  = (wind instanceof BigDecimal) ? wind.setScale(0, java.math.RoundingMode.HALF_UP) : wind
+
+    String currentBodyHtml = "<div style='color:#fff;display:flex;flex-direction:column;justify-content:space-around;align-items:center;height:100%;box-sizing:border-box;overflow:hidden;padding:.1em;line-height:1;text-align:center;font-size:.7em'>" +
+        "<div style='font-size:1.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%'>Currently in ${cityName}</div>" +
+        "<div style='display:flex;align-items:center'><img src='${currentIconUrl}' style='height:2em;max-width:2.4em;object-fit:contain'><b style='font-size:1.74em;margin-left:.2em'>${sT}${tUnit}</b></div>" +
+        "<div style='font-size:.93em;color:#ddd;margin-top:-.2em'>(feels like ${sFL}${tUnit})</div>" +
+        "<div style='text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%'>${cond}</div>" +
+        "<div>High: ${sH}° Low: ${sL}°</div>" +
+        "<div style='white-space:nowrap'>💦${hum}% &nbsp;&nbsp; ${windIconDisplay}${sW} ${wUnit}</div>"
+
+    sendIfChanged(name: "currentTile", value: appendTileDebug(currentBodyHtml))
+	
+    // =========================================================================
+    // SECTION 2: 3DayForecastTile (Aligned Rows / Clean Layout)
+    // =========================================================================
+    long epochMsNow = now()
+	String day1Name = (tomData && tomData.dt) ? new Date(tomData.dt * 1000L).format("EEE", location.timeZone) : "Tom"
+	String day2Name = (tdaData && tdaData.dt) ? new Date(tdaData.dt * 1000L).format("EEE", location.timeZone) : "TDA"
+    String pUnit = (settings.precipUnit == "none" || settings.precipUnit == null) ? "" : settings.precipUnit
+    String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
+
+    // Current Column Data
+    String cIcon = device.currentValue("currentConditionAltIcon") ?: "${basePath}${(currentData.weather && currentData.weather[0]) ? currentData.weather[0].icon : '01d'}.png"
+    def cTemp    = currentData.temp != null ? convertKelvin(currentData.temp) : (device.currentValue("currentTemperature") ?: "--")
+    String cTStr = (cTemp instanceof BigDecimal) ? cTemp.setScale(0, java.math.RoundingMode.HALF_UP) : cTemp
+
+    // Helper for forecast column data lookup
+    def getFcstData = { prefix, Map sourceMap ->
+        String iconUrl = device.currentValue("${prefix}ConditionAltIcon") ?: ""
+        if (!iconUrl && sourceMap && sourceMap.weather && sourceMap.weather[0]) {
+            iconUrl = "${basePath}${sourceMap.weather[0].icon}.png"
+        }
+        String desc = sourceMap.weather ? sourceMap.weather[0].description : (device.currentValue("${prefix}ConditionTypeDesc") ?: "--")
+        
+        // Stack words by replacing spaces with <br>
+        if (desc && desc != "--") {
+            desc = desc.replace(" ", "<br>")
+        }
+
+        def fHi = sourceMap.temp?.max != null ? convertKelvin(sourceMap.temp.max) : (device.currentValue("${prefix}TempMax") ?: "--")
+        def fLo = sourceMap.temp?.min != null ? convertKelvin(sourceMap.temp.min) : (device.currentValue("${prefix}TempMin") ?: "--")
+        def pop = sourceMap.pop != null ? sourceMap.pop : (device.currentValue("${prefix}POP") ?: 0)
+        def rain = sourceMap.rain != null ? sourceMap.rain : 0.0
+        def snow = sourceMap.snow != null ? sourceMap.snow : 0.0
+        def precip = (rain.toBigDecimal() > 0) ? convertPrecip(rain) : convertPrecip(snow)
+
+        String sHi = (fHi instanceof BigDecimal) ? fHi.setScale(0, java.math.RoundingMode.HALF_UP) : fHi
+        String sLo = (fLo instanceof BigDecimal) ? fLo.setScale(0, java.math.RoundingMode.HALF_UP) : fLo
+        int popPct = (pop.toBigDecimal() * 100).intValue()
+        String precipStr = (precip != null && precip.toBigDecimal() > 0) ? "${precip}${pUnit}" : ""
+
+        return [icon: iconUrl, desc: desc, hi: sHi, lo: sLo, pop: popPct, precip: precipStr]
+    }
+
+    def d0 = getFcstData("today", todayData)
+    def d1 = getFcstData("tom", tomData)
+    def d2 = getFcstData("tda", tdaData)
+
+    String forecastBodyHtml = "<style>.fcTable{width:100%;height:100%;text-align:center;color:#fff;font-size:.55rem;border-collapse:collapse;line-height:1}.fcTable td{padding:1px;vertical-align:middle}.fcTable img{height:3.2em;vertical-align:middle}.fcD{font-size:.48rem}.fcT{font-size:.7rem;font-weight:bold}</style>" +
+        "<table class='fcTable'>" +
+        "<tr><td colspan='4'><b>${cityName}</b></td></tr>" +
+        "<tr><td>Now</td><td>Today</td><td>${day1Name}</td><td>${day2Name}</td></tr>" +
+        "<tr><td><img src='${cIcon}'></td><td><img src='${d0.icon}'></td><td><img src='${d1.icon}'></td><td><img src='${d2.icon}'></td></tr>" +
+        "<tr><td>Currently<br><span class='fcT'>${cTStr}°</span></td><td class='fcD'>${d0.desc}</td><td class='fcD'>${d1.desc}</td><td class='fcD'>${d2.desc}</td></tr>" +
+        "<tr><td>Hi/Lo</td><td><b>${d0.hi}°/${d0.lo}°</b></td><td><b>${d1.hi}°/${d1.lo}°</b></td><td><b>${d2.hi}°/${d2.lo}°</b></td></tr>" +
+        "<tr><td>Chance of Rain</td><td>💧${d0.pop}%${d0.precip ? ' ' + d0.precip : ''}</td><td>💧${d1.pop}%${d1.precip ? ' ' + d1.precip : ''}</td><td>💧${d2.pop}%${d2.precip ? ' ' + d2.precip : ''}</td></tr>" +
+        "</table>"
+
+    sendIfChanged(name: "3DayForecastTile", value: appendTileDebug(forecastBodyHtml))
+
+	// =========================================================================
+    // SECTION 3: currentAlertTile (Layout Adjustments & Exact 1023 Budget Fix)
+    // =========================================================================
+    String alertActive = device.currentValue("currentAlert") ?: "No active alerts"
+    String alertSender = device.currentValue("currentAlertSender") ?: "N/A"
+    String alertDescFull = device.currentValue("currentAlertDescFull") ?: "No active alerts"
+    String lastPollTime = new Date().format("HH:mm", location.timeZone)
+
+    // Base container wrapper
+    String containerStart = "<div style='display:flex;flex-direction:column;justify-content:space-between;height:100%;box-sizing:border-box;overflow:hidden;padding:6px 4px;border-radius:6px;color:#fff;line-height:1.2;text-align:center'>"
+
+    String alertBodyHtml = ""
+
+    if (alertActive != "No active alerts" && alertActive != "N/A" && alertActive != "") {
+        // --- Added top padding & bottom margin for title spacing ---
+        String headerHtml = "<div style='font-size:.85em;color:#ff5555;padding-top:10px;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'><b>⚠️ ${alertActive}</b></div><div style='font-size:.5em;color:#ddd;padding:2px 0;text-align:left;flex-grow:1;overflow:hidden;'>"
+        String footerHtml = "</div><div style='display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.15);padding-top:4px;font-size:.6em;color:#bbb'><span>👤 ${alertSender.take(12)}</span><span>⏰ ${lastPollTime}</span></div></div>"
+        
+        // --- Dynamic Calculation for Maximum 1023 Total String Length ---
+        // 1. Calculate Debug Overlay Cost if enabled
+        int debugBadgeLen = 0
+        if (settings.debugTileEnable == true) {
+            // Format: "<div style='position:absolute;top:2px;right:4px;font-size:.6em;color:#fff;background:rgba(0,0,0,0.6);padding:1px 4px;border-radius:3px;z-index:99;'>Len:1023</div>"
+            debugBadgeLen = 143 
+        }
+
+        // 2. Fixed HTML overhead (Container + Header + Footer + Debug Tag)
+        int overheadLen = containerStart.length() + headerHtml.length() + footerHtml.length() + debugBadgeLen
+
+        // 3. Max character allowance reserved for alertDescFull
+        int maxDescLen = 1023 - overheadLen
+        
+        String truncatedDesc = alertDescFull
+        if (maxDescLen > 3 && alertDescFull.length() > maxDescLen) {
+            truncatedDesc = alertDescFull.take(maxDescLen - 3) + "..."
+        } else if (maxDescLen <= 3) {
+            truncatedDesc = alertDescFull.take(Math.max(0, maxDescLen))
+        }
+
+        alertBodyHtml = "${containerStart}${headerHtml}${truncatedDesc}${footerHtml}"
+    } else {
+        alertBodyHtml = "${containerStart}<div style='font-size:0.85em;font-weight:bold;color:#5f5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;'>✅ ${cityName}<br>No Alerts</div><div style='font-size:0.8em;color:#aaa;padding:4px 4px;'>No active weather alerts from OpenWeatherMap or their sources</div><div style='display:flex;justify-content:center;border-top:1px solid rgba(255,255,255,0.15);padding-top:4px;font-size:.6em;color:#bbb'><span>Updated ${lastPollTime}</span></div></div>"
+    }
+
+    // Send tile output (appendTileDebug will add the visual badge without exceeding 1023 total chars)
+    sendIfChanged(name: "currentAlertTile", value: appendTileDebug(alertBodyHtml))
+	
+    // =========================================================================
+    // SECTION 4: currentMoonPhaseTile (Trimmed & Optimized Layout)
+    // =========================================================================
+    Map moonVals = calcMoonPhaseValue(todayData, tomData, tdaData)
+    String liveSvg = calcMoonPhaseSvgImage(todayData, tomData, tdaData)
+
+    String moonPhaseText = moonVals.text ?: (device.currentValue("todayMoonPhaseText") ?: "Unknown")
+    String moonSvg       = liveSvg ?: (device.currentValue("todayMoonPhaseSvgImage") ?: "")
+    String moonPngUrl    = moonVals.png ?: (device.currentValue("todayMoonPhasePngImageUrl") ?: "")
+
+    String graphicDisplay = ""
+    if (settings.displayTileMoonPhaseSVGEnable == true && moonSvg != "") {
+        graphicDisplay = moonSvg
+    } else if (moonPngUrl != "") {
+        graphicDisplay = "<img src='${moonPngUrl}' style='width:100%;height:100%;object-fit:contain;'>"
+    } else {
+        String moonEmoji = moonVals.emoji ?: (device.currentValue("todayMoonPhaseEmojiIcon") ?: "🌑")
+        graphicDisplay = "<div style='font-size:min(12vw,12vh,4.5em);line-height:1;'>${moonEmoji}</div>"
+    }
+
+    String moonBodyHtml = "<div style='display:flex;justify-content:center;align-items:center;height:100%;width:100%;text-align:center;position:relative;overflow:hidden;'>" +
+                          graphicDisplay +
+                          "<div style='position:absolute; bottom:38%; width:92%; box-sizing:border-box; font-size:clamp(.6rem, 6vw, .8rem); font-weight:bold; text-shadow:1px 1px 3px #000; line-height:1.1; word-wrap:break-word; text-align:center; color:#fff;'>${moonPhaseText}</div>" +
+                          "</div>"
+    sendIfChanged(name: "currentMoonPhaseTile", value: appendTileDebug(moonBodyHtml))
+}
+private void pollOWMAPI() {
+    logDebug "Building OpenWeatherMap API HTTP Request..."
+    def lat = state.usedLatitude
+    def lon = state.usedLongitude
+    def version = settings.apiSelection ?: "3.0"
+    
+    if (!apiKey) {
+        logError "API request aborted: Missing API Key."
+        return
+    }
+    
+    // Structure endpoint variants depending on driver apiSelection context
+    String apiUrl = ""
+    switch(version) {
+        case "2.5":
+            apiUrl = "https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}"
+            break
+        case "3.0":
+        case "4.0": // Note: 4.0 API key uses 3.0 API poll method
+            apiUrl = "https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly&appid=${apiKey}"
+            break
+        default:
+            logError "Unknown API Version Selection: ${version}"
+            return
+    }
+    
+    def params = [uri: apiUrl, contentType: "application/json", timeout: 15]
+    
+    if (!settings.aPIKeyExposedEnable) {
+        logDebug "Polling OpenWeatherMap via URL: ${apiUrl.replaceAll(/appid=[^&]+/, 'appid=***')}"
+    } else {
+        logDebug "Polling OpenWeatherMap via URL: ${apiUrl}"
+    }
+
+    try {
+        httpGet(params) { response ->
+            if (response.status == 200 && response.data) {
+                // Store response status and execution timestamp directly in state
+                state.lastResponseCode = response.status.toString()
+                
+                long currentUnixEpochSeconds = now() / 1000L
+                state.lastUpdatedDateTime = currentUnixEpochSeconds  
+    
+                String chosenFormat = settings.DateTimeForm ?: "1"
+                if (chosenFormat == "10") {
+                    state.lastUpdatedDateTimeText = "${currentUnixEpochSeconds}"
+                } else {
+                    Map formattedMap = convertDateTimeFormat(currentUnixEpochSeconds, chosenFormat)
+                    state.lastUpdatedDateTimeText = formattedMap.dateTime
+                }                
+                // Route the payload to the custom data extractor
+                parseOWMData(response.data)
+            } else {
+                logError "OWM API call failed with status code: ${response.status}"
+                state.lastResponseCode = response.status.toString()
+            }
+        }
+    } catch (Exception e) {
+        logError "OWM API request failed: ${e.message}"
+        if (e.hasProperty("statusCode")) {
+            state.lastResponseCode = "${e.statusCode}"
+        }
+    }
+}
+
+private void parseOWMData(Map json) {
+    if (!json) {
+        logWarn "parseOWMData received an empty payload map."
+        return 
+    }
+    
+    logDebug "Parsing newly received OpenWeatherMap response data structure..."
+    String calculatedCityAttr = state.usedCity ?: "Local Area"
+    String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/"
+    
+    if (json.lat != null) sendIfChanged(name: "apiLatitude", value: json.lat)
+    if (json.lon != null) sendIfChanged(name: "apiLongitude", value: json.lon)
+    if (json.timezone != null) sendIfChanged(name: "apiTimezone", value: json.timezone)
+    if (json.timezone_offset != null) sendIfChanged(name: "apiTimezoneOffset", value: json.timezone_offset)
+
+    long liveSunrise = 0
+    long liveSunset = 0
+
+    def currentData = json.current ?: [:]
+    if (currentData) {
+        logTrace "Current weather data payload extracted successfully."
+        if (currentData.sunrise) {
+            liveSunrise = currentData.sunrise.toLong()
+            state.todaySunriseEpoch = liveSunrise
+        }
+        if (currentData.sunset) {
+            liveSunset = currentData.sunset.toLong()
+            state.todaySunsetEpoch = liveSunset
+        }
+        currentData["calculatedRain"] = currentData.rain?.getAt("1h") != null ? currentData.rain["1h"] : 0.00
+        currentData["calculatedSnow"] = currentData.snow?.getAt("1h") != null ? currentData.snow["1h"] : 0.00
+    }
+    
+    // Process Daily forecast arrays safely
+    def dailyList = json.daily ?: []
+    def data0 = dailyList.size() > 0 ? dailyList[0] : [:]
+    def data1 = dailyList.size() > 1 ? dailyList[1] : [:]
+    def data2 = dailyList.size() > 2 ? dailyList[2] : [:]
+    
+    if (data0 && data0.dt != null) sendIfChanged(name: "todayDate", value: data0.dt)
+    if (data1 && data1.dt != null) sendIfChanged(name: "tomDate", value: data1.dt)
+    if (data2 && data2.dt != null) sendIfChanged(name: "tdaDate", value: data2.dt)
+    
+    // --- FORCE ALERTS EVALUATION BEFORE TILE GENERATION SCHEDULE ---
+    calcAlertsState(json, calculatedCityAttr, iconBasePath)
+
+    // Route all isolated datasets into the custom event dispatcher
+    sendOWMData(currentData, data0, data1, data2)
+    
+    if (liveSunrise > 0 && liveSunset > 0) {
+        updateDynamicSchedules(liveSunrise, liveSunset)
+    }
+    
+    calcCurrentTwilight()
+    
+    BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("altitude")?.toBigDecimal() ?: 0.0)
+    calcBetwixtState(currentAlt, liveSunrise, liveSunset)
+	
+	// Force immediate sync update of Moon Phase attributes
+    calcMoonPhaseValue(data0, data1, data2)
+    calcMoonPhaseSvgImage(data0, data1, data2)
+
+    if (state.isInitializing == true) {
+        state.isInitializing = false
+        logDebug "Driver is initializing. Scheduling secondary out-of-band text refresh to prevent DB race conditions."
+        
+        currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("altitude")?.toBigDecimal() ?: 0.0)
+        def liveClouds = currentData?.clouds != null ? currentData.clouds : null
+        
+        BigDecimal freshLux = calcCurrentIlluminance(currentAlt, liveClouds)
+        BigDecimal freshTemp = currentData?.temp != null ? convertKelvin(currentData.temp) : null
+        BigDecimal freshPress = currentData?.pressure != null ? convertPressure(currentData.pressure) : null
+        BigDecimal freshWind = currentData?.wind_speed != null ? convertWindSpeed(currentData.wind_speed) : null
+        BigDecimal freshHum = currentData?.humidity != null ? convertHumidity(currentData.humidity) : null
+
+        // Pass full json payload map down so alert state can be re-evaluated synchronously if needed
+        runIn(2, "scheduledTextValue", [data: [freshLux, freshTemp, freshPress, freshWind, freshHum, currentData, data0, data1, data2, json]])
+    } else {
+        generateTiles(currentData, data0, data1, data2)
+    }
+}
+
+private void sendOWMData(Map current, Map today, Map tom, Map tda) {
+    logDebug "sendOWMData initiated. Dispatching events to device attributes..."
+    logTrace "sendOWMData Current section starting"
+
+    // ==========================================
+    // 1. CURRENT DATA DISPATCHES
+    // ==========================================
+    if (current) {
+        // Handle hourly rain and snow values if provided by OWM API
+        def rawRain = current.calculatedRain ?: 0.00
+        def rawSnow = current.calculatedSnow ?: 0.00
+        
+        // Process through convertPrecip() which handles unit conversion and precision
+        def rainVal = convertPrecip(rawRain)
+        def snowVal = convertPrecip(rawSnow)
+        
+        // Handle 'none' display unit preference gracefully
+        String preUnit = (settings.precipUnit == "none" || settings.precipUnit == null) ? "" : "${settings.precipUnit}"
+        String spaceStr = (preUnit == '"') ? "" : " "
+
+        sendIfChanged(name: "currentRain", value: rainVal)
+        sendIfChanged(name: "currentSnow", value: snowVal)
+        sendIfChanged(name: "currentRainText", value: "${rainVal}${spaceStr}${preUnit}")
+        sendIfChanged(name: "currentSnowText", value: "${snowVal}${spaceStr}${preUnit}")
+        
+        // Current sunrise/sunset
+        if (current.sunrise != null) sendIfChanged(name: "currentSunriseTime", value: current.sunrise)
+        if (current.sunset  != null) sendIfChanged(name: "currentSunsetTime",  value: current.sunset)
+    
+        if (current.temp != null) {
+            BigDecimal calcTemp = convertKelvin(current.temp)
+            sendIfChanged(name: "currentTemperature", value: calcTemp)
+            sendIfChanged(name: "temperature", value: calcTemp) // Map to Core Capability
+        }
+        if (current.feels_like != null) sendIfChanged(name: "currentFeelsLike", value: convertKelvin(current.feels_like))
+        if (current.dew_point != null) sendIfChanged(name: "currentDewPoint", value: convertKelvin(current.dew_point))
+        if (current.humidity != null) {
+            BigDecimal calcHumidity = convertHumidity(current.humidity)
+            sendIfChanged(name: "currentHumidity", value: calcHumidity)
+            sendIfChanged(name: "humidity", value: calcHumidity) // Map to Core Capability
+        }
+        if (current.pressure != null) {
+            BigDecimal calcPressure = convertPressure(current.pressure)
+            sendIfChanged(name: "currentPressure", value: calcPressure)
+            sendIfChanged(name: "pressure", value: calcPressure) // Map to Core Capability
+        }
+        if (current.uvi != null) {
+            sendIfChanged(name: "currentUVI", value: current.uvi)
+            sendIfChanged(name: "ultravioletIndex", value: current.uvi) // Map to Core Capability
+        }
+        if (current.visibility != null) {
+            BigDecimal visDist = convertVisibilityDistance(current.visibility)
+            sendIfChanged(name: "currentVisibility", value: visDist)
+            sendIfChanged(name: "currentVisibilityText", value: "${visDist} ${visibilityUnit}")
+        }
+        if (current.clouds != null) sendIfChanged(name: "currentCloudPCT", value: current.clouds)
+               
+        // Wind Speed elements converted from m/s using user selection preference logic
+        if (current.wind_speed != null) sendIfChanged(name: "currentWindSpeed", value: convertWindSpeed(current.wind_speed))
+        if (current.wind_deg != null) sendIfChanged(name: "currentWindDeg", value: current.wind_deg)
+        if (current.wind_gust != null) sendIfChanged(name: "currentWindGust", value: convertWindSpeed(current.wind_gust))
+		if (current.wind_deg != null) {
+            Map wDir = convertWindDirectionState(current.wind_deg)
+            sendIfChanged(name: "currentWindDirCardinal", value: wDir.cardinal)
+            sendIfChanged(name: "currentWindDirFull", value: wDir.full)
+            sendIfChanged(name: "currentWindDirImageUrl", value: wDir.iconUrl)
+            sendIfChanged(name: "currentWindDirectionIcon", value: wDir.icon)
+            sendIfChanged(name: "currentWindDirectionEmojiIcon", value: wDir.emoji)
+        }     
+        
+        // Handle nested weather condition arrays safely if available
+        if (current.weather && current.weather[0]) {
+            Integer code = current.weather[0].id != null ? current.weather[0].id.toInteger() : 0
+            String omiIcon = current.weather[0].icon ?: "01d"
+
+            sendIfChanged(name: "currentConditionCode", value: code)
+            sendIfChanged(name: "currentConditionType", value: current.weather[0].main)
+            sendIfChanged(name: "currentConditionTypeDesc", value: current.weather[0].description)
+            sendIfChanged(name: "currentConditionIcon", value: omiIcon)
+            
+            // 1. Fetch condition details from lookup map
+            Map condDetails = lookupConditionDetails(code)
+            sendIfChanged(name: "currentConditionTypeAltDesc", value: condDetails.desc)
+
+            // 2. Resolve icon base path and construct icon URL based on altIconsEnable
+            String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
+            String finalIconUrl = ""
+
+            if (settings.altIconsEnable == true) {
+                boolean isDay = (device.currentValue("currentIsDay") == "true")
+                String iconFilename = isDay ? condDetails.altDay : condDetails.altNight
+                finalIconUrl = "${basePath}${iconFilename}"
+                logDebug "Alternate Icons Enabled. Day: ${isDay} | File: ${iconFilename} | URL: ${finalIconUrl}"
+            } else {
+                finalIconUrl = "${basePath}${omiIcon}.png"
+                logDebug "Standard OpenWeatherMap Icon Used | URL: ${finalIconUrl}"
+            }
+            
+            sendIfChanged(name: "currentConditionAltIcon", value: finalIconUrl)
+        }
+        logTrace "sendOWMData Current section ended"
+    }
+
+    // ==========================================
+    // 2. FORECAST DISPATCHES (Today, Tom, Tda)
+    // ==========================================
+    def forecastDays = [
+        [prefix: "today", map: today],
+        [prefix: "tom",   map: tom],
+        [prefix: "tda",   map: tda]
+    ]
+
+    forecastDays.each { day ->
+        String prefix = day.prefix
+        Map data = day.map
+
+        if (data) {
+            logTrace "sendOWMData ${prefix} section started"
+
+            if (data.sunrise != null)    sendIfChanged(name: "${prefix}SunriseTime", value: data.sunrise)
+            if (data.sunset != null)     sendIfChanged(name: "${prefix}SunsetTime",  value: data.sunset)
+            if (data.pop != null)        sendIfChanged(name: "${prefix}POP", value: data.pop)
+            if (data.summary != null)    sendIfChanged(name: "${prefix}Summary", value: data.summary)
+            if (data.moonrise != null)   sendIfChanged(name: "${prefix}MoonriseTime", value: data.moonrise)
+            if (data.moonset != null)    sendIfChanged(name: "${prefix}MoonsetTime", value: data.moonset)
+            if (data.moon_phase != null) sendIfChanged(name: "${prefix}MoonPhase", value: data.moon_phase)
+            
+            // Weather Condition Extraction
+            // Weather Condition Extraction
+			if (data.weather && data.weather[0]) {
+				Integer code = data.weather[0].id != null ? data.weather[0].id.toInteger() : 0
+				String omiIcon = data.weather[0].icon ?: "01d"
+
+				sendIfChanged(name: "${prefix}ConditionCode", value: code)
+				sendIfChanged(name: "${prefix}ConditionType", value: data.weather[0].main)
+				sendIfChanged(name: "${prefix}ConditionTypeDesc", value: data.weather[0].description)
+				sendIfChanged(name: "${prefix}ConditionIcon", value: omiIcon)
+
+				Map condDetails = lookupConditionDetails(code)
+    
+				sendIfChanged(name: "${prefix}ConditionTypeAltDesc", value: condDetails.desc)
+
+				String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
+				String finalIconUrl = ""
+
+				if (settings.altIconsEnable == true) {
+					finalIconUrl = "${basePath}${condDetails.altDay}"
+				} else {
+					finalIconUrl = "${basePath}${omiIcon}.png"
+				}
+				sendIfChanged(name: "${prefix}ConditionAltIcon", value: finalIconUrl)
+			}
+
+            if (data.temp) {
+                ["min", "max", "day", "night", "eve", "morn"].each { tKey ->
+                    if (data.temp[tKey] != null) {
+                        sendIfChanged(name: "${prefix}Temp${tKey.capitalize()}", value: convertKelvin(data.temp[tKey]))
+                    }
+                }
+            }
+
+            if (data.feels_like) {
+                ["day", "night", "eve", "morn"].each { fKey ->
+                    if (data.feels_like[fKey] != null) {
+                        sendIfChanged(name: "${prefix}FeelsLike${fKey.capitalize()}", value: convertKelvin(data.feels_like[fKey]))
+                    }
+                }
+            }
+
+            if (data.pressure != null)   sendIfChanged(name: "${prefix}Pressure", value: convertPressure(data.pressure))
+            if (data.humidity != null)   sendIfChanged(name: "${prefix}Humidity", value: convertHumidity(data.humidity))
+            if (data.dew_point != null)  sendIfChanged(name: "${prefix}DewPoint", value: convertKelvin(data.dew_point))
+            if (data.uvi != null)        sendIfChanged(name: "${prefix}UVI", value: data.uvi)
+            if (data.clouds != null)     sendIfChanged(name: "${prefix}CloudPCT", value: data.clouds)
+            if (data.wind_gust != null)  sendIfChanged(name: "${prefix}WindGust", value: convertWindSpeed(data.wind_gust))
+            if (data.wind_deg != null)   sendIfChanged(name: "${prefix}WindDeg", value: data.wind_deg)
+            if (data.wind_speed != null) sendIfChanged(name: "${prefix}WindSpeed", value: convertWindSpeed(data.wind_speed))
+
+			if (data.wind_deg != null) {
+                Map wDir = convertWindDirectionState(data.wind_deg)
+                sendIfChanged(name: "${prefix}WindDirCardinal", value: wDir.cardinal)
+                sendIfChanged(name: "${prefix}WindDirFull", value: wDir.full)
+                sendIfChanged(name: "${prefix}WindDirImageUrl", value: wDir.iconUrl)
+                sendIfChanged(name: "${prefix}WindDirectionIcon", value: wDir.icon)
+                sendIfChanged(name: "${prefix}WindDirectionEmojiIcon", value: wDir.emoji)
+            }
+            logTrace "sendOWMData ${prefix} section ended"
+        }
+    }
+
+    // ==========================================
+    // 3. ILLUMINANCE & OUT-OF-BAND MATH EXECUTION
+    // ==========================================
+    BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("altitude")?.toBigDecimal() ?: 0.0)
+    
+    def liveClouds = current?.clouds != null ? current.clouds : null
+    BigDecimal freshLux = calcCurrentIlluminance(currentAlt, liveClouds)
+    
+    BigDecimal freshTemp = current?.temp != null ? convertKelvin(current.temp) : null
+    BigDecimal freshPress = current?.pressure != null ? convertPressure(current.pressure) : null
+    BigDecimal freshWind = current?.wind_speed != null ? convertWindSpeed(current.wind_speed) : null
+    BigDecimal freshHum = current?.humidity != null ? convertHumidity(current.humidity) : null
+
+    calcTextValue(freshLux, freshTemp, freshPress, freshWind, freshHum, current, today, tom, tda)
+    calcMoonPhaseValue(today, tom, tda)
+    calcMoonPhaseSvgImage(today, tom, tda)
+    
+    logDebug "sendOWMData event parsing complete."
+}
+
+// -----------------CONVERTERS
+
+private Map convertDateTimeFormat(def epochSeconds, String formatOption) {
+    if (epochSeconds == null) {
+        logDebug "convertDateTimeFormat received a null epoch timestamp value."
+        return [dateTime: "--", date: "--", time: "--"]
+    }
+    
+    // Convert epoch seconds to milliseconds for Java/Groovy Date tracking
+    long msecs = epochSeconds.toLong() * 1000L
+    Date dateObject = new Date(msecs)
+    
+    // --- BUG FIX: Use the remote OWM local timezone offset instead of only the hub's local zone ---
+    TimeZone tz = location.timeZone ?: TimeZone.getDefault()
+    if (device.currentValue("apiTimezone") != null) {
+        tz = TimeZone.getTimeZone(device.currentValue("apiTimezone").toString())
+    }
+    
+    String DTFormat = ""
+    String dateFormat = ""
+    String timeFormat = ""
+    
+    switch(formatOption?.toString()) {
+        case '1': DTFormat = 'M/d/yyyy h:mm a';  dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
+        case '2': DTFormat = 'M/d/yyyy HH:mm';   dateFormat = 'M/d/yyyy';   timeFormat = 'HH:mm'; break
+        case '3': DTFormat = 'MM/dd/yyyy h:mm a'; dateFormat = 'MM/dd/yyyy'; timeFormat = 'h:mm a'; break
+        case '4': DTFormat = 'MM/dd/yyyy HH:mm';  dateFormat = 'MM/dd/yyyy'; timeFormat = 'HH:mm'; break
+        case '5': DTFormat = 'd/M/yyyy h:mm a';  dateFormat = 'd/M/yyyy';   timeFormat = 'h:mm a'; break
+        case '6': DTFormat = 'd/M/yyyy HH:mm';   dateFormat = 'd/M/yyyy';   timeFormat = 'HH:mm'; break
+        case '7': DTFormat = 'dd/MM/yyyy h:mm a'; dateFormat = 'dd/MM/yyyy'; timeFormat = 'h:mm a'; break
+        case '8': DTFormat = 'dd/MM/yyyy HH:mm';  dateFormat = 'dd/MM/yyyy'; timeFormat = 'HH:mm'; break
+        case '9': DTFormat = 'yyyy/MM/dd HH:mm';  dateFormat = 'yyyy/MM/dd'; timeFormat = 'HH:mm'; break
+        default:  DTFormat = 'M/d/yyyy h:mm a';  dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
+    }
+    
+    // Format the date target strings utilizing Hubitat's local timezone rules safely
+    try {
+        return [
+            dateTime: dateObject.format(DTFormat, tz),
+            date: dateObject.format(dateFormat, tz),
+            time: dateObject.format(timeFormat, tz)
+        ]
+    } catch (Exception e) {
+        logError "Exception occurred during convertDateTimeFormat conversion execution: ${e.message}"
+        return [dateTime: "--", date: "--", time: "--"]
+    }
+}
+
+private BigDecimal convertVisibilityDistance(def rawVisibility) {
+    BigDecimal meters = rawVisibility?.toBigDecimal()
+    if (meters == null) return 0.0
+    
+    BigDecimal converted = meters
+    String targetUnit = settings.visibilityUnit ?: "miles"
+    int precision = 1 // Default precision fallback
+    
+    switch (targetUnit) {
+        case "km":
+            // 1 meter = 0.001 kilometers
+            converted = meters / 1000.0
+            precision = 1
+            break
+        case "miles":
+            // 1 meter = 0.000621371 miles (or divided by 1609.344)
+            converted = meters / 1609.344
+            precision = 2
+            break
+        case "ft":
+            // 1 meter = 3.28084 feet
+            converted = meters * 3.28084
+            precision = 0
+            break
+        default:
+            precision = 0
+            break
+    }
+    return converted.setScale(precision, java.math.RoundingMode.HALF_UP)
+}
+
+private BigDecimal convertIlluminance(BigDecimal rawLux) {
+    if (rawLux == null) return 0.0
+    
+    // Fall back to 'lx' if the preference is null or unconfigured
+    String targetUnit = settings.illuminanceUnit ?: "lx"
+    BigDecimal convertedValue = rawLux
+    int precision = 0 // Default precision for Lux and Foot-candles
+    
+    switch (targetUnit) {
+        case "fc":
+            // Lux to Foot-candle conversion: lx * 0.092903
+            convertedValue = rawLux * 0.092903
+            precision = 1 // Standard clarity representation
+            break
+        case "ph":
+            // Lux to Phot conversion: lx * 0.0001
+            convertedValue = rawLux * 0.0001
+            precision = 4 // Phot values are extremely small, requiring deeper decimal precision
+            break
+        case "lx":
+        case "none":
+        default:
+            // Remain as standard Lux
+            convertedValue = rawLux
+            precision = 0
+            break
+    }
+    
+    // Round using standard half-up scaling rules and guard against negative outcomes
+    BigDecimal finalValue = convertedValue.setScale(precision, java.math.RoundingMode.HALF_UP)
+    return finalValue < 0 ? 0.0 : finalValue
+}
+
+private BigDecimal convertHumidity(BigDecimal rawHumidity) {
+    // If rawHumidity is null, empty string, or evaluates as false/missing, immediately return 0 formatted to precision
+    if (rawHumidity == null || rawHumidity == "") {
+        int precision = settings.precisionHumid != null ? settings.precisionHumid.toInteger() : 0
+        return new BigDecimal("0.0").setScale(precision, java.math.RoundingMode.HALF_UP)
+    }
+
+    // Match the exact preference keys from your metadata options
+    String hUnit = settings.humidityUnit ?: "%"
+    Double calculatedValue = rawHumidity.toDouble()
+
+    switch (hUnit) {
+        case "%":
+        case "%RH":
+            // Default: no conversion needed, just return the raw percentage
+            break
+        case "g/m³": // Absolute Humidity
+            def tempVal = device.currentValue("currentTemperature")
+            if (tempVal != null && tempVal.toString().isNumber()) {
+				Double tempC = tempVal.toDouble()
+                String tUnit = settings.temperatureUnit ?: "°F"
+                if (tUnit == "°F") { tempC = (tempC - 32.0) * 5.0 / 9.0 }
+                else if (tUnit == "K") { tempC = tempC - 273.15 }
+
+                // Vapor pressure approximations
+                Double es = 6.112 * Math.exp((17.67 * tempC) / (tempC + 243.5))
+                Double e = (calculatedValue / 100.0) * es
+                calculatedValue = (e * 216.7) / (tempC + 273.15)
+            }
+            break
+        case "g/kg³": // Mixing Ratio
+            def tempVal = device.currentValue("currentTemperature")
+            def pressVal = device.currentValue("currentPressure")
+            if (tempVal != null) {
+                Double tempC = tempVal.toDouble()
+                String tUnit = settings.temperatureUnit ?: "°F"
+                if (tUnit == "°F") { tempC = (tempC - 32.0) * 5.0 / 9.0 }
+                else if (tUnit == "K") { tempC = tempC - 273.15 }
+
+                Double es = 6.112 * Math.exp((17.67 * tempC) / (tempC + 243.5))
+                Double e = (calculatedValue / 100.0) * es
+
+                Double pressureHpa = (pressVal != null) ? pressVal.toDouble() : 1013.25
+                String pUnit = settings.pressureUnit ?: "inHg"
+                if (pUnit == "inHg") { pressureHpa = pressureHpa * 33.8639 }
+                else if (pUnit == "kPa") { pressureHpa = pressureHpa * 10.0 }
+                else if (pUnit == "mmHg") { pressureHpa = pressureHpa * 1.33322 }
+
+                calculatedValue = 621.99 * e / (pressureHpa - e)
+            }
+            break
+        case "none":
+            // Simply pass the raw numeric value out without text/units decoration
+            break
+        default:
+            break
+    }
+
+    int precision = (settings.precisionHumid ?: "0").toInteger()
+    return BigDecimal.valueOf(calculatedValue).setScale(precision, java.math.RoundingMode.HALF_UP)
+}
+
+private BigDecimal convertKelvin(def kelvinVal) {
+    BigDecimal K = kelvinVal?.toBigDecimal()
+    if (K == null) return 0.0
+    BigDecimal converted = K
+    
+    // Determine conversion target from preference selection
+    String targetUnit = settings.temperatureUnit ?: "°F"
+
+    switch (targetUnit) {
+        case "°F":
+            // Kelvin to Fahrenheit: (K − 273.15) × 9/5 + 32
+            converted = (K - 273.15) * 1.8 + 32
+            break
+        case "°C":
+            // Kelvin to Celsius: K − 273.15
+            converted = K - 273.15
+            break
+        case "K":
+        case "none":
+        default:
+            // Remain as Kelvin
+            break
+    }
+    
+    // Apply user chosen decimal precision layout
+    int precision = (settings.precisionTemp ?: "2").toInteger()
+    return converted.setScale(precision, java.math.RoundingMode.HALF_UP)
+}
+
+private BigDecimal convertPrecip(precipVal) {
+    // If precipVal is null, empty string, or evaluates as false/missing, immediately return 0 formatted to precision
+    if (precipVal == null || precipVal == "") {
+        int precision = settings.precisionPrecip != null ? settings.precisionPrecip.toInteger() : 2
+        return new BigDecimal("0.0").setScale(precision, java.math.RoundingMode.HALF_UP)
+    }
+    
+    // Ensure we are starting with a clean BigDecimal representation
+    BigDecimal precip = (precipVal instanceof BigDecimal) ? precipVal : new BigDecimal(precipVal.toString())
+    
+    // 1. Handle unit conversion if necessary (OWM returns mm)
+    String unit = settings.precipUnit ?: "inHr"
+    if (unit in ["inHr", "in", "\""]) {
+        precip = precip * 0.0393701
+    }
+    
+    // 2. Grab precision selection from preferences
+    int precision = settings.precisionPrecip != null ? settings.precisionPrecip.toInteger() : 2
+    
+    // 3. Scale and round using HALF_UP strategy
+    return precip.setScale(precision, java.math.RoundingMode.HALF_UP)
+}
+
+private BigDecimal convertPressure(def hpaVal) {
+    BigDecimal hpa = hpaVal?.toBigDecimal()
+    if (hpa == null) return 0.0
+    BigDecimal converted = hpa
+    
+    // Determine conversion target from preference selection
+    String targetUnit = settings.pressureUnit ?: "inHg"
+    
+    switch (targetUnit) {
+        case "inHg":
+            // Hectopascals to Inches of Mercury
+            converted = hpa * 0.029530
+            break
+        case "mmHg":
+            // Hectopascals to Millimeters of Mercury
+            converted = hpa * 0.750062
+            break
+        case "kPa":
+            // Hectopascals to Kilopascals
+            converted = hpa * 0.1
+            break
+        case "hPa":
+        case "mb":
+        case "none":
+        default:
+            // Remain as hPa / Millibars
+            break
+    }
+    
+    // Apply user chosen pressure decimal precision
+    int precision = (settings.precisionPress ?: "2").toInteger()
+    return converted.setScale(precision, java.math.RoundingMode.HALF_UP)
+}
+
+private BigDecimal convertWindSpeed(def msVal) {
+    BigDecimal ms = msVal?.toBigDecimal()
+    if (ms == null) return 0.0
+    BigDecimal converted = ms
+    
+    // Determine conversion target from user preference selection
+    String targetUnit = settings.windSpeedUnit ?: "mph"
+    
+    switch (targetUnit) {
+        case "mph":
+            // Meters per second to Miles per Hour
+            converted = ms * 2.23694
+            break
+        case "kmh":
+            // Meters per second to Kilometers per Hour
+            converted = ms * 3.6
+            break
+        case "kt":
+            // Meters per second to Knots
+            converted = ms * 1.94384
+            break
+        case "ms":
+        case "none":
+        default:
+            // Remain as Meters per second
+            break
+    }
+    
+    // Apply user chosen wind speed decimal precision
+    int precision = (settings.precisionWind ?: "2").toInteger()
+    return converted.setScale(precision, java.math.RoundingMode.HALF_UP)
+}
+
+private Map convertWindDirectionState(degrees) {
+    if (degrees == null) {
+        logDebug "convertWindDirectionState received null value."
+        return [cardinal: "Unknown", full: "Unknown", iconUrl: "", icon: "💨", emoji: "💨"]
+    }
+    double deg = 0.0
+    try {
+        deg = degrees.toDouble()
+    } catch (Exception e) {
+        logError "Failed to parse wind degrees (${degrees}): ${e.message}"
+        return [cardinal: "Unknown", full: "Unknown", iconUrl: "", icon: "💨", emoji: "💨"]
+    }
+
+    deg = (deg % 360 + 360) % 360
+    def cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+    def fullWords = ["North", "North-Northeast", "Northeast", "East-Northeast", "East", "East-Southeast", "Southeast", "South-Southeast", "South", "South-Southwest", "Southwest", "West-Southwest", "West", "West-Northwest", "Northwest", "North-Northwest"]
+    def directionEmojis = ["⬇️", "↙️", "↙️", "↙️", "⬅️", "↖️", "↖️", "↖️", "⬆️", "↗️", "↗️", "↗️", "➡️", "↘️", "↘️", "↘️"]
+
+    int index = (int) Math.round(deg / 22.5) % 16
+    String token = cardinals[index]
+    String word  = fullWords[index]
+    String chosenEmoji = directionEmojis[index]
+    
+    String finalIconUrl = ""
+    String finalIconDisplay = chosenEmoji
+
+    // Resolve base path from state or preference helper
+    String basePath = state.windDirectionImagePath ?: calcWinDirImagePath(settings.altWindDirectionImageLoc)
+
+    if (basePath != null && basePath.trim() != "") {
+        String filename = "wind-${token.toLowerCase()}.png"
+        finalIconUrl = "${basePath}${filename}"
+        // Set icon attribute to rendered HTML image element pointing at your path asset
+        finalIconDisplay = "<img src='${finalIconUrl}' style='height:1em;vertical-align:middle;'>"
+    }
+    
+    return [
+        cardinal: token, 
+        full: word, 
+        iconUrl: finalIconUrl, 
+        icon: finalIconDisplay, 
+        emoji: chosenEmoji
+    ]
+}
+
+// -----------------------  CALCS
+
+private String calcIconBasePath(String altIconLoc) {
+    String base = ""
+    
+    if (settings.altIconsEnable == true) {
+        base = (altIconLoc && altIconLoc.trim() != "") ? altIconLoc.trim() : "https://tinyurl.com/icnqz/"
+    } else {
+        base = "https://openweathermap.org/img/wn/"
+    }
+    
+    // Enforce trailing slash constraint
+    if (!base.endsWith("/")) base += "/"
+    logDebug "Calculated Icon Base Path resolved to: ${base}"
+    return base
+}
+
+private String calcMoonPhaseImagePath(String altMPLoc) {
+    // Clean and validate user preference override string, fall back to GitHub main path
+    String base = altMPLoc ? altMPLoc.trim() : "https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/"
+    if (!base.endsWith("/")) base += "/"
+    logDebug "Calculated Moon Phase Image base path resolved to: ${base}"
+    return base
+}
+
+private String calcWinDirImagePath(String altWDLoc) {
+    // Validate user preference override string, fall back to empty string if missing/blank
+    String base = (altWDLoc && altWDLoc.trim() != "") ? altWDLoc.trim() : ""
+    
+    // Enforce trailing slash constraint if a valid path was provided
+    if (base != "" && !base.endsWith("/")) {
+        base += "/"
+    }
+    
+    logDebug "Calculated Wind Direction Image base path resolved to: '${base}'"
+    return base
+}
+
+Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
+    logDebug "Calculating moon phase icons, text names, and emojis from API payload maps..."
+    
+    // Moon phase emojis array ordered sequentially from New Moon to Waning Crescent
+    List<String> emojis = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
+    
+    def phases = [
+        [sourceMap: todayData, apiKey: "moon_phase", valAttr: "todayMoonPhase", pngAttr: "todayMoonPhasePngImageUrl", textAttr: "todayMoonPhaseText", emojiAttr: "todayMoonPhaseEmojiIcon"],
+        [sourceMap: tomData,   apiKey: "moon_phase", valAttr: "tomMoonPhase",   pngAttr: "tomMoonPhasePngImageUrl",   textAttr: "tomMoonPhaseText",   emojiAttr: "tomMoonPhaseEmojiIcon"],
+        [sourceMap: tdaData,   apiKey: "moon_phase", valAttr: "tdaMoonPhase",   pngAttr: "tdaMoonPhasePngImageUrl",   textAttr: "tdaMoonPhaseText",   emojiAttr: "tdaMoonPhaseEmojiIcon"]
+    ]
+    
+    // Track today's value separately to also populate the 'current' attribute
+    def todayVal = null
+
+    // Determine if the user has provided an override path for the moon phase images
+    boolean isPathOverridden = (settings.altMoonPhaseImagePath != null && settings.altMoonPhaseImagePath.trim() != "")
+    Map resultMap = [:]
+
+    phases.each { phase ->
+        // Direct extraction from API response payload data, fallback to database attributes if empty
+        def rawVal = (phase.sourceMap && phase.sourceMap[phase.apiKey] != null) ? phase.sourceMap[phase.apiKey] : device.currentValue(phase.valAttr)
+        
+        // Ensure value is both non-null and safely numeric before processing
+        if (rawVal != null && rawVal.toString().isNumber()) {
+            // Normalize values to stay strictly within 0.0 to 1.0 bounds
+            double val = (rawVal.toDouble() % 1.0 + 1.0) % 1.0
+            
+            if (phase.valAttr == "todayMoonPhase") {
+                todayVal = val
+            }
+
+            // Determine the icon bin index (0 to 7)
+            int index = (int) Math.floor((val * 8) + 0.5) % 8
+            
+            // --- FIXED: Use 'moon-phase-icon-' for default path, and 'mp' when overridden ---
+            String filename = isPathOverridden ? "mp${index}.png" : "moon-phase-icon-${index}.png"
+            
+            // Re-routed dynamically to the newly initialized moonPhaseImagePath state path
+            String basePath = state.moonPhaseImagePath ?: "https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/"
+            String fullPath = "${basePath}${filename}"
+            
+            // Store to the dedicated PNG attributes
+            sendIfChanged(name: phase.pngAttr, value: fullPath)
+
+            // Map the normalized value directly to the correct emoji index
+            int emojiIndex = (int) Math.floor((val * 8) + 0.5) % 8
+            String chosenEmoji = emojis[emojiIndex]
+            sendIfChanged(name: phase.emojiAttr, value: chosenEmoji)
+
+            // Determine phase name using small range tolerances (+/- 0.02) around major quarter marks
+            String phaseName = "Unknown"
+            double tolerance = 0.02
+            if (val <= tolerance || val >= (1.0 - tolerance)) phaseName = "New Moon"
+            else if (val > tolerance && val < (0.25 - tolerance)) phaseName = "Waxing Crescent"
+            else if (val >= (0.25 - tolerance) && val <= (0.25 + tolerance)) phaseName = "First Quarter"
+            else if (val > (0.25 + tolerance) && val < (0.5 - tolerance)) phaseName = "Waxing Gibbous"
+            else if (val >= (0.5 - tolerance) && val <= (0.5 + tolerance)) phaseName = "Full Moon"
+            else if (val > (0.5 + tolerance) && val < (0.75 - tolerance)) phaseName = "Waning Gibbous"
+            else if (val >= (0.75 - tolerance) && val <= (0.75 + tolerance)) phaseName = "Last Quarter"
+            else if (val > (0.75 + tolerance) && val < (1.0 - tolerance)) phaseName = "Waning Crescent"
+            
+            sendIfChanged(name: phase.textAttr, value: phaseName)
+
+            if (phase.valAttr == "todayMoonPhase") {
+                resultMap.text = phaseName
+                resultMap.png = fullPath
+                resultMap.emoji = chosenEmoji
+            }
+        }
+    }
+    return resultMap
+}
+
+String calcMoonPhaseSvgMask(double phase, String path) {
+    if (phase <= 0.02 || phase >= 0.98) {
+        return """<svg viewBox="0 0 256 256" style="width:100%;height:100%;display:block;"><circle cx="128" cy="128" r="127" fill="#121214"/></svg>"""
+    }
+    double rx1 = 127.0, rx2 = 127.0
+    int sf1 = 1, sf2 = 1
+    if (phase <= 0.25) { rx1 *= (1 - 4 * phase) }
+    else if (phase <= 0.50) { rx1 *= (4 * phase - 1); sf1 = 0 }
+    else if (phase <= 0.75) { rx2 *= (3 - 4 * phase); sf2 = 0 }
+    else { rx2 *= (4 * phase - 3) }
+
+    return """<svg viewBox="0 0 256 256" style="width:100%;height:100%;display:block;"><filter id="b"><feGaussianBlur stdDeviation="6"/></filter><mask id="a"><path d="M128,1A${rx1.round(1)},127 180 0 $sf1 128,255A${rx2.round(1)},127 180 0 $sf2 128,1z" fill="#fff" filter="url(#b)"/></mask><radialGradient id="s"><stop offset="10%" stop-color="#0007"/><stop offset="90%" stop-color="#000d"/></radialGradient><image width="256" height="256" href="${path}lunar_surface.png"/><circle cx="128" cy="128" r="127" mask="url(#a)" fill="url(#s)"/></svg>"""
+}
+
+// Custom handler calculating SVGs from target forecast maps and publishing to new attributes
+String calcMoonPhaseSvgImage(Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
+    logDebug "Evaluating moon phase calculations for SVG output variables..."
+    
+    // Correctly routes background image references using the state.moonPhaseImagePath variable
+    String path = state.moonPhaseImagePath ?: "https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/"
+    String todaySvg = ""
+
+    def targets = [
+        [sourceMap: todayData, apiKey: "moon_phase", valAttr: "todayMoonPhase", targetAttr: "todayMoonPhaseSvgImage"],
+        [sourceMap: tomData,   apiKey: "moon_phase", valAttr: "tomMoonPhase",   targetAttr: "tomMoonPhaseSvgImage"],
+        [sourceMap: tdaData,   apiKey: "moon_phase", valAttr: "tdaMoonPhase",   targetAttr: "tdaMoonPhaseSvgImage"]
+    ]
+    
+    targets.each { entry ->
+        def rawVal = (entry.sourceMap && entry.sourceMap[entry.apiKey] != null) ? entry.sourceMap[entry.apiKey] : device.currentValue(entry.valAttr)
+        if (rawVal != null && rawVal.toString().isNumber()) {
+            double val = (rawVal.toDouble() % 1.0 + 1.0) % 1.0
+            String svgContent = calcMoonPhaseSvgMask(val, path)
+            sendIfChanged(name: entry.targetAttr, value: svgContent)
+
+            if (entry.targetAttr == "todayMoonPhaseSvgImage") {
+                todaySvg = svgContent
+            }
+        }
+    }
+    return todaySvg
+}
+
+private void calcAlertsState(Map json, String calculatedCityAttr, String iconBasePath) {
+    def alerts = json?.alerts ?: []
+    String alertActive = "No active alerts"
+    String currentAlertSender = "N/A"
+    String currentAlertDesc = "No active alerts"
+    String lastPollTime = new Date().format("HH:mm", location.timeZone)
+    String currentAlertDescFull = "No active alerts for ${calculatedCityAttr} at last poll as of ${lastPollTime}"
+
+    if (alerts.size() > 0) {
+        def a = alerts[0]
+        alertActive = a.event ?: "Active Alert"
+        currentAlertSender = a.sender_name ?: "Unknown"
+		currentAlertDesc = a.description ? (a.description.length() > 100 ? a.description.take(100) + "..." : a.description) : "Alert details unavailable"
+        currentAlertDescFull = (a.description ?: "N/A") + " as of ${lastPollTime}"
+    }
+
+    sendIfChanged(name: "currentAlert", value: alertActive)
+    sendIfChanged(name: "currentAlertSender", value: currentAlertSender)
+    sendIfChanged(name: "currentAlertDesc", value: currentAlertDesc)
+    sendIfChanged(name: "currentAlertDescFull", value: currentAlertDescFull)
+}
+
+private BigDecimal calcSunPosition() {
+    // 1. Establish User Precision and Coordinates
+    int precision = (settings.precisionSunAngles ?: "0").toInteger()
+    BigDecimal locLat = state.usedLatitude != null ? state.usedLatitude.toBigDecimal() : location.latitude
+    BigDecimal locLon = state.usedLongitude != null ? state.usedLongitude.toBigDecimal() : location.longitude
+
+    if (locLat == null || locLon == null) {
+        logWarn "calcSunPosition: Latitude or Longitude coordinates are unavailable."
+        return 0.0
+    }
+
+    // 2. Get current universal time in UTC to bypass local timezone/DST errors
+    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    double hour = cal.get(Calendar.HOUR_OF_DAY) + (cal.get(Calendar.MINUTE) / 60.0) + (cal.get(Calendar.SECOND) / 3600.0)
+    int day = cal.get(Calendar.DAY_OF_MONTH)
+    int month = cal.get(Calendar.MONTH) + 1
+    int year = cal.get(Calendar.YEAR)
+
+    // 3. Compute fractional Julian Date (relative to standard J2000 epoch)
+    if (month <= 2) {
+        year -= 1
+        month += 12
+    }
+    int A = (int)(year / 100)
+    int B = 2 - A + (int)(A / 4)
+    double jd = (int)(365.25 * (year + 4716)) + (int)(30.6001 * (month + 1)) + day + (hour / 24.0) + B - 1524.5
+    double d = jd - 2451545.0
+
+    // 4. Calculate Keplerian Solar Coordinates
+    double g = 357.529 + 0.98560028 * d // Mean anomaly of the Sun
+    double q = 280.459 + 0.98564736 * d // Mean longitude of the Sun
+    double L = q + 1.915 * Math.sin(Math.toRadians(g)) + 0.020 * Math.sin(Math.toRadians(2 * g)) // Ecliptic longitude
+    double e = 23.439 - 0.00000036 * d // Obliquity of the ecliptic
+
+    // Declination and Right Ascension
+    double sin_delta = Math.sin(Math.toRadians(e)) * Math.sin(Math.toRadians(L))
+    double delta = Math.toDegrees(Math.asin(sin_delta))
+    double ra = Math.toDegrees(Math.atan2(Math.cos(Math.toRadians(e)) * Math.sin(Math.toRadians(L)), Math.cos(Math.toRadians(L))))
+
+    // 5. Sidereal Time tracking and Local Hour Angle
+    double gst = 280.46061837 + 360.98564736629 * d
+    double lst = gst + locLon
+    double H = lst - ra
+
+    // 6. Project onto local horizontal plane (Altitude & Azimuth)
+    double latRad = Math.toRadians(locLat)
+    double deltaRad = Math.toRadians(delta)
+    double hRad = Math.toRadians(H)
+
+    // Calculate Altitude
+    double sin_alt = Math.sin(latRad) * Math.sin(deltaRad) + Math.cos(latRad) * Math.cos(deltaRad) * Math.cos(hRad)
+    sin_alt = Math.max(-1.0, Math.min(1.0, sin_alt)) // Safety clamp
+    double alt = Math.toDegrees(Math.asin(sin_alt))
+
+    // Calculate Azimuth
+    double cos_alt = Math.cos(Math.toRadians(alt))
+    double az = 0.0
+    if (Math.abs(cos_alt) > 0.0001) {
+        double cos_az = (Math.sin(deltaRad) - Math.sin(latRad) * sin_alt) / (Math.cos(latRad) * cos_alt)
+        cos_az = Math.max(-1.0, Math.min(1.0, cos_az))
+        az = Math.toDegrees(Math.acos(cos_az))
+        if (Math.sin(hRad) > 0) az = 360.0 - az
+    } else {
+        az = (locLat > 0) ? 180.0 : 0.0
+    }
+
+    // Normalize Azimuth loop to 0-360 boundaries
+    az = (az % 360.0 + 360.0) % 360.0
+
+    // 7. Process precision preferences and build attributes
+    BigDecimal finalAltitude = BigDecimal.valueOf(alt).setScale(precision, java.math.RoundingMode.HALF_UP)
+    BigDecimal finalAzimuth = BigDecimal.valueOf(az).setScale(precision, java.math.RoundingMode.HALF_UP)
+
+    logTrace "calcSunPosition: Solar Altitude computed as ${finalAltitude}°, Azimuth as ${finalAzimuth}°"
+
+    // 8. Publish the rounded numbers to the device attributes
+    sendIfChanged(name: "altitude", value: finalAltitude)
+    sendIfChanged(name: "azimuth", value: finalAzimuth)
+    sendIfChanged(name: "altitudeText", value: "${finalAltitude}°")
+    sendIfChanged(name: "azimuthText", value: "${finalAzimuth}°")
+
+    state.sunAltitude = finalAltitude
+    return finalAltitude
+}
+
+private void calcCurrentTwilight() {
+    if (state.todaySunriseEpoch && state.todaySunsetEpoch) {
+        // Civil twilight ≈ 24 minutes (1440 seconds) before sunrise and after sunset
+        long twilightBeginEpoch = (state.todaySunriseEpoch as Long) - 1440L
+        long twilightEndEpoch   = (state.todaySunsetEpoch  as Long) + 1440L
+        logDebug "Calculated Twilight Epochs -> Begin: ${twilightBeginEpoch}, End: ${twilightEndEpoch}"
+
+        sendIfChanged(name: "currentTwilightBeginTime", value: twilightBeginEpoch)
+        sendIfChanged(name: "currentTwilightEndTime", value: twilightEndEpoch)
+        state.twilightBeginEpoch = twilightBeginEpoch
+        state.twilightEndEpoch   = twilightEndEpoch
+    } else {
+        logWarn "calcCurrentTwilight skipped: Missing todaySunriseEpoch or todaySunsetEpoch in state."
+    }
+}
+
+private void calcBetwixtState(BigDecimal altitude, long liveSunrise = 0, long liveSunset = 0) {
+    String sliceText = "fully night time"
+    long currentEpoch = (now() / 1000L)
+    
+    // Use live method arguments if provided, otherwise fall back to cached states
+    long sunriseEpoch = (liveSunrise > 0) ? liveSunrise : (state.todaySunriseEpoch ?: 0)
+    long sunsetEpoch = (liveSunset > 0) ? liveSunset : (state.todaySunsetEpoch ?: 0)
+    
+    boolean isTwilightAngle = (altitude >= -6.0 && altitude < -0.833)
+    boolean isSunUp = (altitude >= -0.833)
+    
+    if (sunriseEpoch > 0 && sunsetEpoch > 0) { 
+        long midDayEpoch = sunriseEpoch + ((sunsetEpoch - sunriseEpoch) / 2)
+        
+        // --- ADDED LOGIC FOR CURRENT NOON TIME ---
+        try {
+            // Hubitat sandboxed way to format a raw long timestamp without instantiating Date(long)
+            sendIfChanged(name: "currentSolarNoonTime", value: midDayEpoch)
+            state.solarNoonEpoch = midDayEpoch
+        } catch (Exception e) {
+            logError "Exception occurred while calculating currentSolarNoonTime: ${e.message}"
+        }
+        if (currentEpoch < midDayEpoch) {
+            sliceText = isTwilightAngle ? "between twilight and sunrise" : (isSunUp ? "between sunrise and noon" : sliceText)
+        } else {
+            sliceText = isSunUp ? "between noon and sunset" : (isTwilightAngle ? "between sunset and twilight" : sliceText)
+        }
+    } else {
+        sliceText = isTwilightAngle ? "between twilight and sunrise" : (isSunUp ? "between sunrise and noon" : sliceText)
+    }
+
+    sendIfChanged(name: "betwixt", value: sliceText)
+    logDebug "Calculated betwixt slice: ${sliceText} (Current Altitude: ${altitude}°)"
+}
+
+private void calcIsDayState(BigDecimal altitude) {
+    // The sun is considered "up" (daytime) if its altitude is >= -0.833 degrees
+    String isDayText = (altitude != null && altitude >= -0.833) ? "true" : "false"
+    sendIfChanged(name: "currentIsDay", value: isDayText) 
+    logTrace "Calculated currentIsDay: ${isDayText}" 
+}
+
+private BigDecimal calcCurrentIlluminance(BigDecimal altitude, def liveClouds = null) { 
+    logDebug "Calculating dynamic current illuminance adjusted for chosen unit..."
+    
+    // Fall back to DB lookup only if an in-memory cloud value wasn't provided
+    def cloudPctVal = (liveClouds != null) ? liveClouds : device.currentValue("currentCloudPCT")
+    
+    if (cloudPctVal == null || altitude == null) {
+        logDebug "calcCurrentIlluminance postponed: Waiting for cloud percentage or sun altitude data."
+        return 0.0
+    }
+    
+    if (altitude <= 0) {
+        sendIfChanged(name: "currentIlluminance", value: 0)
+        sendIfChanged(name: "illuminance", value: 0) 
+        return 0.0 
+    }
+    
+    BigDecimal clouds = cloudPctVal.toBigDecimal()
+    double radians = Math.toRadians(altitude.doubleValue())
+    BigDecimal clearSkyLux = 100000 * Math.sin(radians)
+    BigDecimal attenuatedLux = (clearSkyLux * ((100 - clouds) / 100)) * 0.75
+    
+    String targetUnit = settings.illuminanceUnit ?: "lx"
+    BigDecimal finalValue = convertIlluminance(attenuatedLux)
+
+    if (targetUnit == "lx" && finalValue > 100000) finalValue = 100000 
+    logDebug "Illuminance Parsed: ${finalValue} ${targetUnit} (Base Lux: ${attenuatedLux.setScale(0, 4)} lx)"
+
+    sendIfChanged(name: "currentIlluminance", value: finalValue)
+    sendIfChanged(name: "illuminance", value: finalValue) 
+    return finalValue 
+}
+
+private void calcTextValue(BigDecimal freshLux = null, BigDecimal freshTemp = null, BigDecimal freshPress = null, BigDecimal freshWind = null, BigDecimal freshHum = null, Map currentMap = [:], Map todayMap = [:], Map tomMap = [:], Map tdaMap = [:]) {
+    logDebug "Generating formatted text attributes with unit suffixes..."
+
+    // --- CONSOLIDATED ENVIRONMENT PREFERENCES ---
+    String tUnit = settings.temperatureUnit ?: "°F"
+    String pUnit = settings.pressureUnit ?: "inHg"
+    String wUnit = (settings.windSpeedUnit == "none") ? "" : " ${settings.windSpeedUnit ?: 'mph'}"
+    String iUnit = (settings.illuminanceUnit == "none") ? "lx" : (settings.illuminanceUnit ?: "lx")
+    String hUnit = settings.humidityUnit ?: "%"
+    
+    if (hUnit == "none") hUnit = ""
+    else if (hUnit in ["g/m³", "g/kg³"]) hUnit = " ${hUnit}"
+
+    // 1. Temperature Text Formatting
+    def tempVal = (freshTemp != null) ? freshTemp : device.currentValue("currentTemperature")
+    if (tempVal != null) sendIfChanged(name: "currentTemperatureText", value: "${tempVal}${tUnit}")
+
+    // 2. Pressure Text Formatting
+    def pressVal = (freshPress != null) ? freshPress : device.currentValue("currentPressure")
+    if (pressVal != null) sendIfChanged(name: "currentPressureText", value: "${pressVal} ${pUnit}")
+
+    // 3. Wind Speed Text Formatting (Current, Today, Tomorrow, Day After) & Beaufort Scale Loop
+    def windTargets = [
+        [prefix: "current", val: freshWind, map: currentMap],
+        [prefix: "today",   val: null,      map: todayMap],
+        [prefix: "tom",     val: null,      map: tomMap],
+        [prefix: "tda",     val: null,      map: tdaMap]
+    ]
+
+    windTargets.each { target ->
+        // Resolve dynamic forecast/current speeds safely
+        def speedVal = target.val
+        if (speedVal == null) {
+            speedVal = (target.map && target.map.wind_speed != null) ? convertWindSpeed(target.map.wind_speed) : device.currentValue("${target.prefix}WindSpeed")
+        }
+        if (speedVal != null) sendIfChanged(name: "${target.prefix}WindSpeedText", value: "${speedVal}${wUnit}")
+        
+        // Output matching Beaufort texts
+        def rawSpeed = (target.map && target.map.wind_speed != null) ? target.map.wind_speed : device.currentValue("${target.prefix}WindSpeed")
+        sendIfChanged(name: "${target.prefix}WindSpeedDescText", value: getBeaufortText(rawSpeed))
+    }
+
+    // 4. Illuminance Text Formatting
+    def luxVal = (freshLux != null) ? freshLux : device.currentValue("currentIlluminance")
+    if (luxVal != null) sendIfChanged(name: "currentIlluminanceText", value: "${luxVal} ${iUnit}")
+    
+    // 5. Solar Angles Formatting (Respecting precisionSunAngles preference)
+    int sunPrecision = (settings.precisionSunAngles ?: "0").toInteger()
+    
+    def altVal = device.currentValue("altitude")
+    if (altVal != null && altVal.toString().isNumber()) {
+        BigDecimal formattedAlt = altVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
+        String altStr = (sunPrecision == 0) ? "${formattedAlt.toBigInteger()}" : "${formattedAlt}"
+        sendIfChanged(name: "altitudeText", value: "${altStr}°")
+    }
+    
+    def azVal = device.currentValue("azimuth")
+    if (azVal != null && azVal.toString().isNumber()) {
+        BigDecimal formattedAz = azVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
+        String azStr = (sunPrecision == 0) ? "${formattedAz.toBigInteger()}" : "${formattedAz}"
+        sendIfChanged(name: "azimuthText", value: "${azStr}°")
+    }
+
+    // 6. Humidity Formatting
+    def humVal = (freshHum != null) ? freshHum : device.currentValue("currentHumidity")
+    if (humVal != null) sendIfChanged(name: "currentHumidityText", value: "${humVal}${hUnit}")
+
+    // --- CONSOLIDATED LOOP FOR ALL DATE/TIME PROPERTIES (SECTIONS 7, 8, 9, 10) ---
+    logDebug "Consolidated loop executing for date/time properties..."
+    String chosenDTForm = settings.DateTimeForm ?: "1"
+    String chosenDateForm = settings.DateForm ?: "1"
+    String chosenTimeForm = settings.TimeForm ?: "1"
+
+    device.properties.supportedAttributes.each { attr ->
+        String attrName = attr.name
+        def epochValue = null
+        String formatSelection = "1"
+        String textTargetSuffix = ""
+
+        if (attrName.endsWith("DateTime")) {
+            epochValue = device.currentValue(attrName)
+            formatSelection = chosenDTForm
+            textTargetSuffix = "Text"
+        } else if (attrName.endsWith("Date")) {
+            // Intercept with local maps if available to prevent initialization race condition
+            if (attrName == "todayDate" && todayMap?.dt != null) epochValue = todayMap.dt
+            else if (attrName == "tomDate" && tomMap?.dt != null) epochValue = tomMap.dt
+            else if (attrName == "tdaDate" && tdaMap?.dt != null) epochValue = tdaMap.dt
+            else epochValue = device.currentValue(attrName)
+            formatSelection = chosenDateForm
+            textTargetSuffix = "Text"
+        } else if (attrName.endsWith("Time") && !attrName.contains("DateTime")) {
+            // Intercept with live API maps to prevent initialization database lag
+            if (attrName == "currentSunriseTime" && currentMap?.sunrise != null) epochValue = currentMap.sunrise
+            else if (attrName == "currentSunsetTime" && currentMap?.sunset != null) epochValue = currentMap.sunset
+            else if (attrName == "todaySunriseTime" && todayMap?.sunrise != null) epochValue = todayMap.sunrise
+            else if (attrName == "todaySunsetTime" && todayMap?.sunset != null) epochValue = todayMap.sunset
+            else if (attrName == "todayMoonriseTime" && todayMap?.moonrise != null) epochValue = todayMap.moonrise
+            else if (attrName == "todayMoonsetTime" && todayMap?.moonset != null) epochValue = todayMap.moonset
+            else if (attrName == "tomSunriseTime" && tomMap?.sunrise != null) epochValue = tomMap.sunrise
+            else if (attrName == "tomSunsetTime" && tomMap?.sunset != null) epochValue = tomMap.sunset
+            else if (attrName == "tomMoonriseTime" && tomMap?.moonrise != null) epochValue = tomMap.moonrise
+            else if (attrName == "tomMoonsetTime" && tomMap?.moonset != null) epochValue = tomMap.moonset
+            else if (attrName == "tdaSunriseTime" && tdaMap?.sunrise != null) epochValue = tdaMap.sunrise
+            else if (attrName == "tdaSunsetTime" && tdaMap?.sunset != null) epochValue = tdaMap.sunset
+            else if (attrName == "tdaMoonriseTime" && tdaMap?.moonrise != null) epochValue = tdaMap.moonrise
+            else if (attrName == "tdaMoonsetTime" && tdaMap?.moonset != null) epochValue = tdaMap.moonset
+            else if (attrName == "currentTwilightBeginTime") epochValue = state.twilightBeginEpoch ?: device.currentValue(attrName)
+            else if (attrName == "currentTwilightEndTime") epochValue = state.twilightEndEpoch ?: device.currentValue(attrName)
+            else if (attrName == "currentSolarNoonTime") epochValue = state.solarNoonEpoch ?: device.currentValue(attrName)
+            else epochValue = device.currentValue(attrName)
+            
+            formatSelection = chosenTimeForm
+            textTargetSuffix = "Text"
+        }
+
+        if (epochValue != null && textTargetSuffix != "") {
+            String targetAttr = "${attrName}${textTargetSuffix}"
+            if (formatSelection == "10") {
+                sendIfChanged(name: targetAttr, value: "${epochValue}")
+            } else {
+                Map formattedMap = convertDateTimeFormat(epochValue, formatSelection)
+                String finalVal = (attrName.endsWith("Date")) ? formattedMap.date : ((attrName.endsWith("Time") && !attrName.contains("DateTime")) ? formattedMap.time : formattedMap.dateTime)
+                sendIfChanged(name: targetAttr, value: finalVal)
+            }
+        }
+    }
+
+    // 12. Current Wind Summary Text Formatter
+    logDebug "Section 11b: Formatting Current Wind Summary Text ..."
+    try {
+        def windValLocal = (freshWind != null) ? freshWind : device.currentValue("currentWindSpeed")
+        String windSpeedText = (windValLocal != null) ? "${windValLocal}${wUnit}" : (device.currentValue("currentWindSpeedText") ?: "--")
+        
+        String currentWindSpeedDescText = device.currentValue("currentWindSpeedDescText") ?: "Calm"
+        String windDirFull = device.currentValue("currentWindDirFull") ?: "Unknown"
+        
+        sendIfChanged(name: "currentWindSummaryText", value: "${currentWindSpeedDescText} from the ${windDirFull} at ${windSpeedText}")
+    } catch (Exception e) {
+        logError "Exception occurred during currentWindSummaryText generation: ${e.message}"
+    }
+    
+    // 13. Current Weather Summary Text Formatter
+    logDebug "Section 12: Formatting Current Weather Summary Text ..."
+    try {
+        def city = state.usedCity ?: "Local Area"
+        def lastUpdatedEpoch = state.lastUpdatedDateTime
+        
+        String lastUpdatedDate = "--"
+        String lastUpdatedTime = "--"
+        if (lastUpdatedEpoch != null) {
+            if (chosenDateForm == "10") {
+                lastUpdatedDate = "${lastUpdatedEpoch}"
+            } else {
+                lastUpdatedDate = convertDateTimeFormat(lastUpdatedEpoch, chosenDateForm).date
+            }
+            if (chosenTimeForm == "10") {
+                lastUpdatedTime = "${lastUpdatedEpoch}"
+            } else {
+                lastUpdatedTime = convertDateTimeFormat(lastUpdatedEpoch, chosenTimeForm).time
+            }
+        }
+        
+        def cond = device.currentValue("currentConditionTypeDesc") ?: "--"
+        
+        def temp = (freshTemp != null) ? freshTemp : device.currentValue("currentTemperature")
+        def hi = (todayMap && todayMap.temp?.max != null) ? convertKelvin(todayMap.temp.max) : (device.currentValue("todayTempMax") ?: "--")
+        def lo = (todayMap && todayMap.temp?.min != null) ? convertKelvin(todayMap.temp.min) : (device.currentValue("todayTempMin") ?: "--")
+        def feels = device.currentValue("currentFeelsLike") ?: temp
+        
+        String tempText = (temp != null) ? "${temp}${tUnit}" : (device.currentValue("currentTemperatureText") ?: "--")
+        
+        humVal = (freshHum != null) ? freshHum : device.currentValue("currentHumidity")
+        String humText = (humVal != null) ? "${humVal}%" : "--"
+        
+        def windRaw = (currentMap && currentMap.wind_speed != null) ? currentMap.wind_speed : device.currentValue("currentWindSpeed")
+        String windStrengthText = getBeaufortText(windRaw)
+        String windDirFull = device.currentValue("currentWindDirFull") ?: "Unknown"
+        
+        def windValLocal = (freshWind != null) ? freshWind : device.currentValue("currentWindSpeed")
+        String windSpeedText = (windValLocal != null) ? "${windValLocal}${wUnit}" : (device.currentValue("currentWindSpeedText") ?: "--")
+        
+        def popRaw = (todayMap && todayMap.pop != null) ? todayMap.pop : (device.currentValue("todayPOP") ?: 0)
+        int popPct = (popRaw.toBigDecimal() * 100).intValue()
+        
+        String visibilityText = device.currentValue("currentVisibilityText") ?: "--"
+        String alertVal = device.currentValue("currentAlert") ?: "No active alerts"
+        
+        String alertSentence = (alertVal != "No active alerts" && alertVal != "N/A" && alertVal != "") ? "Active alerts for ${alertVal} exist for this area." : "No active alerts exist for this area."
+
+        String summary = "Weather summary for ${city} updated at ${lastUpdatedTime} on ${lastUpdatedDate}. " +
+                         "Expect ${cond} with a high of ${hi}${tUnit} and a low of ${lo}${tUnit}. " +
+                         "Humidity is ${humText} and the current temperature is ${tempText}. " +
+                         "The temperature feels like it is ${feels}${tUnit}. " +
+                         "Wind: ${windStrengthText} from the ${windDirFull} at ${windSpeedText}. " +
+                         "There is a ${popPct}% chance of precipitation. " +
+                         "Visibility is around ${visibilityText}. " +
+                         "${alertSentence}"
+
+        sendIfChanged(name: "currentWeatherSummaryText", value: summary)
+    } catch (Exception e) {
+        logError "Exception occurred during currentWeatherSummaryText generation: ${e.message}"
+    }
+}
+
+private String getBeaufortText(def rawMsVal) {
+    // Beaufort scale bounds based on m/s
+    double ms = rawMsVal?.toDouble() ?: 0.0
+    if (ms < 0.3)   return "Calm"
+    if (ms <= 1.5)  return "Light Air"
+    if (ms <= 3.3)  return "Light Breeze"
+    if (ms <= 5.4)  return "Gentle Breeze"
+    if (ms <= 7.9)  return "Moderate Breeze"
+    if (ms <= 10.7) return "Fresh Breeze"
+    if (ms <= 13.8) return "Strong Breeze"
+    if (ms <= 17.1) return "Near Gale"
+    if (ms <= 20.7) return "Gale"
+    if (ms <= 24.4) return "Severe Gale"
+    if (ms <= 28.4) return "Storm"
+    if (ms <= 32.6) return "Violent Storm"
+    return "Hurricane"
+}
+
+private void calcLonLatCityState() {
+    // Read current input settings values safely
+    String currentCity = settings.overrideCity ?: ""
+    BigDecimal currentLat = settings.overrideLatitude ? settings.overrideLatitude.toBigDecimal() : null 
+    BigDecimal currentLon = settings.overrideLongitude ? settings.overrideLongitude.toBigDecimal() : null 
+
+    // Optimisation check: If preferences are unchanged and we already have cached outputs, skip
+    Boolean settingsChanged = (currentCity != state.lastOverrideCity || currentLat != state.lastOverrideLatitude || currentLon != state.lastOverrideLongitude)
+    Boolean hasCachedData = (state.usedCity && state.usedLatitude != null && state.usedLongitude != null)
+
+    if (!settingsChanged && hasCachedData) {
+        logDebug "Coordinates and city are unchanged and cached. Skipping geo lookup."
+        return
+    }
+
+    String usedCity = ""
+    BigDecimal usedLatitude = 0.0
+    BigDecimal usedLongitude = 0.0
+
+    // ------------------------------------------------------------- 
+    // SCENARIO 1: An explicit override city name has been given
+    // ------------------------------------------------------------- 
+    if (currentCity && currentCity.trim() != "") {
+        logDebug "Scenario 1: overrideCity provided ('${currentCity}'). Running Direct Geo-Lookup."
+        String encodedCity = URLEncoder.encode(currentCity.trim(), "UTF-8")
+        String geoUrl = "https://api.openweathermap.org/geo/1.0/direct?q=${encodedCity}&limit=1&appid=${apiKey}"
+		if (!settings.aPIKeyExposedEnable) {
+			logDebug "Polling OpenWeatherMap GEO via URL: ${geoUrl.replaceAll(/appid=[^&]+/, 'appid=***')}"
 		} else {
-			wgust = myGetDataBD('wind_gust')
+			logDebug "Polling OpenWeatherMap GEO via URL: ${geoUrl}"
 		}
-		String mytext
-		mytext = '<style type="text/css">.cI{height:45%}.cIb{height:80%}</style>'
-		mytext += '<table style="text-align:center;display:inline">'
-		mytext += sTR + '<B>' + myGetData('city') + '</B>'
-		mytext += sTR + myGetData('condition_text') + (noAlert ? sBLK : ' | ') + alertStyleOpen + (noAlert ? sBLK : myGetData('alertLink')) + alertStyleClose
-        LOGINFO("myGetData('imgName0') is " + myGetData('imgName0'))
-		mytext += sTR + String.format(ddisp_twd, myGetDataBD(sTEMP)) + myGetData(sTMETR) + myGetData('imgName0')
-		mytext += 'Feels like ' + String.format(ddisp_twd, myGetDataBD('feelsLike')) + myGetData(sTMETR)
-		mytext += '<tr style="font-size:85%">' + sTD + sIMGS8 + myGetData(sICON) + myGetData('wind_bft_icon') + iconClose + myGetData('wind_direction') + sSPC
-		mytext += (myGetDataBD('wind') < 1.0 ? 'calm' : '@ ' + String.format(ddisp_twd, myGetDataBD('wind')) + sSPC + myGetData(sDMETR))
-		mytext += ', gusts ' + ((wgust < 1.0) ? 'calm' : '@ ' + String.format(ddisp_twd, wgust) + sSPC + myGetData(sDMETR))
+        
+        def params = [uri: geoUrl, contentType: "application/json", timeout: 10]
+        try {
+            httpGet(params) { response ->
+                if (response.status == 200 && response.data && response.data.size() > 0) {
+                    def locationData = response.data[0]
+                    usedCity = locationData.name ?: currentCity
+                    usedLatitude = locationData.lat ? locationData.lat.toBigDecimal() : 0.0
+                    usedLongitude = locationData.lon ? locationData.lon.toBigDecimal() : 0.0
+                    logDebug "Direct Geo-Lookup Success -> City: ${usedCity}, Lat: ${usedLatitude}, Lon: ${usedLongitude}"
+                } else {
+                    logWarn "Direct Geo-Lookup returned no results. Falling back to configurations."
+                }
+            }
+        } catch (Exception e) {
+            logError "Exception occurred during Direct Geo-Lookup execution: ${e.message}"
+        }
+    } 
+    // ------------------------------------------------------------- 
+    // SCENARIO 2: Fall back to coordinate inputs or hub defaults
+    // ------------------------------------------------------------- 
+    else {
+        logDebug "Scenario 2: No overrideCity provided. Evaluating coordinate inputs or Hub configuration."
+        usedLatitude = currentLat ?: location.latitude?.toBigDecimal()
+        usedLongitude = currentLon ?: location.longitude?.toBigDecimal()
+        
+        // Execute Reverse Geo Lookup using the determined coordinates
+        if (usedLatitude && usedLongitude && apiKey) {
+            logDebug "Attempting Reverse Geo-Lookup using Lat: ${usedLatitude}, Lon: ${usedLongitude}"
+            String reverseGeoUrl = "https://api.openweathermap.org/geo/1.0/reverse?lat=${usedLatitude}&lon=${usedLongitude}&limit=1&appid=${apiKey}"
+            def params = [uri: reverseGeoUrl, contentType: "application/json", timeout: 10]
+            try {
+                httpGet(params) { response ->
+                    if (response.status == 200 && response.data && response.data.size() > 0) {
+                        usedCity = response.data[0].name ?: "Local Area"
+                        logDebug "Reverse Geo-Lookup Success -> City resolved: ${usedCity}"
+                    } else {
+                        logWarn "Reverse Geo-Lookup returned empty results. Defaulting city name."
+                        usedCity = "Local Area"
+                    }
+                }
+            } catch (Exception e) {
+                logError "Exception occurred during Reverse Geo-Lookup execution: ${e.message}"
+                usedCity = "Local Area"
+            }
+        } else {
+            usedCity = "Local Area"
+        }
+    } 
 
-		String mytexte
-		mytexte = '<tr style="font-size:80%">' + sTD + sIMGS8 + myGetData(sICON) + 'wb.png' + iconClose + String.format(ddisp_p, myGetDataBD('pressure')) + sSPC + myGetData(sPMETR) + sSPC + sIMGS8 + myGetData(sICON) + 'wh.png' + iconClose
-		mytexte += myGetData('humidity') + '%' + sSPC + sIMGS8 + myGetData(sICON) + 'wu.png' + iconClose + myGetData('percentPrecip') + '%' + sSPC + sIMGS8 + myGetData(sICON) + 'wr.png' + iconClose + (myGetDataBD('rainToday') > 0 ? String.format(ddisp_r, myGetDataBD('rainToday')) + sSPC + myGetData(sRMETR) : 'None') + sBR
-		mytexte += sIMGS8 + myGetData(sICON) + 'wsr.png' + iconClose + myGetData('localSunrise') + sSPC + sIMGS8 + myGetData(sICON) + 'wss.png' + iconClose + myGetData('localSunset')
-		if ((mytext.length() + mytexte.length() + OWMIcon.length() + 8) < 1025) {
-			mytext += mytexte + OWMIcon
-		} else {
-			mytexte = '<tr style="font-size:80%">' + sTD + '<B>B:</B> ' + String.format(ddisp_p, myGetDataBD('pressure')) + sSPC + myGetData(sPMETR) + sSPC + '<B>H:</B> '
-			mytexte += myGetData('humidity') + '%' + sSPC + '<B>PoP:</B> ' + myGetData('percentPrecip') + '%' + sSPC + '<B>Precip:</B> ' + (myGetDataBD('rainToday') > 0 ? String.format(ddisp_r, myGetDataBD('rainToday')) + sSPC + myGetData(sRMETR) : 'None') + sBR
-			mytexte += '<B>SRise:</B> ' + myGetData('localSunrise') + sSPC + '<B>SSet:</B> ' + myGetData('localSunset')
-			mytext += mytexte
-			if ((mytext.length() + OWMIcon.length() + 8) < 1025) {
-				mytext += OWMIcon
-			} else if ((mytext.length() + OWMText.length() + 8) < 1025) {
-				mytext += OWMText
-			} else {
-				mytext += 'OpenWeatherMap.org'
-			}
-		}
-		mytext += '</table>'
-		if (mytext.length() > 1024) {
-			LOGWARN('Too much data to display.</br></br>Current myTile length (' + mytext.length() + ') exceeds maximum tile length by ' + (mytext.length() - 1024).toString() + ' characters.')
-		}
-		sendEvent(name: 'myTile', value: mytext.take(1024))
-	}else{
-		device.deleteCurrentState('myTile')
-	}
-//  >>>>>>>>>> End Built mytext <<<<<<<<<<
-}
-void refresh() {
-	updateLux(true)
-}
+    // ------------------------------------------------------------- 
+    // EXTRA PROTECTION: Enforce fallback to Hub defaults if values 
+    // remain blank or zero (e.g. failed lookups or empty settings)
+    // ------------------------------------------------------------- 
+    if (!usedLatitude || usedLatitude == 0.0) {
+        usedLatitude = currentLat ?: location.latitude?.toBigDecimal() ?: 0.0
+    }
+    if (!usedLongitude || usedLongitude == 0.0) {
+        usedLongitude = currentLon ?: location.longitude?.toBigDecimal() ?: 0.0
+    }
+    if (!usedCity || usedCity.trim() == "") {
+        usedCity = "Local Area"
+    }
 
-void installed() {
-}
-
-@Field static Map<String,String> verFLD=[:]
-
-Boolean ifreInstalled(){
-	String mc=device.id.toString()
-	if(verFLD[mc]!=version()) return true
-	return false
-}
-
-void updated(){
-	LOGINFO("running updated()")
-	unschedule()
-	String mc=device.id.toString()
-	verFLD[mc]=version()
-	initMe()
-	updateCheck()
-	runIn(5,finishSched)
-}
-
-Long wnow(){ return (Long)now() }
-
-void finishSched() {
-	pollSunRiseSet()
-	initialize_poll()
-	runEvery10Minutes(updateLux, [Data: [true]])
-	Random rand = new Random(wnow())
-	Integer ssseconds = rand.nextInt(60)
-	schedule("${ssseconds} 20 0/8 ? * * *", pollSunRiseSet)
-	runIn(5, pollData)
-	if(settingEnable) runIn(2100,settingsOff)// 'roll up' (hide) the condition selectors after 35 min
-	if(settings.txtEnable) runIn(1800,logsOff)// turns off extended logging after 30 min
-	Integer r_minutes = rand.nextInt(60)
-	schedule("0 ${r_minutes} 8 ? * FRI *", updateCheck)
+    // Commit calculated configurations into global variables for API calls
+    state.usedCity = usedCity
+    state.usedLatitude = usedLatitude
+    state.usedLongitude = usedLongitude
+    
+    // Cache current settings so we can compare against them next time
+    state.lastOverrideCity = currentCity
+    state.lastOverrideLatitude = currentLat
+    state.lastOverrideLongitude = currentLon
 }
 
-void initMe() {
-	myUpdData('is_light', sTRU)
-	myUpdData('is_lightOld', myGetData('is_light')) //avoid startup oscillation
-	String city = (settings.city ?: sBLK)
-	myUpdData('city', city)
-	myUpdData('threedayLH', settings.threedayLH ? sTRU : sFLS)
-	Boolean altCoord = (settings.altCoord ?: false)
-	String valtLat = location.latitude.toString().replace(sSPC, sBLK)
-	String valtLon = location.longitude.toString().replace(sSPC, sBLK)
-	String altLat = settings.altLat ?: valtLat
-	String altLon = settings.altLon ?: valtLon
-	if (altCoord) {
-		if (altLat == null) {
-			device.updateSetting('altLat', [value:valtLat,type:'text'])
-		}
-		if (altLon == null) {
-			device.updateSetting('altLon', [value:valtLon,type:'text'])
-		}
-		if (altLat == null || altLon == null) {
-			if ((valtLat == null) || (valtLat = sBLK)) {
-				LOGERR('The Override Coordinates feature is selected but Both Hub & the Override Latitude are null.')
-			}else{
-				device.updateSetting('altLat', [value:valtLat,type:'text'])
-			}
-			if ((valtLon == null) || (valtLon = sBLK)) {
-				LOGERR('The Override Coordinates feature is selected but Both Hub & the Override Longitude are null.')
-			}else{
-				device.updateSetting('altLon', [value:valtLon,type:'text'])
-			}
-		}
-	}else{
-		device.updateSetting('altLat', [value:valtLat,type:'text'])
-		device.updateSetting('altLon', [value:valtLon,type:'text'])
-		if (altLat == null || altLon == null) {
-			if ((valtLat == null) || (valtLat = sBLK)) {
-				LOGERR('The Hub\'s latitude is not set. Please set it, or use the Override Coordinates feature.')
-			}else{
-				device.updateSetting('altLat', [value:valtLat,type:'text'])
-			}
-			if ((valtLon == null) || (valtLon = sBLK)) {
-				LOGERR('The Hub\'s longitude is not set. Please set it, or use the Override Coordinates feature.')
-			}else{
-				device.updateSetting('altLon', [value:valtLon,type:'text'])
-			}
-		}
-	}
-	Boolean iconType = (settings.iconType ?: false)
-	myUpdData('iconType', iconType ? sTRU : sFLS)
-//	https://tinyurl.com/icnqz/ points to https://raw.githubusercontent.com/HubitatCommunity/WeatherIcons/master/
-	String iconLocation = (settings.iconLocation ?: 'https://tinyurl.com/icnqz/')
-	myUpdData(sICON, iconLocation)
-	state.OWM = '<a href="https://openweathermap.org" target="_blank">'+sIMGS5 + myGetData(sICON) + 'OWM.png style="height:2em"></a>'
-	setDateTimeFormats((String)settings.datetimeFormat)
-	String distanceFormat = (settings.distanceFormat ?: 'Miles (mph)')
-	String pressureFormat = (settings.pressureFormat ?: 'Inches')
-	String rainFormat = (settings.rainFormat ?: 'Inches')
-	String tempFormat = (settings.tempFormat ?: 'Fahrenheit (°F)')
-	setMeasurementMetrics(distanceFormat, pressureFormat, rainFormat, tempFormat)
-	String TWDDecimals = (settings.TWDDecimals ?: sZERO)
-	String PDecimals = (settings.PDecimals ?: sZERO)
-	String RDecimals = (settings.RDecimals ?: sZERO)
-	setDisplayDecimals(TWDDecimals, PDecimals, RDecimals)
-	pollOWMl()
-	if(settings.alertSource==sTWO) {pollWDG()}
-}
-void pollOWMl() {
-/*  for testing a different Lat/Lon location uncommnent the two lines below */
-//	String altLat = "44.809122" //"41.5051613" // "40.6" //"38.627003" //"30.6953657"
-//	String altLon = "-68.735892" //"-81.6934446" // "-75.43" //"-90.199402" //-88.0398912"
-	Map ParamsOWMl = [ uri: 'https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey, timeout: 20 ]
-	LOGINFO('Poll OpenWeatherMap.org Location: ' + ParamsOWMl)
-	asynchttpGet('pollOWMlHandler', ParamsOWMl)
-}
-void pollOWMlHandler(resp, data) {
-	LOGINFO('Polling OpenWeatherMap.org Location')
-	if(resp.getStatus() != 200 && resp.getStatus() != 207) {
-		LOGWARN('Calling https://api.openweathermap.org/data/' + (apiVer==true ? '3.0' : '2.5') + '/find?lat=' + (String)altLat + '&lon=' + (String)altLon + '&cnt=1&appid=' + (String)apiKey)
-		LOGWARN(resp.getStatus() + sCOLON + resp.getErrorMessage())
-		myUpdData('OWML',sSPC)
-	}else{
-		Map owml = parseJson(resp.data)
-		if(owml.toString()==sNULL) {
-			pauseExecution(1000)
-			pollOWMl()
-			return
-		}
-		LOGINFO('OpenWeatherMap Location Data: ' + owml.toString())
-		myUpdData('OWML',(owml?.list[0]?.id==null ? sSPC : owml.list[0].id.toString()))
-		LOGINFO('OWM Location City Code: ' + myGetData('OWML'))
-	}
+private void sendIfChanged(Map args) {
+    if (!args || !args.name) return
+    
+    // Standardize checking logic
+    String oldVal = device.currentValue(args.name as String)?.toString()
+    String newVal = args.value != null ? args.value.toString() : ""
+
+    if (oldVal != newVal) {
+        // Ensure standard Hubitat tracking options are appended safely
+        Map eventMap = [name: args.name, value: args.value, descriptionText: "Attribute ${args.name} changed to ${args.value}"]
+        if (args.unit) eventMap.unit = args.unit
+        sendEvent(eventMap)
+        logDebug "Event triggered: ${args.name} -> ${args.value}"
+    }
 }
 
-void initialize_poll() {
-	unschedule(pollOWM)
-	Random rand = new Random(wnow())
-	Integer ssseconds = rand.nextInt(60)
-	Integer minutes2 = rand.nextInt(2)
-	Integer minutes5 = rand.nextInt(5)
-	Integer minutes10 = rand.nextInt(10)
-	Integer minutes15 = rand.nextInt(15)
-	Integer minutes30 = rand.nextInt(30)
-	Integer minutes60 = rand.nextInt(60)
-	Integer hours3 = rand.nextInt(3)
-	Integer dsseconds
-	if(ssseconds < 56 ){
-		dsseconds = ssseconds + 4
-	}else{
-		dsseconds = ssseconds - 60 + 4
-	}
-	String pollIntervalFcst = (settings.pollIntervalForecast ?: '3 Hours')
-	String pollIntervalFcstnight = (settings.pollIntervalForecastnight ?: '3 Hours')
-	if(myGetData('is_light')==sTRU) {
-		myPoll = pollIntervalFcst
-	}else{
-		myPoll = pollIntervalFcstnight
-	}
-	if(myPoll == 'Manual Poll Only'){
-		LOGINFO('MANUAL FORECAST POLLING ONLY')
-	}else{
-		myPoll = myPoll.replace(sSPC,sBLK)
-		String mySched
-		LOGINFO('pollInterval: ' + myPoll)
-		switch(myPoll) {
-			case '2Minutes':
-				mySched = "${dsseconds} ${minutes2}/2 * * * ? *"
-				break
-			case '5Minutes':
-				mySched = "${dsseconds} ${minutes5}/5 * * * ? *"
-				break
-			case '10Minutes':
-				mySched = "${dsseconds} ${minutes10}/10 * * * ? *"
-				break
-			case '15Minutes':
-				mySched = "${dsseconds} ${minutes15}/15 * * * ? *"
-				break
-			case '30Minutes':
-				mySched = "${dsseconds} ${minutes30}/30 * * * ? *"
-				break
-			case '1Hour':
-				mySched = "${dsseconds} ${minutes60} * * * ? *"
-				break
-			case '3Hours':
-			default:
-				mySched = "${dsseconds} ${minutes60} ${hours3}/3 * * ? *"
-		}
-		schedule(mySched, pollOWM)
-	}
+private Map lookupConditionDetails(Integer code) {
+    def conditions = [
+        // Thunderstorms
+        200: [type: "Thunderstorm", desc: "Thunderstorm with Light Rain", altDay: "38.png", altNight: "47.png"],
+        201: [type: "Thunderstorm", desc: "Thunderstorm with Rain", altDay: "38.png", altNight: "47.png"],
+        202: [type: "Thunderstorm", desc: "Thunderstorm with Heavy Rain", altDay: "38.png", altNight: "47.png"],
+        210: [type: "Thunderstorm", desc: "Light Thunderstorm", altDay: "38.png", altNight: "47.png"],
+        211: [type: "Thunderstorm", desc: "Thunderstorm", altDay: "38.png", altNight: "47.png"],
+        212: [type: "Thunderstorm", desc: "Heavy Thunderstorm", altDay: "38.png", altNight: "47.png"],
+        221: [type: "Thunderstorm", desc: "Ragged Thunderstorm", altDay: "38.png", altNight: "47.png"],
+        230: [type: "Thunderstorm", desc: "Thunderstorm with Light Drizzle", altDay: "38.png", altNight: "47.png"],
+        231: [type: "Thunderstorm", desc: "Thunderstorm with Drizzle", altDay: "38.png", altNight: "47.png"],
+        232: [type: "Thunderstorm", desc: "Thunderstorm with Heavy Drizzle", altDay: "38.png", altNight: "47.png"],
+
+        // Drizzle
+        300: [type: "Drizzle", desc: "Light Intensity Drizzle", altDay: "9.png", altNight: "9.png"],
+        301: [type: "Drizzle", desc: "Drizzle", altDay: "9.png", altNight: "9.png"],
+        302: [type: "Drizzle", desc: "Heavy Intensity Drizzle", altDay: "9.png", altNight: "9.png"],
+        310: [type: "Drizzle", desc: "Light Intensity Drizzle Rain", altDay: "9.png", altNight: "9.png"],
+        311: [type: "Drizzle", desc: "Drizzle Rain", altDay: "9.png", altNight: "9.png"],
+        312: [type: "Drizzle", desc: "Heavy Intensity Drizzle Rain", altDay: "9.png", altNight: "9.png"],
+        313: [type: "Drizzle", desc: "Shower Rain and Drizzle", altDay: "9.png", altNight: "9.png"],
+        314: [type: "Drizzle", desc: "Heavy Shower Rain and Drizzle", altDay: "9.png", altNight: "9.png"],
+        321: [type: "Drizzle", desc: "Shower Drizzle", altDay: "9.png", altNight: "9.png"],
+
+        // Rain
+        500: [type: "Rain", desc: "Light Rain", altDay: "39.png", altNight: "9.png"],
+        501: [type: "Rain", desc: "Moderate Rain", altDay: "39.png", altNight: "11.png"],
+        502: [type: "Rain", desc: "Heavy Intensity Rain", altDay: "39.png", altNight: "11.png"],
+        503: [type: "Rain", desc: "Very Heavy Rain", altDay: "39.png", altNight: "11.png"],
+        504: [type: "Rain", desc: "Extreme Rain", altDay: "39.png", altNight: "11.png"],
+        511: [type: "Rain", desc: "Freezing Rain", altDay: "39.png", altNight: "11.png"],
+        520: [type: "Rain", desc: "Light Intensity Shower Rain", altDay: "39.png", altNight: "9.png"],
+        521: [type: "Rain", desc: "Shower Rain", altDay: "39.png", altNight: "11.png"],
+        522: [type: "Rain", desc: "Heavy Intensity Shower Rain", altDay: "39.png", altNight: "11.png"],
+        531: [type: "Rain", desc: "Ragged Shower Rain", altDay: "39.png", altNight: "9.png"],
+
+        // Snow
+        600: [type: "Snow", desc: "Light Snow", altDay: "13.png", altNight: "13.png"],
+        601: [type: "Snow", desc: "Snow", altDay: "14.png", altNight: "14.png"],
+        602: [type: "Snow", desc: "Heavy Snow", altDay: "16.png", altNight: "16.png"],
+        611: [type: "Snow", desc: "Sleet", altDay: "18.png", altNight: "18.png"],
+        612: [type: "Snow", desc: "Light Shower Sleet", altDay: "18.png", altNight: "18.png"],
+        613: [type: "Snow", desc: "Shower Sleet", altDay: "18.png", altNight: "18.png"],
+        615: [type: "Snow", desc: "Light Rain and Snow", altDay: "5.png", altNight: "5.png"],
+        616: [type: "Snow", desc: "Rain and Snow", altDay: "5.png", altNight: "5.png"],
+        620: [type: "Snow", desc: "Light Shower Snow", altDay: "13.png", altNight: "13.png"],
+        621: [type: "Snow", desc: "Shower Snow", altDay: "14.png", altNight: "14.png"],
+        622: [type: "Snow", desc: "Heavy Shower Snow", altDay: "16.png", altNight: "16.png"],
+
+        // Atmosphere
+        701: [type: "Atmosphere", desc: "Mist", altDay: "20.png", altNight: "20.png"],
+        711: [type: "Atmosphere", desc: "Smoke", altDay: "20.png", altNight: "20.png"],
+        721: [type: "Atmosphere", desc: "Haze", altDay: "21.png", altNight: "21.png"],
+        731: [type: "Atmosphere", desc: "Sand/Dust Whirls", altDay: "19.png", altNight: "19.png"],
+        741: [type: "Atmosphere", desc: "Fog", altDay: "20.png", altNight: "20.png"],
+        751: [type: "Atmosphere", desc: "Sand", altDay: "19.png", altNight: "19.png"],
+        761: [type: "Atmosphere", desc: "Dust", altDay: "19.png", altNight: "19.png"],
+        762: [type: "Atmosphere", desc: "Volcanic Ash", altDay: "19.png", altNight: "19.png"],
+        771: [type: "Atmosphere", desc: "Squalls", altDay: "24.png", altNight: "24.png"],
+        781: [type: "Atmosphere", desc: "Tornado", altDay: "24.png", altNight: "24.png"],
+
+        // Clear & Clouds
+        800: [type: "Clear",  desc: "Clear Sky", altDay: "32.png", altNight: "31.png"],
+        801: [type: "Clouds", desc: "Few Clouds: 11-25%", altDay: "34.png", altNight: "29.png"],
+        802: [type: "Clouds", desc: "Scattered Clouds: 25-50%", altDay: "30.png", altNight: "30.png"],
+        803: [type: "Clouds", desc: "Broken Clouds: 51-84%", altDay: "28.png", altNight: "27.png"],
+        804: [type: "Clouds", desc: "Overcast Clouds: 85-100%", altDay: "26.png", altNight: "26.png"]
+    ]
+    return conditions[code] ?: [type: "Unknown", desc: "Unknown Condition", altDay: "unknown.png", altNight: "unknown.png"]
 }
 
-void pollData() {
-	pollOWM()
+void disableDebugLogging() {
+    logInfo "30 minutes have elapsed. Automatically disabling debug logging."
+    device.updateSetting("logDebugEnable", [type: "bool", value: false])
 }
 
-// ************************************************************************************************
-
-void setDateTimeFormats(String formatselector){
-	String mSel = formatselector ?: sONE
-	String DTFormat
-	String dateFormat
-	String timeFormat
-	switch(mSel) {
-		case sONE: DTFormat = 'M/d/yyyy h:mm a';   dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
-		case '2': DTFormat = 'M/d/yyyy HH:mm';	dateFormat = 'M/d/yyyy';   timeFormat = 'HH:mm';  break
-		case '3': DTFormat = 'MM/dd/yyyy h:mm a'; dateFormat = 'MM/dd/yyyy'; timeFormat = 'h:mm a'; break
-		case '4': DTFormat = 'MM/dd/yyyy HH:mm';  dateFormat = 'MM/dd/yyyy'; timeFormat = 'HH:mm';  break
-		case '5': DTFormat = 'd/M/yyyy h:mm a';   dateFormat = 'd/M/yyyy';   timeFormat = 'h:mm a'; break
-		case '6': DTFormat = 'd/M/yyyy HH:mm';	dateFormat = 'd/M/yyyy';   timeFormat = 'HH:mm';  break
-		case '7': DTFormat = 'dd/MM/yyyy h:mm a'; dateFormat = 'dd/MM/yyyy'; timeFormat = 'h:mm a'; break
-		case '8': DTFormat = 'dd/MM/yyyy HH:mm';  dateFormat = 'dd/MM/yyyy'; timeFormat = 'HH:mm';  break
-		case '9': DTFormat = 'yyyy/MM/dd HH:mm';  dateFormat = 'yyyy/MM/dd'; timeFormat = 'HH:mm';  break
-		default: DTFormat = 'M/d/yyyy h:mm a';  dateFormat = 'M/d/yyyy';   timeFormat = 'h:mm a'; break
-	}
-	myUpdData('DTFormat', DTFormat)
-	myUpdData('dateFormat', dateFormat)
-	myUpdData('timeFormat', timeFormat)
+// Unified dynamic logger helper mapping
+private void logMessage(String level, String msg) {
+    if (settings["log${level.capitalize()}Enable"] == true) {
+        log."${level}" "OpenWeatherMap Driver${level == 'warn' ? ' WARNING' : level == 'error' ? ' ERROR' : ''}: ${msg}"
+    }
 }
 
-void setMeasurementMetrics(String distFormat, String pressFormat, String precipFormat, String temptFormat){
-	String dMetric
-	String pMetric
-	String rMetric
-	String tMetric
-	if(distFormat == 'Miles (mph)') {
-		dMetric = 'MPH'
-	} else if(distFormat == 'knots') {
-		dMetric = 'knots'
-	} else if(distFormat == 'Kilometers (kph)') {
-		dMetric = 'KPH'
-	}else{
-		dMetric = 'm/s'
-	}
-	myUpdData(sDMETR, dMetric)
-
-	if(pressFormat == 'Millibar') {
-		pMetric = 'MBAR'
-	} else if(pressFormat == 'Inches') {
-		pMetric = 'inHg'
-	}else{
-		pMetric = 'hPa'
-	}
-	myUpdData(sPMETR, pMetric)
-
-	if(precipFormat == 'Millimeters') {
-		rMetric = 'mm'
-	}else{
-		rMetric = 'in'
-	}
-	myUpdData(sRMETR, rMetric)
-
-	if(temptFormat == 'Fahrenheit (°F)') {
-		tMetric = sDF
-	}else{
-		tMetric = '°C'
-	}
-	myUpdData(sTMETR, tMetric)
-}
-
-void setDisplayDecimals(String TWDDisp, String PressDisp, String RainDisp) {
-	String ddisp_twd
-	String mult_twd
-	String ddisp_p
-	String mult_p
-	String ddisp_r
-	String mult_r
-	switch(TWDDisp) {
-		case sZERO: ddisp_twd = '%3.0f'; mult_twd = sONE; break
-		case sONE: ddisp_twd = '%3.1f'; mult_twd = '10'; break
-		case '2': ddisp_twd = '%3.2f'; mult_twd = '100'; break
-		case '3': ddisp_twd = '%3.3f'; mult_twd = '1000'; break
-		case '4': ddisp_twd = '%3.4f'; mult_twd = '10000'; break
-		default: ddisp_twd = '%3.0f'; mult_twd = sONE; break
-	}
-	myUpdData('ddisp_twd', ddisp_twd)
-	myUpdData('mult_twd', mult_twd)
-	switch(PressDisp) {
-		case sZERO: ddisp_p = '%,4.0f'; mult_p = sONE; break
-		case sONE: ddisp_p = '%,4.1f'; mult_p = '10'; break
-		case '2': ddisp_p = '%,4.2f'; mult_p = '100'; break
-		case '3': ddisp_p = '%,4.3f'; mult_p = '1000'; break
-		case '4': ddisp_p = '%,4.4f'; mult_p = '10000'; break
-		default: ddisp_p = '%,4.0f'; mult_p = sONE; break
-	}
-	myUpdData('ddisp_p', ddisp_p)
-	myUpdData('mult_p', mult_p)
-	switch(RainDisp) {
-		case sZERO: ddisp_r = '%2.0f'; mult_r = sONE; break
-		case sONE: ddisp_r = '%2.1f'; mult_r = '10'; break
-		case '2': ddisp_r = '%2.2f'; mult_r = '100'; break
-		case '3': ddisp_r = '%2.3f'; mult_r = '1000'; break
-		case '4': ddisp_r = '%2.4f'; mult_r = '10000'; break
-		default: ddisp_r = '%2.0f'; mult_r = sONE; break
-	}
-	myUpdData('ddisp_r', ddisp_r)
-	myUpdData('mult_r', mult_r)
-}
-
-def estimateLux(Integer condition_id, Integer cloud) {
-	Long lux
-	Boolean aFCC
-	aFCC = true
-	Double l
-	String bwn
-	TimeZone tZ					= TimeZone.getDefault() //TimeZone.getTimeZone(tz_id)
-	String lT					= new Date().format('yyyy-MM-dd\'T\'HH:mm:ssXXX', tZ)
-	Long localeMillis			= getEpoch(lT)
-	Long twilight_beginMillis
-	Long sunriseTimeMillis
-	Long noonTimeMillis
-	Long sunsetTimeMillis
-	Long twilight_endMillis
-    Date tsunrise= todaysSunrise
-    Date tsunset= todaysSunset
-    twilight_beginMillis	= tsunrise.getTime() - 1500000L // (25*60*1000) // 25 minutes before sunrise
-    sunriseTimeMillis	= tsunrise.getTime()
-    noonTimeMillis		= tsunrise.getTime() + (tsunset.getTime() - tsunrise.getTime()).intdiv(2)
-    sunsetTimeMillis	= tsunset.getTime()
-    twilight_endMillis	= tsunset.getTime() + 1500000L // (25*60*1000) // 25 minutes after sunset
-
-	Long twiStartNextMillis		= twilight_beginMillis + 86400000L // = 24*60*60*1000 --> one day in milliseconds
-	Long sunriseNextMillis		= sunriseTimeMillis + 86400000L
-	Long noonTimeNextMillis		= noonTimeMillis + 86400000L
-	Long sunsetNextMillis		= sunsetTimeMillis + 86400000L
-	Long twiEndNextMillis		= twilight_endMillis + 86400000L
-
-	switch(localeMillis) {
-		case { it < twilight_beginMillis}:
-			bwn = 'Fully Night Time'
-			lux = 5l
-			aFCC = false
-			break
-		case { it < sunriseTimeMillis}:
-			bwn = 'between twilight and sunrise'
-			l = (((localeMillis - twilight_beginMillis) * 50f) / (sunriseTimeMillis - twilight_beginMillis))
-			lux = (l < 10f ? 10l : l.trunc(0) as Long)
-			break
-		case { it < noonTimeMillis}:
-			bwn = 'between sunrise and noon'
-			l = (((localeMillis - sunriseTimeMillis) * 10000f) / (noonTimeMillis - sunriseTimeMillis))
-			lux = (l < 50f ? 50l : l.trunc(0) as Long)
-			break
-		case { it < sunsetTimeMillis}:
-			bwn = 'between noon and sunset'
-			l = (((sunsetTimeMillis - localeMillis) * 10000f) / (sunsetTimeMillis - noonTimeMillis))
-			lux = (l < 50f ? 50l : l.trunc(0) as Long)
-			break
-		case { it < twilight_endMillis}:
-			bwn = 'between sunset and twilight'
-			l = (((twilight_endMillis - localeMillis) * 50f) / (twilight_endMillis - sunsetTimeMillis))
-			lux = (l < 10f ? 10l : l.trunc(0) as Long)
-			break
-		case { it < twiStartNextMillis}:
-			bwn = 'Fully Night Time'
-			lux = 5l
-			aFCC = false
-			break
-		case { it < sunriseNextMillis}:
-			bwn = 'between twilight and sunrise'
-			l = (((localeMillis - twiStartNextMillis) * 50f) / (sunriseNextMillis - twiStartNextMillis))
-			lux = (l < 10f ? 10l : l.trunc(0) as Long)
-			break
-		case { it < noonTimeNextMillis}:
-			bwn = 'between sunrise and noon'
-			l = (((localeMillis - sunriseNextMillis) * 10000f) / (noonTimeNextMillis - sunriseNextMillis))
-			lux = (l < 50f ? 50l : l.trunc(0) as Long)
-			break
-		case { it < sunsetNextMillis}:
-			bwn = 'between noon and sunset'
-			l = (((sunsetNextMillis - localeMillis) * 10000f) / (sunsetNextMillis - noonTimeNextMillis))
-			lux = (l < 50f ? 50l : l.trunc(0) as Long)
-			break
-		case { it < twiEndNextMillis}:
-			bwn = 'between sunset and twilight'
-			l = (((twiEndNextMillis - localeMillis) * 50f) / (twiEndNextMillis - sunsetNextMillis))
-			lux = (l < 10f ? 10l : l.trunc(0) as Long)
-			break
-		default:
-			bwn = 'Fully Night Time'
-			lux = 5l
-			aFCC = false
-			break
-	}
-	String cC = condition_id.toString()
-	String cCT = ' using cloud cover from API'
-	Double cCF = (!cloud || cloud==sBLK) ? 0.998d : (1 - (cloud/100 / 3d))
-	if(aFCC){
-		if(!cloud){
-			Map LUitem = LUTable.find{ Map it -> (Integer)it.id == condition_id }
-			if (LUitem)	{
-				cCF = LUitem.luxp
-				cCT = ' using estimated cloud cover based on condition.'
-			}else{
-				cCF = 1.0
-				cCT = ' cloud coverage not available now.'
-			}
-		}
-	}
-	lux = (lux * cCF) as Long
-	Boolean t_jitter = (!settings.luxjitter) ? false : settings.luxjitter
-	if(t_jitter){
-		// reduce event variability  code from @nh.schottfam
-		if(lux > 1100) {
-			Long t0 = Math.round(lux/800)
-			lux = t0 * 800
-		} else if(lux <= 1100 && lux > 400) {
-			Long t0 = Math.round(lux/400)
-			lux = t0 * 400
-		}else{
-			lux = 5
-		}
-	}
-	lux = Math.max(lux, 5)
-	LOGINFO('estimateLux results: condition: ' + cC + ' | condition factor: ' + cCF + ' | condition text: ' + cCT + '| lux: ' + lux)
-	return [lux, bwn]
-}
-
-private static Long getEpoch (String aTime) {
-	TimeZone tZ = TimeZone.getDefault()
-	Date localeTime = new Date().parse('yyyy-MM-dd\'T\'HH:mm:ssXXX', aTime, tZ)
-	Long localeMillis = localeTime.getTime()
-	return (localeMillis)
-}
-
-void SummaryMessage(Boolean SType, String Slast_poll_date, String Slast_poll_time, String SforecastTemp, String Sprecip, String Svis){
-	BigDecimal windgust
-	if(myGetData('wind_gust') == sBLK || myGetDataBD('wind_gust') < 1.0 || myGetData('wind_gust')==sNULL) {
-		windgust = 0.00g
-	}else{
-		windgust = myGetDataBD('wind_gust')
-	}
-	String wSum // = (String)null
-	if(SType){
-		wSum = 'Weather summary for ' + myGetData('city') + ' updated at ' + Slast_poll_time + ' on ' + Slast_poll_date + '. '
-		wSum+= myGetData('condition_text')
-		wSum+= (!SforecastTemp || SforecastTemp==sBLK) ? '. ' : SforecastTemp
-		wSum+= 'Humidity is ' + myGetData('humidity') + '% and the temperature is ' + String.format(myGetData('ddisp_twd'), myGetDataBD(sTEMP)) + myGetData(sTMETR) + '. '
-		wSum+= 'The temperature feels like it is ' + String.format(myGetData('ddisp_twd'), myGetDataBD('feelsLike')) + myGetData(sTMETR) + '. '
-		wSum+= 'Wind: ' + myGetData('wind_string') + ', gusts: ' + ((windgust < 1.00) ? 'calm. ' : 'up to ' + windgust.toString() + sSPC + myGetData(sDMETR) + '. ')
-		wSum+= Sprecip
-		wSum+= Svis
-		wSum+= alertPublish ? ((!myGetData('alert') || myGetData('alert')==sNULL) ? sBLK : sSPC + myGetData('alert') + sDOT) : sBLK
-	}else{
-		wSum = myGetData('condition_text') + sSPC
-		wSum+= ((!SforecastTemp || SforecastTemp==sBLK) ? '. ' : SforecastTemp)
-		wSum+= ' Humidity: ' + myGetData('humidity') + '%. Temperature: ' + String.format(myGetData('ddisp_twd'), myGetDataBD(sTEMP)) + myGetData(sTMETR) + '. '
-		wSum+= myGetData('wind_string') + ', gusts: ' + ((windgust == 0.00) ? 'calm. ' : 'up to ' + windgust + sSPC + myGetData(sDMETR) + sDOT)
-	}
-	wSum = wSum.take(1024)
-	sendEvent(name: 'weatherSummary', value: wSum)
-}
-
-String getImgName(Integer wCode, String iconTOD){
-	Map LUitem = LUTable.find{ (Integer)it.id == wCode }
-	LOGINFO('getImgName Inputs: ' + wCode.toString() + ', ' + iconTOD + ';  Result: ' + (iconTOD==sTRU ? (LUitem ? (String)LUitem.Icd : sNPNG) : (LUitem ? (String)LUitem.Icn : sNPNG)))
-	return (iconTOD==sTRU ? (LUitem ? (String)LUitem.Icd : sNPNG) : (LUitem ? (String)LUitem.Icn : sNPNG))
-}
-
-String getCondCode(Integer cid, String iconTOD){
-	Map LUitem = LUTable.find{ (Integer)it.id == cid }
-	LOGINFO('getCondCode Inputs: ' + cid.toString() + ', ' + iconTOD + ';  Result: ' + (iconTOD==sTRU ? (LUitem ? (String)LUitem.sId : sNPNG) : (LUitem ? (String)LUitem.sIn : sNPNG)))
-	return (iconTOD==sTRU ? (LUitem ? (String)LUitem.sId : sNPNG) : (LUitem ? (String)LUitem.sIn : sNPNG))
-}
-
-void logCheck(){
-	if(settings.txtEnable){
-		log.info 'OpenWeatherMap.org Weather Driver - INFO:  All Logging Enabled'
-	}else{
-		log.info 'OpenWeatherMap.org Weather Driver - INFO:  Further Logging Disabled'
-	}
-}
-
-void LOGDEBUG(String txt){
-	if(settings.txtEnable){ log.debug('OpenWeatherMap.org Weather Driver - DEBUG:  ' + txt) }
-}
-
-void LOGINFO(String txt){
-	if(settings.txtEnable){log.info('OpenWeatherMap.org Weather Driver - INFO:  ' + txt) }
-}
-
-void LOGWARN(String txt){
-	if(settings.txtEnable){log.warn('OpenWeatherMap.org Weather Driver - WARNING:  ' + txt) }
-}
-
-void LOGERR(String txt){
-	if(settings.txtEnable){log.error('OpenWeatherMap.org Weather Driver - ERROR:  ' + txt) }
-}
-
-void logsOff(){
-	log.info 'OpenWeatherMap.org Weather Driver - INFO:  extended logging disabled...'
-	device.updateSetting('txtEnable',[value:sFLS,type:'bool'])
-}
-
-void settingsOff(){
-	log.info 'OpenWeatherMap.org Weather Driver - INFO: Settings disabled...'
-	device.updateSetting('settingEnable',[value:sFLS,type:'bool'])
-}
-
-void sendEventPublish(evt)	{
-//	Purpose: Attribute sent to DB if selected
-	if (settings."${evt.name + 'Publish'}") {
-		sendEvent(name: evt.name, value: evt.value, descriptionText: evt.descriptionText, unit: evt.unit, displayed: evt.displayed)
-		LOGINFO('Will publish: ' + (String)evt.name) //: evt.name, evt.value evt.unit'
-	} else {
-		device.deleteCurrentState((String)evt.name)
-	}
-}
-
-@Field final List<Map>	LUTable =	[
-[id: 200, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 201, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 202, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 210, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 211, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 212, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 221, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 230, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 231, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 232, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
-[id: 300, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 301, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 302, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 310, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 311, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 312, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 313, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 314, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 321, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 500, OWMd: '10d.png', OWMn: '09n.png', Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 501, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 502, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 503, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 504, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 511, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 520, OWMd: '10d.png', OWMn: '09n.png', Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 521, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 522, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 531, OWMd: '10d.png', OWMn: '09n.png', Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 600, OWMd: '13d.png', OWMn: '13n.png', Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
-[id: 601, OWMd: '13d.png', OWMn: '13n.png', Icd: '14.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
-[id: 602, OWMd: '13d.png', OWMn: '13n.png', Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
-[id: 611, OWMd: '13d.png', OWMn: '13n.png', Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
-[id: 612, OWMd: '13d.png', OWMn: '13n.png', Icd: '8.png', Icn: '46.png', luxp: 0.5, sId: 'sleet', sIn: 'nt_snow'],
-[id: 613, OWMd: '13d.png', OWMn: '13n.png', Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
-[id: 615, OWMd: '13d.png', OWMn: '13n.png', Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 616, OWMd: '13d.png', OWMn: '13n.png', Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
-[id: 620, OWMd: '13d.png', OWMn: '13n.png', Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
-[id: 621, OWMd: '13d.png', OWMn: '13n.png', Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
-[id: 622, OWMd: '13d.png', OWMn: '13n.png', Icd: '42.png', Icn: '42.png', luxp: 0.6, sId: 'snow', sIn: 'nt_snow'],
-[id: 701, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 711, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 721, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 731, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 741, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 751, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 761, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 762, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 771, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 781, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 800, OWMd: '01d.png', OWMn: '01n.png', Icd: '32.png', Icn: '31.png', luxp: 1, sId: 'clear', sIn: 'nt_clear'],
-[id: 801, OWMd: '02d.png', OWMn: '02n.png', Icd: '34.png', Icn: '33.png', luxp: 0.9, sId: sPCLDY, sIn: sNPCLDY],
-[id: 802, OWMd: '03d.png', OWMn: '03n.png', Icd: '30.png', Icn: '29.png', luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
-[id: 803, OWMd: '04d.png', OWMn: '04n.png', Icd: '28.png', Icn: '27.png', luxp: 0.6, sId: 'mostlycloudy', sIn: 'nt_mostlycloudy'],
-[id: 804, OWMd: '04d.png', OWMn: '04n.png', Icd: '26.png', Icn: '26.png', luxp: 0.6, sId: 'cloudy', sIn: 'nt_cloudy'],
-[id: 999, OWMd: '50d.png', OWMn: '50n.png', Icd: sNPNG, Icn: sNPNG, luxp: 1.0, sId: 'unknown', sIn: 'unknown'],
-	]
-
-@Field final Map attributesMap = [
-	'threedayTile':				[t: 'Three Day Forecast Tile', d: 'Display Three Day Forecast Tile?', ty: sSTR, defa: sFLS],
-	'alert':					[t: 'Weather Alert', d: 'Display any weather alert?', ty: false, defa: sFLS],
-	'betwixt':					[t: 'Slice of Day', d: 'Display the slice-of-day?', ty: sSTR, defa: sFLS],
-	'cloud':					[t: 'Cloud', d: 'Display cloud coverage %?', ty: sNUM, defa: sFLS],
-	'cloudExtended':			[t: 'Cloud Forecast', d: 'Display cloud coverage forecast?', ty: false, defa: sFLS],
-	'condition_code':			[t: 'Condition Code', d: 'Display condition_code?', ty: sSTR, defa: sFLS],
-	'condition_icon_only':		[t: 'Condition Icon Only', d: 'Display condition_code_only?', ty: sSTR, defa: sFLS],
-	'condition_icon_url':		[t: 'Condition Icon URL', d: 'Display condition_code_url?', ty: sSTR, defa: sFLS],
-	'condition_icon':			[t: 'Condition Icon', d: 'Display condition_icon?', ty: sSTR, defa: sFLS],
-	'condition_iconWithText':	[t: 'Condition Icon With Text', d: 'Display condition_iconWithText?', ty: sSTR, defa: sFLS],
-	'condition_text':			[t: 'Condition Text', d: 'Display condition_text?', ty: sSTR, defa: sFLS],
-	'dashHubitatOWM':			[t: 'Dash - Hubitat and OpenWeatherMap', d: 'Display attributes required by Hubitat and OpenWeatherMap dashboards?', ty: false, defa: sFLS],
-	'dashSmartTiles':			[t: 'Dash - SmartTiles', d: 'Display attributes required by SmartTiles dashboards?', ty: false, defa: sFLS],
-	'dashSharpTools':			[t: 'Dash - SharpTools.io', d: 'Display attributes required by SharpTools.io?', ty: false, defa: sFLS],
-	'dewpoint':					[t: 'Dewpoint (in default unit)', d: 'Display the dewpoint?', ty: sNUM, defa: sFLS],
-	'fcstHighLow':				[t: 'Forecast High/Low Temperatures:', d: 'Display forecast High/Low temperatures?', ty: false, defa: sFLS],
-	'forecast_code':			[t: 'Forecast Code', d: 'Display forecast_code?', ty: sSTR, defa: sFLS],
-	'forecast_text':			[t: 'Forecast Text', d: 'Display forecast_text?', ty: sSTR, defa: sFLS],
-	'illuminated':				[t: 'Illuminated', d: 'Display illuminated (with lux added for use on a Dashboard)?', ty: sSTR, defa: sFLS],
-	'is_day':					[t: 'Is daytime', d: 'Display is_day?', ty: sNUM, defa: sFLS],
-	'localSunrise':				[t: 'Local SunRise and SunSet', d: 'Display the Group of Time of Local Sunrise and Sunset, with and without Dashboard text?', ty: false, defa: sFLS],
-	'myTile':					[t: 'myTile for dashboard', d: 'Display myTile?', ty: sSTR, defa: sFLS],
-	'rainToday':				[t: 'Today\'s Precipitation volume', d: 'Display today\'s precipitation volume?', ty: sNUM, defa: sFLS],
-	'percentPrecip':			[t: 'Today\'s Precipitation Probability', d: 'Display today\'s precipitation probability?', ty: sNUM, defa: sFLS],
-	'precipExtended':			[t: 'Precipitation Forecast', d: 'Display precipitation forecast?', ty: false, defa: sFLS],
-	'obspoll':					[t: 'Observation time', d: 'Display Observation and Poll times?', ty: false, defa: sFLS],
-	'vis':						[t: 'Visibility (in default unit)', d: 'Display visibility distance?', ty: sNUM, defa: sFLS],
-	'weatherSummary':			[t: 'Weather Summary Message', d: 'Display the Weather Summary?', ty: sSTR, defa: sFLS],
-	'wind_cardinal':			[t: 'Wind Cardinal', d: 'Display the Wind Direction (text initials)?', ty: sSTR, defa: sFLS],
-	'wind_degree':				[t: 'Wind Degree', d: 'Display the Wind Direction (number)?', ty: sNUM, defa: sFLS],
-	'wind_direction':			[t: 'Wind direction', d: 'Display the Wind Direction (text words)?', ty: sSTR, defa: sFLS],
-	'wind_gust':				[t: 'Wind gust (in default unit)', d: 'Display the Wind Gust?', ty: sNUM, defa: sFLS],
-	'wind_string':				[t: 'Wind string', d: 'Display the wind string?', ty: sSTR, defa: sFLS],
-]
-
-// Check Version   ***** with great thanks and acknowledgment to Cobra (CobraVmax) for his original code ****
-void updateCheck()
-{
-	Map paramsUD = [uri: 'https://raw.githubusercontent.com/Scottma61/Hubitat/master/docs/version2.json'] //https://hubitatcommunity.github.io/???/version2.json"]
-	asynchttpGet('updateCheckHandler', paramsUD)
-}
-
-void updateCheckHandler(resp, data) {
-	state.InternalName = 'OpenWeatherMap-Alerts Weather Driver'
-	Boolean descTextEnable = settings.txtEnable ?: false
-	if (resp.getStatus() == 200 || resp.getStatus() == 207) {
-		Map respUD = parseJson(resp.data)
-		// log.warn " Version Checking - Response Data: $respUD"   // Troubleshooting Debug Code - Uncommenting this line should show the JSON response from your webserver
-		state.Copyright = respUD.copyright
-		// uses reformattted 'version2.json'
-		String Ver = (String)respUD.driver.(state.InternalName).ver
-		String newVer = padVer(Ver)
-		String currentVer = padVer(version())
-		state.UpdateInfo = (respUD.driver.(state.InternalName).updated)
-		// log.debug 'updateCheck: ${respUD.driver.(state.InternalName).ver}, $state.UpdateInfo, ${respUD.author}'
-		switch(newVer) {
-			case { it == 'NLS'}:
-				state.Status = '<b>** This Driver is no longer supported by ' + respUD.author +'  **</b>'
-				if (descTextEnable) log.warn '** This Driver is no longer supported by ${respUD.author} **'
-				break
-			case { it > currentVer}:
-				state.Status = '<b>New Version Available (Version: ' + Ver + ')</b>'
-				if (descTextEnable) log.warn '** There is a newer version of this Driver available  (Version: ' + Ver + ') **'
-				if (descTextEnable) log.warn '** ' + (String)state.UpdateInfo + ' **'
-				break
-			case { it < currentVer}:
-				state.Status = '<b>You are using a Test version of this Driver (Expecting: ' + Ver + ')</b>'
-				if (descTextEnable) log.warn 'You are using a Test version of this Driver (Expecting: ' + Ver + ')'
-				break
-			default:
-				state.Status = 'Current Version: ' + Ver
-				if (descTextEnable) log.info 'You are using the current version of this driver'
-				break
-		}
-	}else{
-		log.error 'Something went wrong: CHECK THE JSON FILE AND IT\'S URI'
-	}
-}
-
-/*
-	padVer
-	Version progression of 1.4.9 to 1.4.10 would mis-compare unless each duple is padded first.
-*/
-static String padVer(String ver) {
-	String pad
-	pad = sBLK
-	ver.replaceAll( '[vV]', sBLK ).split( /\./ ).each { String it -> pad += it.padLeft( 2, sZERO ) }
-	return pad
-}
-
-static String getThisCopyright(){'&copy; 2020 Matthew (scottma61) '}
+private void logInfo(String msg)  { logMessage("info", msg) }
+private void logDebug(String msg) { logMessage("debug", msg) }
+private void logTrace(String msg) { logMessage("trace", msg) }
+private void logWarn(String msg)  { logMessage("warn", msg) }
+private void logError(String msg) { logMessage("error", msg) }
