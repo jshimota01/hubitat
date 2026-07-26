@@ -593,7 +593,7 @@ def pollOWM(String type = "manual") {
     // Resolve paths safely and save them to state before API execution
     state.iconBasePath = calcIconBasePath(settings.altIconLoc)
     state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
-    state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc) // <-- ADD THIS LINE
+    state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc) 
     
     pollOWMAPI()
 }
