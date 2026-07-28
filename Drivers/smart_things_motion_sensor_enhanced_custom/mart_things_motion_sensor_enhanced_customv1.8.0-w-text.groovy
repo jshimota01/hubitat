@@ -1,11 +1,9 @@
 /*
 SmartThings Motion Sensor Enhanced Custom
 
-Version: 1.8.1
+Version: 1.8.0
 Author: jshimota
-Namespace: jshimota
-Original Namespace: jdthomas24 
-
+Namespace: jdthomas24
 
 Supported Models:
 - STS-IRM-250 (motionv4)
@@ -22,11 +20,6 @@ Enhancements:
 - Health Check ping() implementation
 - Debug logging auto-disables after 30 minutes
 - Temperature logging suppressed when enableTemp is off
-
-Changes in 1.8.1:
-- Fixed missing Protocol import and corrected sendZigbeeCommands execution
-- Optimized temperature events to avoid database bloating (removed forced isStateChange on periodic reports)
-- Throttled redundant LQI/RSSI event emissions
 
 Changes in 1.8.0:
 - Gemini bug fix on duplicate active trigger in logs
@@ -68,10 +61,8 @@ Changes in 1.7.6:
 
 import hubitat.zigbee.clusters.iaszone.ZoneStatus
 import hubitat.zigbee.zcl.DataType
-import hubitat.device.Protocol
-import hubitat.device.HubMultiAction
 
-def driverVersion() { return "1.8.1" }
+def driverVersion() { return "1.8.0" }
 
 metadata {
     definition(
@@ -184,7 +175,6 @@ def updated() {
 }
 
 def configure() {
-	log.info "Configuring device..."
     def battInterval = (batteryReportMinutes ?: "240").toInteger() * 60
 
     def cmds = []
@@ -243,18 +233,14 @@ def parse(String description) {
     // Safely parse Hex values for LQI/RSSI to avoid NumberFormatException
     if (descMap?.lqi)  { 
         def lqiInt = Integer.parseInt(descMap.lqi, 16)
-        if (device.currentValue("lqi") != lqiInt) {
-            sendEvent(name: "lqi", value: lqiInt, descriptionText: "LQI is ${lqiInt}")
-        }
+        sendEvent(name: "lqi", value: lqiInt, descriptionText: "LQI is ${lqiInt}")
         updateRouteHealth(lqiInt) 
     }
     if (descMap?.rssi) { 
         def rssiInt = Integer.parseInt(descMap.rssi, 16)
         // Convert to signed 8-bit value if RSSI is returned as unsigned hex above 127
         if (rssiInt > 127) rssiInt -= 256
-        if (device.currentValue("rssi") != rssiInt) {
-            sendEvent(name: "rssi", value: rssiInt, descriptionText: "RSSI is ${rssiInt} dBm")
-        }
+        sendEvent(name: "rssi", value: rssiInt, descriptionText: "RSSI is ${rssiInt} dBm") 
     }
 
     // Zone status — motion
@@ -290,13 +276,9 @@ def parse(String description) {
         if (!enableTemp) return
         Double offset = tempAdj ?: 0
         def temp = (evt.value + offset).round(2)
-        
-        // v1.8.1: publish event only when changed to avoid database bloat
-        if (device.currentValue("temperature") != temp) {
-            def descText = "${device.displayName}: Temperature ${temp}°${evt.unit}"
-            if (infoLogging) log.info descText
-            sendEvent(name: "temperature", value: temp, unit: evt.unit, descriptionText: descText)
-        }
+        def descText = "${device.displayName}: Temperature ${temp}°${evt.unit}"
+        if (infoLogging) log.info descText
+        sendEvent(name: "temperature", value: temp, unit: evt.unit, isStateChange: true, descriptionText: descText)
         return
     }
 }
@@ -331,9 +313,7 @@ def processMotion(ZoneStatus status) {
 def motionInactive() {
     def descText = "${device.displayName}: Motion inactive"
     if (infoLogging) log.info descText
-	if (device.currentValue("motion") != "inactive") {
-		sendEvent(name: "motion", value: "inactive", descriptionText: descText)
-	}
+    sendEvent(name: "motion", value: "inactive", descriptionText: descText)
 }
 
 // ============================================================
@@ -343,9 +323,7 @@ def updateRouteHealth(Integer lqi) {
     def health = lqi >= 150 ? "Excellent" :
                  lqi >= 100 ? "Good" :
                  lqi >= 60  ? "Weak" : "Poor"
-    if (device.currentValue("routeHealth") != health) {
-        sendEvent(name: "routeHealth", value: health, descriptionText: "Route health rated as ${health}")
-    }
+    sendEvent(name: "routeHealth", value: health, descriptionText: "Route health rated as ${health}")
     if (debugLogging) log.debug "${device.displayName}: LQI=${lqi} routeHealth=${health}"
 }
 
@@ -393,7 +371,7 @@ def smoothBattery(Double voltage) {
 // ============================================================
 // ===================== ZIGBEE SEND =========================
 // ============================================================
-void sendZigbeeCommands(List cmds) {
+	void sendZigbeeCommands(List cmds) {
     if (!cmds) return
-    sendHubCommand(new HubMultiAction(delayBetween(cmds, 200), Protocol.ZIGBEE))
+    sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
 }
