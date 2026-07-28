@@ -30,7 +30,8 @@
 	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
 	
 	VERSIONS:
-	v2.4.2  07/27/26	jshimota	changed altitude and azimuth to sunAltitude and sunAzimuth
+	v2.4.3	07/27/26	jshimota	added calcMoonPosition and currentMoon attributes
+	v2.4.2  07/27/26	jshimota	changed altitude and azimuth to currentSun attributes 
 	v2.4.1	07/25/26	jshimota	Added button to allow a user to clear all schedules to help people converting
 	v2.4.0	07/25/26	jshimota	Initial public release
 	v2.3.0	07/20/26	jshimota	Integrated Moon Phase
@@ -133,16 +134,16 @@ metadata {
         attribute "currentAlertDescFull", "string"
         
         // - Calculated Solar Angles attributes
-        attribute "sunAltitude", "number"
-        attribute "sunAzimuth", "number"
-        attribute "sunAltitudeText", "string"
-        attribute "sunAzimuthText", "string"
+        attribute "currentSunAltitude", "number"
+        attribute "currentSunAzimuth", "number"
+        attribute "currentSunAltitudeText", "string"
+        attribute "currentSunAzimuthText", "string"
 		
         // - Calculated Lunar Angles attributes
-        attribute "moonAltitude", "number"
-        attribute "moonAzimuth", "number"
-        attribute "moonAltitudeText", "string"
-        attribute "moonAzimuthText", "string"
+        attribute "currentMoonAltitude", "number"
+        attribute "currentMoonAzimuth", "number"
+        attribute "currentMoonAltitudeText", "string"
+        attribute "currentMoonAzimuthText", "string"
 
         // - Current unique attributes
         attribute "currentSnow", "number"
@@ -397,7 +398,7 @@ metadata {
         input name: "precisionHumid", type: "enum", title: "Display Decimal Precision - Humidity", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for humidity readings in logging and tiles<br>Default: <b>0</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "0", required: true
         input name: "precisionPrecip", type: "enum", title: "Display Decimal Precision - Precipitation", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for rainfall readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "2", required: true
         input name: "precisionPress", type: "enum", title: "Display Decimal Precision - Pressure", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for barometer readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 30mb,30.5mb, 30.55mb</i>", defaultValue: "2", required: true
-        input name: "precisionSunAngles", type: "enum", title: "Display Decimal Precision - Sun Angles", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for sun angles (altitude and azimuth) readings in logging and tiles<br>Default: <b>0</b><br><i>EG(with Unit): 149°, 149.5°, 149.55°</i>", defaultValue: "0", required: true
+        input name: "precisionSunMoonAngles", type: "enum", title: "Display Decimal Precision - Sun and Moon Angles", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for sun and moon angles (altitude and azimuth) readings in logging and tiles<br>Default: <b>0</b><br><i>EG(with Unit): 149°, 149.5°, 149.55°</i>", defaultValue: "0", required: true
         input name: "precisionTemp", type: "enum", title: "Display Decimal Precision - Temperature", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for temperature readings in logging and tiles<br>Default: <b>2</b><br><i>EG(with Unit): 70°F, 70.3°F, 70.55°F</i>", defaultValue: "2", required: true
         input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for wind speed readings in logging and tiles<br>Default: <b>2</b><br><i>EG (with Unit): 12 mph, 12.7 mph, 12.77 mph</i>", defaultValue: "2", required: true
         
@@ -965,7 +966,7 @@ private void parseOWMData(Map json) {
     
     calcCurrentTwilight()
     
-    BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("sunAltitude")?.toBigDecimal() ?: 0.0)
+    BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
     calcBetwixtState(currentAlt, liveSunrise, liveSunset)
 	
 	// Force immediate sync update of Moon Phase attributes
@@ -976,7 +977,7 @@ private void parseOWMData(Map json) {
         state.isInitializing = false
         logDebug "Driver is initializing. Scheduling secondary out-of-band text refresh to prevent DB race conditions."
         
-        currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("sunAltitude")?.toBigDecimal() ?: 0.0)
+        currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
         def liveClouds = currentData?.clouds != null ? currentData.clouds : null
         
         BigDecimal freshLux = calcCurrentIlluminance(currentAlt, liveClouds)
@@ -1185,7 +1186,7 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
     // ==========================================
     // 3. ILLUMINANCE & OUT-OF-BAND MATH EXECUTION
     // ==========================================
-    BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("sunAltitude")?.toBigDecimal() ?: 0.0)
+    BigDecimal currentAlt = state.sunAltitude != null ? state.sunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
     
     def liveClouds = current?.clouds != null ? current.clouds : null
     BigDecimal freshLux = calcCurrentIlluminance(currentAlt, liveClouds)
@@ -1719,7 +1720,7 @@ private void calcAlertsState(Map json, String calculatedCityAttr, String iconBas
 
 private BigDecimal calcSunPosition() {
     // 1. Establish User Precision and Coordinates
-    int precision = (settings.precisionSunAngles ?: "0").toInteger()
+    int precision = (settings.precisionSunMoonAngles ?: "0").toInteger()
     BigDecimal locLat = state.usedLatitude != null ? state.usedLatitude.toBigDecimal() : location.latitude
     BigDecimal locLon = state.usedLongitude != null ? state.usedLongitude.toBigDecimal() : location.longitude
 
@@ -1793,10 +1794,10 @@ private BigDecimal calcSunPosition() {
     logTrace "calcSunPosition: Solar Altitude computed as ${finalAltitude}°, Azimuth as ${finalAzimuth}°"
 
     // 8. Publish the rounded numbers to the device attributes
-    sendIfChanged(name: "sunAltitude", value: finalAltitude)
-    sendIfChanged(name: "sunAzimuth", value: finalAzimuth)
-    sendIfChanged(name: "sunAltitudeText", value: "${finalAltitude}°")
-    sendIfChanged(name: "sunAzimuthText", value: "${finalAzimuth}°")
+    sendIfChanged(name: "currentSunAltitude", value: finalAltitude)
+    sendIfChanged(name: "currentSunAzimuth", value: finalAzimuth)
+    sendIfChanged(name: "currentSunAltitudeText", value: "${finalAltitude}°")
+    sendIfChanged(name: "currentSunAzimuthText", value: "${finalAzimuth}°")
 
     state.sunAltitude = finalAltitude
     return finalAltitude
@@ -1939,21 +1940,21 @@ private void calcTextValue(BigDecimal freshLux = null, BigDecimal freshTemp = nu
     def luxVal = (freshLux != null) ? freshLux : device.currentValue("currentIlluminance")
     if (luxVal != null) sendIfChanged(name: "currentIlluminanceText", value: "${luxVal} ${iUnit}")
     
-    // 5. Solar Angles Formatting (Respecting precisionSunAngles preference)
-    int sunPrecision = (settings.precisionSunAngles ?: "0").toInteger()
+    // 5. Solar Angles Formatting (Respecting precisionSunMoonAngles preference)
+    int sunPrecision = (settings.precisionSunMoonAngles ?: "0").toInteger()
     
-    def altVal = device.currentValue("sunAltitude")
+    def altVal = device.currentValue("currentSunAltitude")
     if (altVal != null && altVal.toString().isNumber()) {
         BigDecimal formattedAlt = altVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
         String altStr = (sunPrecision == 0) ? "${formattedAlt.toBigInteger()}" : "${formattedAlt}"
-        sendIfChanged(name: "sunAltitudeText", value: "${altStr}°")
+        sendIfChanged(name: "currentSunAltitudeText", value: "${altStr}°")
     }
     
-    def azVal = device.currentValue("sunAzimuth")
+    def azVal = device.currentValue("currentSunAzimuth")
     if (azVal != null && azVal.toString().isNumber()) {
         BigDecimal formattedAz = azVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
         String azStr = (sunPrecision == 0) ? "${formattedAz.toBigInteger()}" : "${formattedAz}"
-        sendIfChanged(name: "sunAzimuthText", value: "${azStr}°")
+        sendIfChanged(name: "currentSunAzimuthText", value: "${azStr}°")
     }
 
     // 6. Humidity Formatting

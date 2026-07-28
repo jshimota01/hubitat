@@ -90,7 +90,7 @@
 =========================================================================================================
 */
 
-static String version()    {  return '2.4.2'  }
+static String version()    {  return '2.4.3'  }
 
 metadata {
     definition(
@@ -172,7 +172,7 @@ metadata {
         attribute "currentSolarNoonTimeText", "string"
         attribute "currentTwilightEndTimeText", "string"
         attribute "currentVisibilityText", "string"
-        attribute "currentWeatherSummary", "string"
+        attribute "currentWeatherSummaryText", "string"
         attribute "currentWindSummaryText", "string"
 
         // - Current Condition attributes
@@ -398,7 +398,7 @@ metadata {
         input name: "precisionHumid", type: "enum", title: "Display Decimal Precision - Humidity", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for humidity readings in logging and tiles<br>Default: <b>0</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "0", required: true
         input name: "precisionPrecip", type: "enum", title: "Display Decimal Precision - Precipitation", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for rainfall readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "2", required: true
         input name: "precisionPress", type: "enum", title: "Display Decimal Precision - Pressure", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for barometer readings in logging and tiles<br>Default: <b>2</b><br><i>EG: 30mb,30.5mb, 30.55mb</i>", defaultValue: "2", required: true
-        input name: "precisionSunAngles", type: "enum", title: "Display Decimal Precision - Sun Angles", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for sun angles (altitude and azimuth) readings in logging and tiles<br>Default: <b>0</b><br><i>EG(with Unit): 149°, 149.5°, 149.55°</i>", defaultValue: "0", required: true
+        input name: "precisionSunMoonAngles", type: "enum", title: "Display Decimal Precision - Sun and Moon Angles", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for sun and moon angles (altitude and azimuth) readings in logging and tiles<br>Default: <b>0</b><br><i>EG(with Unit): 149°, 149.5°, 149.55°</i>", defaultValue: "0", required: true
         input name: "precisionTemp", type: "enum", title: "Display Decimal Precision - Temperature", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for temperature readings in logging and tiles<br>Default: <b>2</b><br><i>EG(with Unit): 70°F, 70.3°F, 70.55°F</i>", defaultValue: "2", required: true
         input name: "precisionWind", type: "enum", title: "Display Decimal Precision - Wind Speed", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision  for wind speed readings in logging and tiles<br>Default: <b>2</b><br><i>EG (with Unit): 12 mph, 12.7 mph, 12.77 mph</i>", defaultValue: "2", required: true
         
@@ -483,11 +483,6 @@ def updated() {
     state.lastOverrideLongitude = null
     state.usedCity = null
 
-    // Force immediate recalculation of solar & lunar positions on preference updates
-    calcLonLatCityState()
-    calcSunPosition()
-    calcMoonPosition()
-
     initialize()
 }
 
@@ -519,7 +514,7 @@ void clearAllDriverStates() {
 
 void clearAllAttributes() {
     logInfo "Clearing all attributes..."
-    device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
+    device.properties.supportedAttributes.each { device.deleteCurrentState(it.name) }
     logInfo "All attributes have been cleared."
 }
 
@@ -552,11 +547,17 @@ def refresh() {
 // Add this handler to unpack scheduled runIn calls safely
 void scheduledTextValue(List dataList) {
     logDebug "Unpacking scheduled calcTextValue arguments safely..."
-    if (dataList && dataList.size() >= 9) {
+    if (dataList && dataList.size() >= 10) {
         Map currentData = dataList[5] instanceof Map ? dataList[5] : [:]
         Map todayData   = dataList[6] instanceof Map ? dataList[6] : [:]
         Map tomData     = dataList[7] instanceof Map ? dataList[7] : [:]
         Map tdaData     = dataList[8] instanceof Map ? dataList[8] : [:]
+        Map fullJson    = dataList[9] instanceof Map ? dataList[9] : [:]
+
+        String cityName = state.usedCity ?: "Local Area"
+        String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/"
+        
+        calcAlertsState(fullJson, cityName, iconBasePath)
 
         calcTextValue(
             dataList[0] != null ? dataList[0].toBigDecimal() : null,
@@ -591,26 +592,25 @@ def pollOWM(String type = "manual") {
     // pollOWM triggered. Evaluating location coordinates...
     logDebug "pollOWM triggered. Evaluating location coordinates..."
     
-    // Ensure state variables exist by evaluating coordinate overrides
-	calcLonLatCityState()
-    
-    if(state.usedLatitude == null || state.usedLongitude == null) {
-        logWarn "pollOWM aborted: Valid coordinates are missing (Lat: ${state.usedLatitude}, Lon: ${state.usedLongitude})"
-        return
-    }
+    // Ensure state variables exist by evaluating coordinate overrides asynchronously via callback
+    calcLonLatCityState { success ->
+        if (!success || state.usedLatitude == null || state.usedLongitude == null) {
+            logWarn "pollOWM aborted: Valid coordinates are missing (Lat: ${state.usedLatitude}, Lon: ${state.usedLongitude})"
+            return
+        }
 
-    BigDecimal currentAlt = calcSunPosition()
-    calcMoonPosition()
-    
-    calcBetwixtState(currentAlt)
-    calcIsDayState(currentAlt)
-    
-    // Resolve paths safely and save them to state before API execution
-    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
-    state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
-    state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc) 
-    
-    pollOWMAPI()
+        BigDecimal currentSunAlt = calcSunPosition()
+        calcMoonPosition()
+        calcBetwixtState(currentSunAlt)
+        calcIsDayState(currentSunAlt)
+        
+        // Resolve paths safely and save them to state before API execution
+        state.iconBasePath = calcIconBasePath(settings.altIconLoc)
+        state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
+        state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc) 
+        
+        pollOWMAPI()
+    }
 }
 
 private void updateDynamicSchedules(long sunriseEpoch, long sunsetEpoch) {
@@ -725,10 +725,9 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
     // =========================================================================
     // SECTION 2: 3DayForecastTile (Aligned Rows / Clean Layout)
     // =========================================================================
-    long epochMsNow = now()
 	String day1Name = (tomData && tomData.dt) ? new Date(tomData.dt * 1000L).format("EEE", location.timeZone) : "Tom"
 	String day2Name = (tdaData && tdaData.dt) ? new Date(tdaData.dt * 1000L).format("EEE", location.timeZone) : "TDA"
-    String pUnit = (settings.precipUnit == "none" || settings.precipUnit == null) ? "" : settings.precipUnit
+    String pUnit = (settings.precipUnit == "none") ? "" : (settings.precipUnit ?: "inHr")
     String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
 
     // Current Column Data
@@ -752,8 +751,9 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
         def fHi = sourceMap.temp?.max != null ? convertKelvin(sourceMap.temp.max) : (device.currentValue("${prefix}TempMax") ?: "--")
         def fLo = sourceMap.temp?.min != null ? convertKelvin(sourceMap.temp.min) : (device.currentValue("${prefix}TempMin") ?: "--")
         def pop = sourceMap.pop != null ? sourceMap.pop : (device.currentValue("${prefix}POP") ?: 0)
-        def rain = sourceMap.rain != null ? sourceMap.rain : 0.0
-        def snow = sourceMap.snow != null ? sourceMap.snow : 0.0
+        
+        def rain = (sourceMap.rain instanceof Map) ? (sourceMap.rain['1h'] ?: 0.0) : (sourceMap.rain != null ? sourceMap.rain : 0.0)
+		def snow = (sourceMap.snow instanceof Map) ? (sourceMap.snow['1h'] ?: 0.0) : (sourceMap.snow != null ? sourceMap.snow : 0.0)
         def precip = (rain.toBigDecimal() > 0) ? convertPrecip(rain) : convertPrecip(snow)
 
         String sHi = (fHi instanceof BigDecimal) ? fHi.setScale(0, java.math.RoundingMode.HALF_UP) : fHi
@@ -837,10 +837,6 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
     String moonSvg       = liveSvg ?: (device.currentValue("todayMoonPhaseSvgImage") ?: "")
     String moonPngUrl    = moonVals.png ?: (device.currentValue("todayMoonPhasePngImageUrl") ?: "")
 
-    // Fetch current lunar angle text attributes
-    String moonAltText = device.currentValue("currentMoonAltitudeText") ?: "--°"
-    String moonAzText  = device.currentValue("currentMoonAzimuthText")  ?: "--°"
-
     String graphicDisplay = ""
     if (settings.displayTileMoonPhaseSVGEnable == true && moonSvg != "") {
         graphicDisplay = moonSvg
@@ -853,10 +849,7 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
 
     String moonBodyHtml = "<div style='display:flex;justify-content:center;align-items:center;height:100%;width:100%;text-align:center;position:relative;overflow:hidden;'>" +
                           graphicDisplay +
-                          "<div style='position:absolute; bottom:32%; width:92%; box-sizing:border-box; text-shadow:1px 1px 3px #000; line-height:1.15; word-wrap:break-word; text-align:center; color:#fff;'>" +
-                              "<div style='font-size:clamp(.6rem, 6vw, .8rem); font-weight:bold;'>${moonPhaseText}</div>" +
-                              "<div style='font-size:clamp(.45rem, 4.5vw, .6rem); color:#ddd; margin-top:2px;'>Alt: ${moonAltText} &nbsp; Az: ${moonAzText}</div>" +
-                          "</div>" +
+                          "<div style='position:absolute; bottom:38%; width:92%; box-sizing:border-box; font-size:clamp(.6rem, 6vw, .8rem); font-weight:bold; text-shadow:1px 1px 3px #000; line-height:1.1; word-wrap:break-word; text-align:center; color:#fff;'>${moonPhaseText}</div>" +
                           "</div>"
     sendIfChanged(name: "currentMoonPhaseTile", value: appendTileDebug(moonBodyHtml))
 }
@@ -955,8 +948,9 @@ private void parseOWMData(Map json) {
             liveSunset = currentData.sunset.toLong()
             state.todaySunsetEpoch = liveSunset
         }
-        currentData["calculatedRain"] = currentData.rain?.getAt("1h") != null ? currentData.rain["1h"] : 0.00
-        currentData["calculatedSnow"] = currentData.snow?.getAt("1h") != null ? currentData.snow["1h"] : 0.00
+        
+        currentData["calculatedRain"] = (currentData.rain instanceof Map) ? (currentData.rain["1h"] ?: 0.00) : 0.00
+        currentData["calculatedSnow"] = (currentData.snow instanceof Map) ? (currentData.snow["1h"] ?: 0.00) : 0.00
     }
     
     // Process Daily forecast arrays safely
@@ -981,8 +975,8 @@ private void parseOWMData(Map json) {
     
     calcCurrentTwilight()
     
-    BigDecimal currentAlt = device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0
-    calcBetwixtState(currentAlt, liveSunrise, liveSunset)
+    BigDecimal currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
+    calcBetwixtState(currentSunAlt, liveSunrise, liveSunset)
 	
 	// Force immediate sync update of Moon Phase attributes
     calcMoonPhaseValue(data0, data1, data2)
@@ -992,10 +986,10 @@ private void parseOWMData(Map json) {
         state.isInitializing = false
         logDebug "Driver is initializing. Scheduling secondary out-of-band text refresh to prevent DB race conditions."
         
-        currentAlt = device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0
+        currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
         def liveClouds = currentData?.clouds != null ? currentData.clouds : null
         
-        BigDecimal freshLux = calcCurrentIlluminance(currentAlt, liveClouds)
+        BigDecimal freshLux = calcCurrentIlluminance(currentSunAlt, liveClouds)
         BigDecimal freshTemp = currentData?.temp != null ? convertKelvin(currentData.temp) : null
         BigDecimal freshPress = currentData?.pressure != null ? convertPressure(currentData.pressure) : null
         BigDecimal freshWind = currentData?.wind_speed != null ? convertWindSpeed(currentData.wind_speed) : null
@@ -1136,7 +1130,6 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
             if (data.moon_phase != null) sendIfChanged(name: "${prefix}MoonPhase", value: data.moon_phase)
             
             // Weather Condition Extraction
-            // Weather Condition Extraction
 			if (data.weather && data.weather[0]) {
 				Integer code = data.weather[0].id != null ? data.weather[0].id.toInteger() : 0
 				String omiIcon = data.weather[0].icon ?: "01d"
@@ -1201,10 +1194,10 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
     // ==========================================
     // 3. ILLUMINANCE & OUT-OF-BAND MATH EXECUTION
     // ==========================================
-    BigDecimal currentAlt = device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0
+    BigDecimal currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
     
     def liveClouds = current?.clouds != null ? current.clouds : null
-    BigDecimal freshLux = calcCurrentIlluminance(currentAlt, liveClouds)
+    BigDecimal freshLux = calcCurrentIlluminance(currentSunAlt, liveClouds)
     
     BigDecimal freshTemp = current?.temp != null ? convertKelvin(current.temp) : null
     BigDecimal freshPress = current?.pressure != null ? convertPressure(current.pressure) : null
@@ -1363,7 +1356,7 @@ private BigDecimal convertHumidity(BigDecimal rawHumidity) {
         case "g/kg³": // Mixing Ratio
             def tempVal = device.currentValue("currentTemperature")
             def pressVal = device.currentValue("currentPressure")
-            if (tempVal != null) {
+            if (tempVal != null && tempVal.toString().isNumber()) {
                 Double tempC = tempVal.toDouble()
                 String tUnit = settings.temperatureUnit ?: "°F"
                 if (tUnit == "°F") { tempC = (tempC - 32.0) * 5.0 / 9.0 }
@@ -1372,7 +1365,7 @@ private BigDecimal convertHumidity(BigDecimal rawHumidity) {
                 Double es = 6.112 * Math.exp((17.67 * tempC) / (tempC + 243.5))
                 Double e = (calculatedValue / 100.0) * es
 
-                Double pressureHpa = (pressVal != null) ? pressVal.toDouble() : 1013.25
+                Double pressureHpa = (pressVal != null && pressVal.toString().isNumber()) ? pressVal.toDouble() : 1013.25
                 String pUnit = settings.pressureUnit ?: "inHg"
                 if (pUnit == "inHg") { pressureHpa = pressureHpa * 33.8639 }
                 else if (pUnit == "kPa") { pressureHpa = pressureHpa * 10.0 }
@@ -1605,9 +1598,6 @@ Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]
         [sourceMap: tomData,   apiKey: "moon_phase", valAttr: "tomMoonPhase",   pngAttr: "tomMoonPhasePngImageUrl",   textAttr: "tomMoonPhaseText",   emojiAttr: "tomMoonPhaseEmojiIcon"],
         [sourceMap: tdaData,   apiKey: "moon_phase", valAttr: "tdaMoonPhase",   pngAttr: "tdaMoonPhasePngImageUrl",   textAttr: "tdaMoonPhaseText",   emojiAttr: "tdaMoonPhaseEmojiIcon"]
     ]
-    
-    // Track today's value separately to also populate the 'current' attribute
-    def todayVal = null
 
     // Determine if the user has provided an override path for the moon phase images
     boolean isPathOverridden = (settings.altMoonPhaseImagePath != null && settings.altMoonPhaseImagePath.trim() != "")
@@ -1621,10 +1611,6 @@ Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]
         if (rawVal != null && rawVal.toString().isNumber()) {
             // Normalize values to stay strictly within 0.0 to 1.0 bounds
             double val = (rawVal.toDouble() % 1.0 + 1.0) % 1.0
-            
-            if (phase.valAttr == "todayMoonPhase") {
-                todayVal = val
-            }
 
             // Determine the icon bin index (0 to 7)
             int index = (int) Math.floor((val * 8) + 0.5) % 8
@@ -1735,7 +1721,7 @@ private void calcAlertsState(Map json, String calculatedCityAttr, String iconBas
 
 private BigDecimal calcSunPosition() {
     // 1. Establish User Precision and Coordinates
-    int precision = (settings.precisionSunAngles ?: "0").toInteger()
+    int precision = (settings.precisionSunMoonAngles ?: "0").toInteger()
     BigDecimal locLat = state.usedLatitude != null ? state.usedLatitude.toBigDecimal() : location.latitude
     BigDecimal locLon = state.usedLongitude != null ? state.usedLongitude.toBigDecimal() : location.longitude
 
@@ -1803,23 +1789,23 @@ private BigDecimal calcSunPosition() {
     az = (az % 360.0 + 360.0) % 360.0
 
     // 7. Process precision preferences and build attributes
-    BigDecimal finalAltitude = BigDecimal.valueOf(alt).setScale(precision, java.math.RoundingMode.HALF_UP)
-    BigDecimal finalAzimuth = BigDecimal.valueOf(az).setScale(precision, java.math.RoundingMode.HALF_UP)
+    BigDecimal finalSunAltitude = BigDecimal.valueOf(alt).setScale(precision, java.math.RoundingMode.HALF_UP)
+    BigDecimal finalSunAzimuth = BigDecimal.valueOf(az).setScale(precision, java.math.RoundingMode.HALF_UP)
 
-    logTrace "calcSunPosition: Solar Altitude computed as ${finalAltitude}°, Azimuth as ${finalAzimuth}°"
+    logTrace "calcSunPosition: Solar Altitude computed as ${finalSunAltitude}°, Azimuth as ${finalSunAzimuth}°"
 
     // 8. Publish the rounded numbers to the device attributes
-    sendIfChanged(name: "currentSunAltitude", value: finalAltitude)
-    sendIfChanged(name: "currentSunAzimuth", value: finalAzimuth)
-    sendIfChanged(name: "currentSunAltitudeText", value: "${finalAltitude}°")
-    sendIfChanged(name: "currentSunAzimuthText", value: "${finalAzimuth}°")
+    sendIfChanged(name: "currentSunAltitude", value: finalSunAltitude)
+    sendIfChanged(name: "currentSunAzimuth", value: finalSunAzimuth)
+    sendIfChanged(name: "currentSunAltitudeText", value: "${finalSunAltitude}°")
+    sendIfChanged(name: "currentSunAzimuthText", value: "${finalSunAzimuth}°")
 
-    return finalAltitude
+    state.currentSunAltitude = finalSunAltitude
+    return finalSunAltitude
 }
 
 private BigDecimal calcMoonPosition() {
-    // 1. Establish User Precision and Coordinates
-    int precision = (settings.precisionSunAngles ?: "0").toInteger()
+    int precision = (settings.precisionSunMoonAngles ?: "0").toInteger()
     BigDecimal locLat = state.usedLatitude != null ? state.usedLatitude.toBigDecimal() : location.latitude
     BigDecimal locLon = state.usedLongitude != null ? state.usedLongitude.toBigDecimal() : location.longitude
 
@@ -1828,14 +1814,12 @@ private BigDecimal calcMoonPosition() {
         return 0.0
     }
 
-    // 2. Get current universal time in UTC to bypass local timezone/DST errors
     Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
     double hour = cal.get(Calendar.HOUR_OF_DAY) + (cal.get(Calendar.MINUTE) / 60.0) + (cal.get(Calendar.SECOND) / 3600.0)
     int day = cal.get(Calendar.DAY_OF_MONTH)
     int month = cal.get(Calendar.MONTH) + 1
     int year = cal.get(Calendar.YEAR)
 
-    // 3. Compute fractional Julian Date (relative to standard J2000 epoch)
     if (month <= 2) {
         year -= 1
         month += 12
@@ -1845,44 +1829,39 @@ private BigDecimal calcMoonPosition() {
     double jd = (int)(365.25 * (year + 4716)) + (int)(30.6001 * (month + 1)) + day + (hour / 24.0) + B - 1524.5
     double d = jd - 2451545.0
 
-    // 4. Calculate Low-Precision Lunar Coordinates
-    double L = 218.316 + 13.176396 * d     // Moon's mean longitude
-    double M = 134.963 + 13.064993 * d     // Moon's mean anomaly
-    double F = 93.272 + 13.229350 * d      // Moon's mean distance from ascending node
+    // Keplerian Lunar orbital elements
+    double L = 218.316 + 13.176396 * d // Moon's mean longitude
+    double M = 134.963 + 13.064993 * d // Moon's mean anomaly
+    double F = 93.272 + 13.229350 * d   // Moon's argument of latitude
 
-    // Geocentric Ecliptic Longitude (l) and Latitude (b)
+    // Ecliptic coordinates of the Moon
     double l = L + 6.289 * Math.sin(Math.toRadians(M))
     double b = 5.128 * Math.sin(Math.toRadians(F))
-    double e = 23.439 - 0.00000036 * d     // Obliquity of the ecliptic
+    double e = 23.439 - 0.00000036 * d // Obliquity of the ecliptic
 
-    // Convert Ecliptic to Equatorial Coordinates (Declination and Right Ascension)
+    // Convert Ecliptic to Equatorial (Right Ascension & Declination)
     double lRad = Math.toRadians(l)
     double bRad = Math.toRadians(b)
     double eRad = Math.toRadians(e)
 
     double sin_delta = Math.sin(bRad) * Math.cos(eRad) + Math.cos(bRad) * Math.sin(eRad) * Math.sin(lRad)
     double delta = Math.toDegrees(Math.asin(sin_delta))
+    double ra = Math.toDegrees(Math.atan2(Math.sin(lRad) * Math.cos(eRad) - Math.tan(bRad) * Math.sin(eRad), Math.cos(lRad)))
 
-    double y = Math.sin(lRad) * Math.cos(eRad) - Math.tan(bRad) * Math.sin(eRad)
-    double x = Math.cos(lRad)
-    double ra = Math.toDegrees(Math.atan2(y, x))
-
-    // 5. Sidereal Time tracking and Local Hour Angle
+    // Hour Angle calculation
     double gst = 280.46061837 + 360.98564736629 * d
     double lst = gst + locLon
     double H = lst - ra
 
-    // 6. Project onto local horizontal plane (Altitude & Azimuth)
+    // Horizontal Plane projection (Altitude & Azimuth)
     double latRad = Math.toRadians(locLat)
     double deltaRad = Math.toRadians(delta)
     double hRad = Math.toRadians(H)
 
-    // Calculate Altitude
     double sin_alt = Math.sin(latRad) * Math.sin(deltaRad) + Math.cos(latRad) * Math.cos(deltaRad) * Math.cos(hRad)
-    sin_alt = Math.max(-1.0, Math.min(1.0, sin_alt)) // Safety clamp
+    sin_alt = Math.max(-1.0, Math.min(1.0, sin_alt))
     double alt = Math.toDegrees(Math.asin(sin_alt))
 
-    // Calculate Azimuth
     double cos_alt = Math.cos(Math.toRadians(alt))
     double az = 0.0
     if (Math.abs(cos_alt) > 0.0001) {
@@ -1894,22 +1873,20 @@ private BigDecimal calcMoonPosition() {
         az = (locLat > 0) ? 180.0 : 0.0
     }
 
-    // Normalize Azimuth loop to 0-360 boundaries
     az = (az % 360.0 + 360.0) % 360.0
 
-    // 7. Process precision preferences and build attributes
-    BigDecimal finalAltitude = BigDecimal.valueOf(alt).setScale(precision, java.math.RoundingMode.HALF_UP)
-    BigDecimal finalAzimuth = BigDecimal.valueOf(az).setScale(precision, java.math.RoundingMode.HALF_UP)
+    BigDecimal finalMoonAltitude = BigDecimal.valueOf(alt).setScale(precision, java.math.RoundingMode.HALF_UP)
+    BigDecimal finalMoonAzimuth = BigDecimal.valueOf(az).setScale(precision, java.math.RoundingMode.HALF_UP)
 
-    logTrace "calcMoonPosition: Lunar Altitude computed as ${finalAltitude}°, Azimuth as ${finalAzimuth}°"
+    logTrace "calcMoonPosition: Lunar Altitude computed as ${finalMoonAltitude}°, Azimuth as ${finalMoonAzimuth}°"
 
-    // 8. Publish the rounded numbers to the device attributes
-    sendIfChanged(name: "currentMoonAltitude", value: finalAltitude)
-    sendIfChanged(name: "currentMoonAzimuth", value: finalAzimuth)
-    sendIfChanged(name: "currentMoonAltitudeText", value: "${finalAltitude}°")
-    sendIfChanged(name: "currentMoonAzimuthText", value: "${finalAzimuth}°")
+    sendIfChanged(name: "currentMoonAltitude", value: finalMoonAltitude)
+    sendIfChanged(name: "currentMoonAzimuth", value: finalMoonAzimuth)
+    sendIfChanged(name: "currentMoonAltitudeText", value: "${finalMoonAltitude}°")
+    sendIfChanged(name: "currentMoonAzimuthText", value: "${finalMoonAzimuth}°")
 
-    return finalAltitude
+    state.currentMoonAltitude = finalMoonAltitude
+    return finalMoonAltitude
 }
 
 private void calcCurrentTwilight() {
@@ -2049,34 +2026,34 @@ private void calcTextValue(BigDecimal freshLux = null, BigDecimal freshTemp = nu
     def luxVal = (freshLux != null) ? freshLux : device.currentValue("currentIlluminance")
     if (luxVal != null) sendIfChanged(name: "currentIlluminanceText", value: "${luxVal} ${iUnit}")
     
-    // 5. Solar & Lunar Angles Formatting (Respecting precisionSunAngles preference)
-    int sunPrecision = (settings.precisionSunAngles ?: "0").toInteger()
+    // 5. Solar & Lunar Angles Formatting (Respecting precisionSunMoonAngles preference)
+    int anglePrecision = (settings.precisionSunMoonAngles ?: "0").toInteger()
     
     def altVal = device.currentValue("currentSunAltitude")
     if (altVal != null && altVal.toString().isNumber()) {
-        BigDecimal formattedAlt = altVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
-        String altStr = (sunPrecision == 0) ? "${formattedAlt.toBigInteger()}" : "${formattedAlt}"
+        BigDecimal formattedAlt = altVal.toBigDecimal().setScale(anglePrecision, java.math.RoundingMode.HALF_UP)
+        String altStr = (anglePrecision == 0) ? "${formattedAlt.toBigInteger()}" : "${formattedAlt}"
         sendIfChanged(name: "currentSunAltitudeText", value: "${altStr}°")
     }
     
     def azVal = device.currentValue("currentSunAzimuth")
     if (azVal != null && azVal.toString().isNumber()) {
-        BigDecimal formattedAz = azVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
-        String azStr = (sunPrecision == 0) ? "${formattedAz.toBigInteger()}" : "${formattedAz}"
+        BigDecimal formattedAz = azVal.toBigDecimal().setScale(anglePrecision, java.math.RoundingMode.HALF_UP)
+        String azStr = (anglePrecision == 0) ? "${formattedAz.toBigInteger()}" : "${formattedAz}"
         sendIfChanged(name: "currentSunAzimuthText", value: "${azStr}°")
     }
 
     def moonAltVal = device.currentValue("currentMoonAltitude")
     if (moonAltVal != null && moonAltVal.toString().isNumber()) {
-        BigDecimal formattedMoonAlt = moonAltVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
-        String moonAltStr = (sunPrecision == 0) ? "${formattedMoonAlt.toBigInteger()}" : "${formattedMoonAlt}"
+        BigDecimal formattedMoonAlt = moonAltVal.toBigDecimal().setScale(anglePrecision, java.math.RoundingMode.HALF_UP)
+        String moonAltStr = (anglePrecision == 0) ? "${formattedMoonAlt.toBigInteger()}" : "${formattedMoonAlt}"
         sendIfChanged(name: "currentMoonAltitudeText", value: "${moonAltStr}°")
     }
-    
+
     def moonAzVal = device.currentValue("currentMoonAzimuth")
     if (moonAzVal != null && moonAzVal.toString().isNumber()) {
-        BigDecimal formattedMoonAz = moonAzVal.toBigDecimal().setScale(sunPrecision, java.math.RoundingMode.HALF_UP)
-        String moonAzStr = (sunPrecision == 0) ? "${formattedMoonAz.toBigInteger()}" : "${formattedMoonAz}"
+        BigDecimal formattedMoonAz = moonAzVal.toBigDecimal().setScale(anglePrecision, java.math.RoundingMode.HALF_UP)
+        String moonAzStr = (anglePrecision == 0) ? "${formattedMoonAz.toBigInteger()}" : "${formattedMoonAz}"
         sendIfChanged(name: "currentMoonAzimuthText", value: "${moonAzStr}°")
     }
 
@@ -2224,13 +2201,12 @@ private void calcTextValue(BigDecimal freshLux = null, BigDecimal freshTemp = nu
 
 private String getBeaufortText(def rawMsVal) {
     // Beaufort scale bounds based on m/s
-    double ms = rawMsVal?.toDouble() ?: 0.0
+    double ms = (rawMsVal != null && rawMsVal.toString().isNumber()) ? rawMsVal.toDouble() : 0.0
     if (ms < 0.3)   return "Calm"
     if (ms <= 1.5)  return "Light Air"
     if (ms <= 3.3)  return "Light Breeze"
     if (ms <= 5.4)  return "Gentle Breeze"
-    if (ms <= 7.9)  return "Moderate Breeze"
-    if (ms <= 10.7) return "Fresh Breeze"
+    if (ms <= 10.7) return "Moderate Breeze"
     if (ms <= 13.8) return "Strong Breeze"
     if (ms <= 17.1) return "Near Gale"
     if (ms <= 20.7) return "Gale"
@@ -2240,7 +2216,7 @@ private String getBeaufortText(def rawMsVal) {
     return "Hurricane"
 }
 
-private void calcLonLatCityState() {
+private void calcLonLatCityState(Closure callback) {
     // Read current input settings values safely
     String currentCity = settings.overrideCity ?: ""
     BigDecimal currentLat = settings.overrideLatitude ? settings.overrideLatitude.toBigDecimal() : null 
@@ -2252,12 +2228,9 @@ private void calcLonLatCityState() {
 
     if (!settingsChanged && hasCachedData) {
         logDebug "Coordinates and city are unchanged and cached. Skipping geo lookup."
+        callback(true)
         return
     }
-
-    String usedCity = ""
-    BigDecimal usedLatitude = 0.0
-    BigDecimal usedLongitude = 0.0
 
     // ------------------------------------------------------------- 
     // SCENARIO 1: An explicit override city name has been given
@@ -2277,16 +2250,24 @@ private void calcLonLatCityState() {
             httpGet(params) { response ->
                 if (response.status == 200 && response.data && response.data.size() > 0) {
                     def locationData = response.data[0]
-                    usedCity = locationData.name ?: currentCity
-                    usedLatitude = locationData.lat ? locationData.lat.toBigDecimal() : 0.0
-                    usedLongitude = locationData.lon ? locationData.lon.toBigDecimal() : 0.0
-                    logDebug "Direct Geo-Lookup Success -> City: ${usedCity}, Lat: ${usedLatitude}, Lon: ${usedLongitude}"
+                    state.usedCity = locationData.name ?: currentCity
+                    state.usedLatitude = locationData.lat ? locationData.lat.toBigDecimal() : 0.0
+                    state.usedLongitude = locationData.lon ? locationData.lon.toBigDecimal() : 0.0
+                    
+                    state.lastOverrideCity = currentCity
+                    state.lastOverrideLatitude = currentLat
+                    state.lastOverrideLongitude = currentLon
+                    
+                    logDebug "Direct Geo-Lookup Success -> City: ${state.usedCity}, Lat: ${state.usedLatitude}, Lon: ${state.usedLongitude}"
+                    callback(true)
                 } else {
-                    logWarn "Direct Geo-Lookup returned no results. Falling back to configurations."
+                    logWarn "Direct Geo-Lookup returned no results. Defaulting coordinates."
+                    callback(false)
                 }
             }
         } catch (Exception e) {
             logError "Exception occurred during Direct Geo-Lookup execution: ${e.message}"
+            callback(false)
         }
     } 
     // ------------------------------------------------------------- 
@@ -2294,8 +2275,8 @@ private void calcLonLatCityState() {
     // ------------------------------------------------------------- 
     else {
         logDebug "Scenario 2: No overrideCity provided. Evaluating coordinate inputs or Hub configuration."
-        usedLatitude = currentLat ?: location.latitude?.toBigDecimal()
-        usedLongitude = currentLon ?: location.longitude?.toBigDecimal()
+        BigDecimal usedLatitude = currentLat ?: location.latitude?.toBigDecimal()
+        BigDecimal usedLongitude = currentLon ?: location.longitude?.toBigDecimal()
         
         // Execute Reverse Geo Lookup using the determined coordinates
         if (usedLatitude && usedLongitude && apiKey) {
@@ -2304,46 +2285,31 @@ private void calcLonLatCityState() {
             def params = [uri: reverseGeoUrl, contentType: "application/json", timeout: 10]
             try {
                 httpGet(params) { response ->
-                    if (response.status == 200 && response.data && response.data.size() > 0) {
-                        usedCity = response.data[0].name ?: "Local Area"
-                        logDebug "Reverse Geo-Lookup Success -> City resolved: ${usedCity}"
-                    } else {
-                        logWarn "Reverse Geo-Lookup returned empty results. Defaulting city name."
-                        usedCity = "Local Area"
-                    }
+                    state.usedCity = (response.status == 200 && response.data && response.data.size() > 0) ? (response.data[0].name ?: "Local Area") : "Local Area"
+                    state.usedLatitude = usedLatitude
+                    state.usedLongitude = usedLongitude
+                    
+                    state.lastOverrideCity = currentCity
+                    state.lastOverrideLatitude = currentLat
+                    state.lastOverrideLongitude = currentLon
+                    
+                    logDebug "Reverse Geo-Lookup Success -> City resolved: ${state.usedCity}"
+                    callback(true)
                 }
             } catch (Exception e) {
                 logError "Exception occurred during Reverse Geo-Lookup execution: ${e.message}"
-                usedCity = "Local Area"
+                state.usedCity = "Local Area"
+                state.usedLatitude = usedLatitude
+                state.usedLongitude = usedLongitude
+                callback(true)
             }
         } else {
-            usedCity = "Local Area"
+            state.usedCity = "Local Area"
+            state.usedLatitude = usedLatitude ?: 0.0
+            state.usedLongitude = usedLongitude ?: 0.0
+            callback(true)
         }
-    } 
-
-    // ------------------------------------------------------------- 
-    // EXTRA PROTECTION: Enforce fallback to Hub defaults if values 
-    // remain blank or zero (e.g. failed lookups or empty settings)
-    // ------------------------------------------------------------- 
-    if (!usedLatitude || usedLatitude == 0.0) {
-        usedLatitude = currentLat ?: location.latitude?.toBigDecimal() ?: 0.0
     }
-    if (!usedLongitude || usedLongitude == 0.0) {
-        usedLongitude = currentLon ?: location.longitude?.toBigDecimal() ?: 0.0
-    }
-    if (!usedCity || usedCity.trim() == "") {
-        usedCity = "Local Area"
-    }
-
-    // Commit calculated configurations into global variables for API calls
-    state.usedCity = usedCity
-    state.usedLatitude = usedLatitude
-    state.usedLongitude = usedLongitude
-    
-    // Cache current settings so we can compare against them next time
-    state.lastOverrideCity = currentCity
-    state.lastOverrideLatitude = currentLat
-    state.lastOverrideLongitude = currentLon
 }
 
 private void sendIfChanged(Map args) {
@@ -2431,7 +2397,7 @@ private Map lookupConditionDetails(Integer code) {
         803: [type: "Clouds", desc: "Broken Clouds: 51-84%", altDay: "28.png", altNight: "27.png"],
         804: [type: "Clouds", desc: "Overcast Clouds: 85-100%", altDay: "26.png", altNight: "26.png"]
     ]
-    return conditions[code] ?: [type: "Unknown", desc: "Unknown Condition", altDay: "unknown.png", altNight: "unknown.png"]
+    return conditions[code] ?: [type: "Unknown", desc: "Unknown Condition", altDay: "32.png", altNight: "31.png"]
 }
 
 void disableDebugLogging() {
