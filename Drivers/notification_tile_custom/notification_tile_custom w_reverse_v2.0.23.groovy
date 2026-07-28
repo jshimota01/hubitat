@@ -43,13 +43,17 @@
 *    2026-04-21  jshimota      v2.0.17 added switch for PRE wrapper
 * 	 2026-04-30	 jshimota      v2.0.18 Gemini fixes
 *    2026-05-03  jshimota      v2.0.19 Repair of Gemini created issues 
+*    2026-05-03  jshimota      v2.0.20 format improvement
+*    2026-07-27  jshimota      v2.0.21 Updated color default for Low/High brackets to improve high contrast legibility
+*    2026-07-27  jshimota      v2.0.22 Drop shadow trial
+*    2026-07-27  jshimota      v2.0.23 Replaced drop shadow with crisp 360-degree character outline
 */
 /*
 * Notification Tile (Custom) - Refactored
 */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
-static String version()    {  return '2.0.19'  }
+static String version()    {  return '2.0.23'  }
 
 @Field sdfList = ["ddMMMyyyy HH:mm","ddMMMyyyy HH:mm:ss","ddMMMyyyy hh:mma", "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "dd/MM/yyyy hh:mma", "MM/dd/yyyy hh:mma", "MM/dd HH:mm", "MM/dd h:mma", "HH:mm", "H:mm","h:mma", "HH:mm ddMMMyyyy","HH:mm:ss ddMMMyyyy","hh:mma ddMMMyyyy", "HH:mm:ss dd/MM/yyyy", "HH:mm:ss MM/dd/yyyy", "hh:mma dd/MM/yyyy ", "hh:mma MM/dd/yyyy", "HH:mm yyyy-MM-dd", "None"]
 
@@ -86,10 +90,10 @@ preferences {
     input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (also supports 6 or 8 char Hex format with leading #)", defaultValue: "white")
     input("revFill", "bool", title: "Reverse the fill order (Newest at bottom)")
     input("preAdd", "bool", title: "Encase message tile with 'pre' to format")
-    input("colorE", "text", title: "Color for [E] Emergency", defaultValue: "red")
-    input("colorH", "text", title: "Color for [H] High", defaultValue: "orange")
-    input("colorL", "text", title: "Color for [L] Low", defaultValue: "goldenrod")
-    input("colorN", "text", title: "Color for [N] Normal", defaultValue: "green")
+    input("colorE", "text", title: "Color for [E] Emergency", defaultValue: "#FF0000")
+    input("colorH", "text", title: "Color for [H] High", defaultValue: "#FF8C00")
+    input("colorL", "text", title: "Color for [L] Low", defaultValue: "#DAA520")
+    input("colorN", "text", title: "Color for [N] Normal", defaultValue: "#2E7D32")
 }
 
 void installed() {
@@ -109,7 +113,7 @@ void configure() {
     state.msgCount = 0
 
     // 1. Create the formatted "empty" string
-    String emptyMsg = "No notifications"
+    String emptyMsg = " No notifications"
     if (preAdd) emptyMsg = "<pre style='margin:0;'>${emptyMsg}</pre>"
     
     // 2. Wrap it in the styles and span class
@@ -125,10 +129,10 @@ void configure() {
     sendEvent(name: "tileFontSize", value: existingTileFontSize)
 }
 
-// Helper to generate the CSS block dynamically
+// Helper to generate the CSS block dynamically with 360-degree character outline
 String getTileStyles() {
     String whiteSpace = preAdd ? "white-space:pre-line;" : ""
-    return "<style>.last5 {display:block;${whiteSpace}text-align:${existingTileHorzWordPos};font-size:${existingTileFontSize}%;}</style>"
+    return "<style>.last5 {display:block;${whiteSpace}text-align:${existingTileHorzWordPos};font-size:${existingTileFontSize}%;-webkit-text-stroke:0.5px #000000;text-shadow:-1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000;}</style>"
 }
 
 def deviceNotification(String notification) {
@@ -149,12 +153,15 @@ def deviceNotification(String notification) {
         SimpleDateFormat sdf = new SimpleDateFormat(sdfPref)
         timestamp = sdf.format(new Date())
     }
-	// Add a space before the timestamp for both configurations
-    String msgWithTime = leadingDate ? " ${timestamp} ${cleanedMsg}" : " ${cleanedMsg} ${timestamp}"
+    // Determine the separator based on the 'preAdd' switch
+    String spacer = preAdd ? "" : " "
+    
+    // Construct message with conditional spacing
+    String msgWithTime = leadingDate ? "${timestamp}${spacer}${cleanedMsg}" : "${cleanedMsg}${spacer}${timestamp}"
 
-    // CHANGE: Ensure we handle the tag check clearly here
+    // Ensure we handle the tag check clearly here
     String msgToColor = tag ? "${tag} ${msgWithTime}" : msgWithTime
-    String colorized = colorizeNotification(msgToColor) // Line 155
+    String colorized = colorizeNotification(msgToColor)
     
     if (preAdd) colorized = "<pre style='margin:0;'>${colorized}</pre>"
     
@@ -183,7 +190,6 @@ def deviceNotification(String notification) {
     }
 }
 
-// CHANGE: Explicitly define as 'def' or 'private String' to ensure visibility
 def colorizeNotification(String msg) {
     String color
     String cleaned = msg
@@ -191,19 +197,19 @@ def colorizeNotification(String msg) {
 
     if (msg.startsWith("[E]")) {
         icon = "🚨"
-        color = settings.colorE ?: "red"
+        color = settings.colorE ?: "#FF0000"
         cleaned = msg.replace("[E]", "").trim()
     } else if (msg.startsWith("[H]")) {
         icon = "⚠️"
-        color = settings.colorH ?: "orange"
+        color = settings.colorH ?: "#FF8C00"
         cleaned = msg.replace("[H]", "").trim()
     } else if (msg.startsWith("[L]")) {
         icon = "🔋"
-        color = settings.colorL ?: "goldenrod"
+        color = settings.colorL ?: "#DAA520"
         cleaned = msg.replace("[L]", "").trim()
     } else if (msg.startsWith("[N]")) {
         icon = "ℹ️"
-        color = settings.colorN ?: "green"
+        color = settings.colorN ?: "#2E7D32"
         cleaned = msg.replace("[N]", "").trim()
     } else {
         icon = ""

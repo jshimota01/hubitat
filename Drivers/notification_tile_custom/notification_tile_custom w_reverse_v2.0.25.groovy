@@ -42,13 +42,22 @@
 *    2026-04-21  jshimota      v2.0.16 added back my customizations of layout values and features
 *    2026-04-21  jshimota      v2.0.17 added switch for PRE wrapper
 * 	 2026-04-30	 jshimota      v2.0.18 Gemini fixes
+*    2026-05-03  jshimota      v2.0.19 Repair of Gemini created issues 
+*    2026-05-03  jshimota      v2.0.20 format improvement
+*    2026-07-27  jshimota      v2.0.21 Updated color default for Low/High brackets to improve high contrast legibility
+*    2026-07-27  jshimota      v2.0.22 Drop shadow trial
+*    2026-07-27  jshimota      v2.0.23 Outline trial
+*    2026-07-27  jshimota      v2.0.24 Vertical backlight trial
+*    2026-07-27  jshimota      v2.0.25 Split drop shadows: Black for [L]/[H], White for [E]/[N]
+*    2026-07-27  jshimota      v2.0.26 Updated default colors for [L] (#FFD700) and [H] (#FF6600) for vibrant contrast
+*    2026-07-27  jshimota      v2.0.27 Added enableShadow preference switch
 */
 /*
 * Notification Tile (Custom) - Refactored
 */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
-static String version()    {  return '2.0.18'  }
+static String version()    {  return '2.0.27'  }
 
 @Field sdfList = ["ddMMMyyyy HH:mm","ddMMMyyyy HH:mm:ss","ddMMMyyyy hh:mma", "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "dd/MM/yyyy hh:mma", "MM/dd/yyyy hh:mma", "MM/dd HH:mm", "MM/dd h:mma", "HH:mm", "H:mm","h:mma", "HH:mm ddMMMyyyy","HH:mm:ss ddMMMyyyy","hh:mma ddMMMyyyy", "HH:mm:ss dd/MM/yyyy", "HH:mm:ss MM/dd/yyyy", "hh:mma dd/MM/yyyy ", "hh:mma MM/dd/yyyy", "HH:mm yyyy-MM-dd", "None"]
 
@@ -85,10 +94,11 @@ preferences {
     input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (also supports 6 or 8 char Hex format with leading #)", defaultValue: "white")
     input("revFill", "bool", title: "Reverse the fill order (Newest at bottom)")
     input("preAdd", "bool", title: "Encase message tile with 'pre' to format")
-    input("colorE", "text", title: "Color for [E] Emergency", defaultValue: "red")
-    input("colorH", "text", title: "Color for [H] High", defaultValue: "orange")
-    input("colorL", "text", title: "Color for [L] Low", defaultValue: "goldenrod")
-    input("colorN", "text", title: "Color for [N] Normal", defaultValue: "green")
+    input("enableShadow", "bool", title: "Enable text shadow effects?", defaultValue: true)
+    input("colorE", "text", title: "Color for [E] Emergency", defaultValue: "#FF0000")
+    input("colorH", "text", title: "Color for [H] High", defaultValue: "#FF6600")
+    input("colorL", "text", title: "Color for [L] Low", defaultValue: "#FFD700")
+    input("colorN", "text", title: "Color for [N] Normal", defaultValue: "#2E7D32")
 }
 
 void installed() {
@@ -102,11 +112,21 @@ void updated(){
 }
 
 void configure() {
-    if (debugEnable) log.trace "configure()"
+    if (debugEnable) log.debug "configure()"
+    
+    state.msgList = [] 
     state.msgCount = 0
-    // Reset the attributes to a clean state
-    sendEvent(name:"last5", value: "")
-    sendEvent(name:"last5H", value: "")
+
+    // 1. Create the formatted "empty" string
+    String emptyMsg = " No notifications"
+    if (preAdd) emptyMsg = "<pre style='margin:0;'>${emptyMsg}</pre>"
+    
+    // 2. Wrap it in the styles and span class
+    String formattedEmpty = getTileStyles() + "<span class='last5'>${emptyMsg}</span>"
+
+    // 3. Send the formatted version to the attributes
+    sendEvent(name: "last5", value: formattedEmpty)
+	sendEvent(name: "last5H", value: "** No notifications **")
     
     // Update preference display attributes
     sendEvent(name: "tileFontColor", value: existingTileFontColor)
@@ -114,61 +134,58 @@ void configure() {
     sendEvent(name: "tileFontSize", value: existingTileFontSize)
 }
 
-// Helper to generate the CSS block dynamically
+// Helper to generate CSS with split black/white drop shadows per alert level
 String getTileStyles() {
     String whiteSpace = preAdd ? "white-space:pre-line;" : ""
-    return "<style>.last5 {display:block;${whiteSpace}text-align:${existingTileHorzWordPos};font-size:${existingTileFontSize}%;}</style>"
+    return "<style>.last5 {display:block;${whiteSpace}text-align:${existingTileHorzWordPos};font-size:${existingTileFontSize}%;}.sh-black {text-shadow: 0px 2px 2px rgba(0,0,0,0.8);}.sh-white {text-shadow: 0px 2px 2px rgba(255,255,255,0.6);}</style>"
 }
 
-void deviceNotification(notification) {
+def deviceNotification(String notification) {
     if (debugEnable) log.debug "deviceNotification entered: ${notification}" 
 
     if(sdfPref == null) device.updateSetting("sdfPref",[value:"ddMMMyyyy HH:mm",type:"enum"])
-    String originalMsg = notification?.trim() ?: ""
+    
+    String rawInput = notification?.trim() ?: ""
+    if (rawInput.length() > 800) {
+        rawInput = rawInput.substring(0, 797) + "..."
+    }
 
-    // 1. Determine Tag and Cleanup Message
-    String tag = originalMsg.find(/\[[A-Z]+\]/)
-    String cleanedMsg = originalMsg.replaceFirst(/\[[A-Z]\]/, '').trim()
+    String tag = rawInput.find(/\[[A-Z]+\]/)
+    String cleanedMsg = rawInput.replaceFirst(/\[[A-Z]\]/, '').trim()
 
-    // 2. Add Timestamp
     String timestamp = ""
     if (sdfPref != "None") {
         SimpleDateFormat sdf = new SimpleDateFormat(sdfPref)
         timestamp = sdf.format(new Date())
     }
-    String msgWithTime = leadingDate ? "${timestamp} ${cleanedMsg}" : "${cleanedMsg} ${timestamp}"
+    // Determine the separator based on the 'preAdd' switch
+    String spacer = preAdd ? "" : " "
+    
+    // Construct message with conditional spacing
+    String msgWithTime = leadingDate ? "${timestamp}${spacer}${cleanedMsg}" : "${cleanedMsg}${spacer}${timestamp}"
 
-    // 3. Colorize
-    String colorized = colorizeNotification(tag ? "${tag} ${msgWithTime}" : msgWithTime)
+    // Ensure we handle the tag check clearly here
+    String msgToColor = tag ? "${tag} ${msgWithTime}" : msgWithTime
+    String colorized = colorizeNotification(msgToColor)
+    
     if (preAdd) colorized = "<pre style='margin:0;'>${colorized}</pre>"
     
-    // 4. Get Existing Content (Strip Styles for logic)
-    // We store the raw HTML messages in state.msgList to make manipulation easier
     if (state.msgList == null) state.msgList = []
     
-    // 5. Manage List Based on Fill Order
-    if (!revFill) {
-        state.msgList.add(0, colorized) // Newest at top
-    } else {
-        state.msgList.add(colorized)    // Newest at bottom
-    }
+    if (!revFill) state.msgList.add(0, colorized) 
+    else state.msgList.add(colorized)    
 
-    // 6. Enforce Limit
     int limit = (settings.msgLimit ?: 5).toInteger()
     while (state.msgList.size() > limit) {
-        if (!revFill) state.msgList.removeLast() else state.msgList.removeAt(0)
+        if (!revFill) state.msgList.removeAt(state.msgList.size() - 1) else state.msgList.removeAt(0)
     }
 
-    // 7. Build Tile String and Check Length (1024 char limit)
     String wkTile = state.msgList.join("<br />")
-    
     while (wkTile.length() > 950 && state.msgList.size() > 1) { 
-        // 950 to leave room for the <style> tag
-        if (!revFill) state.msgList.removeLast() else state.msgList.removeAt(0)
+        if (!revFill) state.msgList.removeAt(state.msgList.size() - 1) else state.msgList.removeAt(0)
         wkTile = state.msgList.join("<br />")
     }
 
-    // 8. Final Output
     String finalOutput = getTileStyles() + "<span class='last5'>${wkTile}</span>"
     sendEvent(name:"last5", value: finalOutput)
     state.msgCount = state.msgList.size()
@@ -178,34 +195,42 @@ void deviceNotification(notification) {
     }
 }
 
-String colorizeNotification(String msg) {
+def colorizeNotification(String msg) {
     String color
     String cleaned = msg
+    String icon = "" 
+    String shadowClass = ""
 
-	if (msg.startsWith("[E]")) icon = "🚨"
-	else if (msg.startsWith("[H]")) icon = "⚠️"
-	else if (msg.startsWith("[L]")) icon = "🔋"
-	else if (msg.startsWith("[N]")) icon = "ℹ️"
-    else icon = ""
-
+    Boolean useShadow = settings.enableShadow != null ? settings.enableShadow : true
 
     if (msg.startsWith("[E]")) {
-        color = settings.colorE ?: "red"
-        cleaned = msg.replaceFirst(/\[E\]/, '').trim()
+        icon = "🚨"
+        color = settings.colorE ?: "#FF0000"
+        shadowClass = useShadow ? "sh-white" : ""
+        cleaned = msg.replace("[E]", "").trim()
     } else if (msg.startsWith("[H]")) {
-        color = settings.colorH ?: "orange"
-        cleaned = msg.replaceFirst(/\[H\]/, '').trim()
+        icon = "⚠️"
+        color = settings.colorH ?: "#FF6600"
+        shadowClass = useShadow ? "sh-black" : ""
+        cleaned = msg.replace("[H]", "").trim()
     } else if (msg.startsWith("[L]")) {
-        color = settings.colorL ?: "goldenrod"
-        cleaned = msg.replaceFirst(/\[L\]/, '').trim()
+        icon = "🔋"
+        color = settings.colorL ?: "#FFD700"
+        shadowClass = useShadow ? "sh-black" : ""
+        cleaned = msg.replace("[L]", "").trim()
     } else if (msg.startsWith("[N]")) {
-        color = settings.colorN ?: "green"
-        cleaned = msg.replaceFirst(/\[N\]/, '').trim()
+        icon = "ℹ️"
+        color = settings.colorN ?: "#2E7D32"
+        shadowClass = useShadow ? "sh-white" : ""
+        cleaned = msg.replace("[N]", "").trim()
     } else {
+        icon = ""
         color = existingTileFontColor ?: "white"
+        shadowClass = useShadow ? "sh-white" : ""
     }
 
-    return "<span style='color:${color}'> ${icon} ${cleaned}</span>"
+    String classAttr = shadowClass ? "class='${shadowClass}' " : ""
+    return "<span ${classAttr}style='color:${color}'> ${icon} ${cleaned}</span>"
 }
 
 void logsOff(){
