@@ -30,6 +30,7 @@
 	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
 	
 	VERSIONS:
+	v2.5.10	07/31/26	jshimota	changed scheduling to be aware of day/night change so it updates 5 mins after to keep tiles aware
 	v2.5.9	07/28/26	jshimota	Added moon alt and az text to moonPhaseTile
 	v2.5.8	07/28/26	jshimota	Bug check: Cleaned up calcMoonPosition variables, aligned versions, and added text updates for moon angles in calcTextValue
 	v2.5.7	07/28/26	jshimota	Added independent calcMoonPosition routine dispatches for currentMoon attributes
@@ -55,7 +56,7 @@
 	v2.1.0	07/15/26	jshimota	start point
 **/
 
-static String version()    {  return '2.5.9'  }
+static String version()    {  return '2.5.10'  }
 
 metadata {
     definition(
@@ -574,17 +575,32 @@ private void updateDynamicSchedules(long sunriseEpoch, long sunsetEpoch) {
 
     if (currentInterval == "manual") {
         if (isDay) {
-            delaySeconds = (int)(sunsetEpoch - nowTime)
-            logDebug "Daytime polling is MANUAL. Scheduling next poll at sunset in ${delaySeconds} seconds."
+            delaySeconds = (int)(sunsetEpoch - nowTime) + 300
+            logDebug "Daytime polling is MANUAL. Scheduling next poll at sunset (+5 mins) in ${delaySeconds} seconds."
         } else {
-            long nextSunrise = (nowTime > sunriseEpoch) ? (sunriseEpoch + 86400) : sunriseEpoch
-            delaySeconds = (int)(nextSunrise - nowTime)
-            logDebug "Nighttime polling is MANUAL. Scheduling next poll at sunrise in ${delaySeconds} seconds."
+            long nextSunrise = (nowTime >= sunriseEpoch) ? (sunriseEpoch + 86400) : sunriseEpoch
+            delaySeconds = (int)(nextSunrise - nowTime) + 300
+            logDebug "Nighttime polling is MANUAL. Scheduling next poll at sunrise (+5 mins) in ${delaySeconds} seconds."
         }
     } else {
-		int intervalMinutes = (currentInterval && currentInterval.isInteger()) ? currentInterval.toInteger() : 30
+        int intervalMinutes = (currentInterval && currentInterval.isInteger()) ? currentInterval.toInteger() : 30
         delaySeconds = intervalMinutes * 60
-        logDebug "Scheduling next background poll in ${intervalMinutes} minutes (${delaySeconds} seconds) via runIn."
+
+        // Short-circuit timer if Daybreak or Sunset boundary happens BEFORE the standard interval
+        if (isDay) {
+            long secondsToSunset = (sunsetEpoch - nowTime) + 300
+            if (secondsToSunset > 0 && secondsToSunset < delaySeconds) {
+                delaySeconds = (int)secondsToSunset
+                logDebug "Night transition occurs before next interval. Scheduling poll 5 minutes after sunset in ${delaySeconds} seconds."
+            }
+        } else {
+            long nextSunrise = (nowTime >= sunriseEpoch) ? (sunriseEpoch + 86400) : sunriseEpoch
+            long secondsToSunrise = (nextSunrise - nowTime) + 300
+            if (secondsToSunrise > 0 && secondsToSunrise < delaySeconds) {
+                delaySeconds = (int)secondsToSunrise
+                logDebug "Daybreak transition occurs before next interval. Scheduling poll 5 minutes after sunrise in ${delaySeconds} seconds."
+            }
+        }
     }
 
     if (delaySeconds <= 0) delaySeconds = 1800

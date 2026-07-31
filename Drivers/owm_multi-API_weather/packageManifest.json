@@ -1,13 +1,13 @@
 {
   "packageName": "OpenWeatherMap Multi-API Weather Driver",
   "author": "James Shimota",
-  "version": "2.5.9",
+  "version": "2.5.10",
   "minimumHEVersion": "2.4.4.156",
   "dateReleased": "2026-07-25",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/README.md",
   "communityLink": "https://community.hubitat.com/t/release-openweathermap-multi-api-weather-driver/165312",
   "licenseFile": "",
-  "releaseNotes": "2.4.0 Initial Release\nAdded Clear Schedules button for people converting over\n2.4.1 added schedule clear\n2.4.2-2.4.9 numerous bug fixes-race conditions attribute names\n2.5.0-9 implmented better rain and snow calculations, implmented moon position",
+  "releaseNotes": "2.4.0 Initial Release\nAdded Clear Schedules button for people converting over\n2.4.1 added schedule clear\n2.4.2-2.4.9 numerous bug fixes-race conditions attribute names\n2.5.0-9 implmented better rain and snow calculations, implmented moon position\nAdjusted schedule routine to be aware of day/night changes",
   "drivers": [
     {
       "id": "21ee466c-1c81-435f-9072-6344949c35e9",
@@ -16,7 +16,7 @@
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/owm_multi-API_weather.groovy",
       "required": true,
       "oauth": false,
-      "version": "2.5.9"
+      "version": "2.5.10"
     }
   ]
 }
