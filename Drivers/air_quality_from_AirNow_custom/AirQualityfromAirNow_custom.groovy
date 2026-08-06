@@ -19,6 +19,8 @@
  */
 
 /*
+ * v1.1.0  JAS - Added distinct AirQualityIndex capability so it shows correctly in sensors
+ * v1.0.9  JAS - Put pm2_5 BACK on pm2.5 so as to work correctly with influxdb and values coming from other drivers
  * v1.0.8  JAS - Changed Poll to use new API (by theBearMay 6-17-26)
  * v1.0.7  JAS - Added success/fail status and last checked attributes
  * v1.0.6  JAS - Gemini recommendations
@@ -28,11 +30,11 @@
  * v1.0.2  PR from cmbruns
  * According to Hubitat docs the airQualityIndex attribute is supposed range from 0 to 500, meaning it should be the 
  * full PM10-equivalent value, not the 6-category meaning previously used and matches Ecowitt air quality sensor range.
- * v1.0.1  renamed "PM2.5" attribute to not use a dot (.)
+ * v1.0.1  renamed "PM2.5" attribute to not use a dot (.) // REMOVED - causes problem with PM2.5 to Influx with other drivers
  * csteele v1.0.0  created.
  */
 
-static String version()    {  return '1.0.8'  }
+static String version()    {  return '1.1.0'  }
 
 import groovy.transform.Field
 
@@ -44,7 +46,7 @@ metadata {
         attribute 'airQualityState', 'STRING'
         attribute 'airQualityCity', 'STRING'
         attribute 'O3', 'number'
-        attribute 'PM2_5', 'number'
+        attribute 'PM2.5', 'number'
         attribute 'PM10', 'number'
         attribute 'airQualityIndex', 'number'
         attribute 'airQualityColor', 'STRING'
@@ -60,13 +62,12 @@ metadata {
     preferences {
         input 'apiKey',      'text', title: '<b>Type AirNow.org API Key Here</b>', required: true, defaultValue: null
         input 'pollEvery',   'enum', title: '<b>Publish AQI how frequently?</b>',  required:false, defaultValue: 1, options:[1:'1 hour',2:'2 hours',8:'8 hours',16:'16 hours']
-        input 'basedOn',     'enum', title: '<b>Publish AQI Number based on?</b>', required:false, defaultValue: 1, options:[1:'O3 ozone',2:'PM2.5 particle',3:'PM10 partice', 4: 'Worst AQI']
-        input 'debugOutput', 'bool', title: 'Enable debug logging',                required:false, defaultValue: true
+        input 'basedOn',     'enum', title: '<b>Publish AQI Number based on?</b>', required:false, defaultValue: 1, options:[1:'O3 ozone',2:'PM2.5 particle',3:'PM10 particle', 4: 'Worst AQI']
+        input 'dbgEnable',   'bool', title: 'Enable debug logging',                required:false, defaultValue: false
         input 'txtEnable',   'bool', title: 'Enable descriptionText logging',      required:false, defaultValue: true
     }
 }
 
-				   
 void pollAirNow() {
     if (apiKey == null) {
         log.warn "AirNow API Key is missing. Please enter it in the device settings."
@@ -78,17 +79,16 @@ void pollAirNow() {
     // Log the coordinates being used
     if (txtEnable) log.info "Polling AirNow for Location: Lat: ${location.latitude}, Lon: ${location.longitude}"
 
-Map params = [
+    Map params = [
         // Updated to explicitly match the new 2026 endpoint requirements
         uri: 'https://www.airnowapi.org/aq/observation/latLong/current?format=application/json&latitude=' + (String)location.latitude + '&longitude=' + (String)location.longitude + '&distance=25&API_KEY=' + (String)apiKey,
         timeout: 20 
     ]
             
-    if (debugOutput) log.debug "Full Request Params: ${params}"
+    if (dbgEnable) log.debug "Full Request Params: ${params}"
     asynchttpGet('pollHandler', params)
 }
 
-								
 void pollHandler(resp, data) {
     String timestamp = new Date().format("MM/dd/yyyy h:mm a", location.timeZone)
     sendEvent(name: "lastChecked", value: timestamp, descriptionText: "${device.displayName} lastChecked is ${timestamp}")
@@ -96,7 +96,7 @@ void pollHandler(resp, data) {
     if (resp.getStatus() == 200 || resp.getStatus() == 207) {
         sendEvent(name: "status", value: "Success", descriptionText: "${device.displayName} status is Success")
         
-        if (debugOutput) log.debug "R: $resp.data"
+        if (dbgEnable) log.debug "R: $resp.data"
         def aqi = parseJson(resp.data)
 
         def isBasis = aqiBasis[basedOn as Integer]
@@ -106,11 +106,6 @@ void pollHandler(resp, data) {
         def maxDevState = ""
 
         aqi.each { obs ->
-										
-			 
-																												 
-	
-				  
             if ((obs.AQI >= 0) && (obs.AQI <= 2000)) { // sanity check the value
                 
                 // Track the worst AQI and its associated metadata
@@ -122,21 +117,14 @@ void pollHandler(resp, data) {
                 }
 
                 def descriptionText = "${device.displayName} ${obs.ParameterName} is ${obs.AQI}"
-                def attrNam = obs.ParameterName.replace('.', '_')
-
-                if (debugOutput) log.debug "${descriptionText}"
+                def attrNam = obs.ParameterName
+		
+                if (dbgEnable) log.debug "${descriptionText}"
                 sendEvent(name: attrNam, value: obs.AQI, descriptionText: descriptionText)
 
                 // If the user selected a specific parameter (O3, PM2.5, PM10)
                 if (isBasis == obs.ParameterName) {
-																								
                     if (txtEnable) log.info "AQI Values updated. Enable Debug to monitor changes realtime."
-																						   
-													
-																										
-					
-																						
-												   
                     
                     sendEvent(name: "airQualityIndex", value: obs.AQI, descriptionText: "${device.displayName} airQualityIndex is ${obs.AQI}")
                     sendEvent(name: "airQualityCategory", value: aqiCategory[obs.Category.Number], descriptionText: "${device.displayName} airQualityCategory is ${aqiCategory[obs.Category.Number]}")
@@ -149,14 +137,8 @@ void pollHandler(resp, data) {
         
         // If the user selected "Worst AQI"
         if (isBasis == "maxAQI" && maxAQI >= 0) {
-																					  
             if (txtEnable) log.info "AQI Values updated based on Worst AQI. Enable Debug to monitor changes realtime."
-												  
-																								   
 
-								  
-											
-            
             sendEvent(name: "airQualityIndex", value: maxAQI, descriptionText: "${device.displayName} airQualityIndex is $maxAQI")
             sendEvent(name: "airQualityCategory", value: aqiCategory[maxAQICat], descriptionText: "${device.displayName} airQualityCategory is ${aqiCategory[maxAQICat]}")
             sendEvent(name: "airQualityColor", value: aqiColor[maxAQICat], descriptionText: "${device.displayName} airQualityColor is ${aqiColor[maxAQICat]}")
@@ -169,26 +151,21 @@ void pollHandler(resp, data) {
     }
 }
 
-					   
 void updated() {
     unschedule()
-    //               "Seconds" "Minutes" "Hours" "Day Of Month" "Month" "Day Of Week" "Year"
     if (apiKey) schedule("3 7 0/${pollEvery.toInteger()} ? * * *", pollAirNow)
-    if (debugOutput) runIn(1800,logsOff)
+    if (dbgEnable) runIn(1800, logsOff)
 }
 
- 
 void uninstalled() {
     unschedule()
 }
 
-																   
 def logsOff(){
     log.warn "debug logging disabled..."
-    device.updateSetting("debugOutput",[value:"false",type:"bool"])
+    device.updateSetting("dbgEnable", [value:"false", type:"bool"])
 }
 
-																	  
 @Field static aqiColor = [1: "Green", 2: "Yellow", 3: "Orange", 4: "Red", 5: "Purple", 6: "Maroon"]
 @Field static aqiCategory = [1: "Good", 2: "Moderate", 3: "Unhealthy for Sensitive Groups", 4: "Unhealthy", 5: "Very Unhealthy", 6: "Hazardous"]
 @Field static aqiBasis = [1: "O3", 2: "PM2.5", 3: "PM10", 4: "maxAQI"]
