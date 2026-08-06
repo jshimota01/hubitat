@@ -52,14 +52,13 @@
 *    2026-07-27  jshimota      v2.0.26 Updated default colors for [L] (#FFD700) and [H] (#FF6600) for vibrant contrast
 *    2026-07-27  jshimota      v2.0.27 Added enableShadow preference switch
 *    2026-08-06  jshimota      v2.0.28 Increased HTML tile length safety buffer from 950 to 1010 chars
-*    2026-08-06  jshimota      v2.0.29 Replaced per-line PRE tags with lightweight CSS pre-wrap styling
 */
 /*
 * Notification Tile (Custom) - Refactored
 */
 import java.text.SimpleDateFormat
 import groovy.transform.Field
-static String version()    {  return '2.0.29'  }
+static String version()    {  return '2.0.28'  }
 
 @Field sdfList = ["ddMMMyyyy HH:mm","ddMMMyyyy HH:mm:ss","ddMMMyyyy hh:mma", "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "dd/MM/yyyy hh:mma", "MM/dd/yyyy hh:mma", "MM/dd HH:mm", "MM/dd h:mma", "HH:mm", "H:mm","h:mma", "HH:mm ddMMMyyyy","HH:mm:ss ddMMMyyyy","hh:mma ddMMMyyyy", "HH:mm:ss dd/MM/yyyy", "HH:mm:ss MM/dd/yyyy", "hh:mma dd/MM/yyyy ", "hh:mma MM/dd/yyyy", "HH:mm yyyy-MM-dd", "None"]
 
@@ -95,7 +94,7 @@ preferences {
     input(name: "existingTileHorzWordPos", type: "string", title: "HTML Word Position (left, right, center)", defaultValue: "left")
     input(name: "existingTileFontColor", type: "string", title: "HTML Tile Text Color (also supports 6 or 8 char Hex format with leading #)", defaultValue: "white")
     input("revFill", "bool", title: "Reverse the fill order (Newest at bottom)")
-    input("preAdd", "bool", title: "Enable monospace PRE formatting for tile text")
+    input("preAdd", "bool", title: "Encase message tile with 'pre' to format")
     input("enableShadow", "bool", title: "Enable text shadow effects?", defaultValue: true)
     input("colorE", "text", title: "Color for [E] Emergency", defaultValue: "#FF0000")
     input("colorH", "text", title: "Color for [H] High", defaultValue: "#FF6600")
@@ -119,8 +118,9 @@ void configure() {
     state.msgList = [] 
     state.msgCount = 0
 
-    // 1. Create empty string
+    // 1. Create the formatted "empty" string
     String emptyMsg = " No notifications"
+    if (preAdd) emptyMsg = "<pre style='margin:0;'>${emptyMsg}</pre>"
     
     // 2. Wrap it in the styles and span class
     String formattedEmpty = getTileStyles() + "<span class='last5'>${emptyMsg}</span>"
@@ -135,10 +135,10 @@ void configure() {
     sendEvent(name: "tileFontSize", value: existingTileFontSize)
 }
 
-// Helper to generate CSS with pre-wrap option and split black/white drop shadows
+// Helper to generate CSS with split black/white drop shadows per alert level
 String getTileStyles() {
-    String preStyle = preAdd ? "white-space:pre-wrap;font-family:monospace;" : ""
-    return "<style>.last5 {display:block;${preStyle}text-align:${existingTileHorzWordPos};font-size:${existingTileFontSize}%;}.sh-black {text-shadow: 0px 2px 2px rgba(0,0,0,0.8);}.sh-white {text-shadow: 0px 2px 2px rgba(255,255,255,0.6);}</style>"
+    String whiteSpace = preAdd ? "white-space:pre-line;" : ""
+    return "<style>.last5 {display:block;${whiteSpace}text-align:${existingTileHorzWordPos};font-size:${existingTileFontSize}%;}.sh-black {text-shadow: 0px 2px 2px rgba(0,0,0,0.8);}.sh-white {text-shadow: 0px 2px 2px rgba(255,255,255,0.6);}</style>"
 }
 
 def deviceNotification(String notification) {
@@ -159,14 +159,17 @@ def deviceNotification(String notification) {
         SimpleDateFormat sdf = new SimpleDateFormat(sdfPref)
         timestamp = sdf.format(new Date())
     }
-    String spacer = " "
+    // Determine the separator based on the 'preAdd' switch
+    String spacer = preAdd ? "" : " "
     
-    // Construct message
+    // Construct message with conditional spacing
     String msgWithTime = leadingDate ? "${timestamp}${spacer}${cleanedMsg}" : "${cleanedMsg}${spacer}${timestamp}"
 
     // Ensure we handle the tag check clearly here
     String msgToColor = tag ? "${tag} ${msgWithTime}" : msgWithTime
     String colorized = colorizeNotification(msgToColor)
+    
+    if (preAdd) colorized = "<pre style='margin:0;'>${colorized}</pre>"
     
     if (state.msgList == null) state.msgList = []
     
