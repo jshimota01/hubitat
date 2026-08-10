@@ -1,0 +1,34 @@
+IF a virtual switch for mode from our Period Table is triggered externally, then we switch reason to 'Override'.
+If home or away is toggled by our master presence sensor, then the reason in 'Owntracks'
+If the mode is changed via Alexa Mode switch, the reason is 'Voice'
+If the mode is changed due to a trigger switch or button then the reason is 'normal - rechecked'
+if the mode is changed by period channge - reason is 'Normal'
+
+If the reason changes to Override 
+Schedules stop
+update app label to mode + (Override)
+Home/Away and Alexa Home/Away change to and stay in Home state
+Sleep/Awake and Alexa Sleep / Awake change to Awake and stay in awake state
+stop changing mode by any Home/Away/presence, or alexa switches
+Continue to change mode by any period virtual switch from table
+
+If the reason changes to Owntracks and the state is Away then
+Scheduling stops
+update app label to 'away' and reason + (Owntracks)
+Home/Away and Alexa Home/Away change to away
+
+If the reason changes to 'Owntracks' but the mode became Home
+Start scheduling
+Update app label to mode + (Owntracks)
+Home/Away and Alexa Home/Away change to Home
+
+If the reason changes to 'Normal - rechecked' then 
+Scheduling starts
+Alexa Home/Away is set to Home
+Home / Away is set to Home
+Update app label to mode + 'Normal - Rechecked)
+
+When the reason changes by period to Normal
+check and change if needed Alexa Home/away annd Home/Away set to Home
+check and change if needed Alexa Awake/Sleep and Awake/Sleep set to Awake
+Update App label to mode 'Normal'
