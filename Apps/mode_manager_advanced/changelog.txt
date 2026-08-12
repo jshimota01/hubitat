@@ -1,0 +1,118 @@
+ *  v0.9.15 (2026-08-12) - Enforced explicit updateAppLabel() execution after Voice state sync completes to prevent badge label mismatches.
+ *                       - Extended notificationDevice dispatches to trigger on reason changes even when location mode is unchanged, and enabled tile notifications during Debug/Trace modes.
+ *  v0.9.14 (2026-08-12) - Preserved active Voice state reason inside evaluateAndSetMode() to prevent app label from reverting to Normal.
+ *  v0.9.13 (2026-08-12) - Reordered alexaAwakeSwitchHandler execution to set state.modeReason = 'Voice' prior to invoking syncAwakeState().
+ *                       - Added Override clear guard on Alexa Voice wake-up to allow unblocking from false Sleeping Override state.
+ *  v0.9.12 (2026-08-12) - Refactored isReservationValid() to scan and purge both VSwitch and Mirror maps concurrently for matching device ID.
+ *                       - Added Voice reason guard in vSwitchHandler to prevent mode activator app echoes from escalating Voice transitions to Override.
+ *  v0.9.11 (2026-08-12) - Standardized isReservationValid() to check and consume both VSwitch and Mirror reservation maps concurrently.
+ *                       - Fixed vSwitchHandler reservation clearing bug that allowed virtual indicator switch echo events to trigger Override state.
+ *  v0.9.10 (2026-08-12) - Extended reservation lock consumption across both VSwitch and Mirror maps in vSwitchHandler to prevent false Override triggers during state sync.
+ *                       - Fixed processReasonTransition("Override") forcing Awake switch ON when target override period is 'sleeping'.
+ *  v0.9.9  (2026-08-12) - Increased switch reservation TTL to 5000ms to cover hub execution latency.
+ *                       - Added state protection guard preventing virtual indicator switch events from escalating Voice transitions into Override.
+ *  v0.9.8  (2026-08-12) - Replaced shared periodHandler callback with 6 dedicated method handlers (periodWeeHoursHandler, periodMorningHandler, etc.) to prevent Hubitat CRON scheduler job overwrites.
+ *  v0.9.7  (2026-08-12) - Removed inline ternary fallbacks in evaluateAndSetMode() to enforce explicit Reason authority set by caller.
+ *                       - Documented Test Mode as diagnostic-only forced state.
+ *                       - Normalized state.lastHsmState cached values to match native location.hsmStatus vocabulary ("armedAway" / "disarmed").
+ *  v0.9.6  (2026-08-12) - Added test home/awake toggles and forced state evaluation harness to Step 6 UI.
+ *                       - Standardized WARN log format to use uppercase ENABLED / DISABLED text on setting change.
+ *  v0.9.5  (2026-08-12) - Implemented timed switch reservation maps (pendingVSwitchSync / pendingMirrorSync) with 3000ms TTL to eliminate mirror loop feedback echo.
+ *  v0.9.4  (2026-08-12) - Added Notification Tile integration support with selectable Plain Text or HTML output formatting.
+ *  v0.9.3  (2026-08-12) - Refactored initialize() to evaluate existing physical switch states rather than imposing default Normal mode.
+ *  v0.9.2  (2026-08-12) - Added unidirectional Alexa Awake Virtual Switch handler for voice routine integration.
+ *  v0.9.1  (2026-08-12) - Added dynamic period chronological sequence validator check in preferences page.
+ *  v0.9.0  (2026-08-12) - Initial refactor of Mode Manager Advanced with step-by-step preference UI layout and dynamic HTML app label status badge.
+ *      2026-08-12    jshimota      0.8.9       Restored dynamic app.label in logging header with immediate badge sync; protected period boundary transitions from false Override hijacking
+ *      2026-08-12    jshimota      0.8.8       Added Testing & Diagnostics section driven by Home, Awake, and Period controls; added Alexa switch sync and Presence device warning notice
+ *      2026-08-12    jshimota      0.8.7       Added 'Mode stays' notification dispatching on recheck evaluations where active mode does not change
+ *      2026-08-12    jshimota      0.8.6       Added Notification Tile to Logging
+ *      2026-08-11    jshimota      0.8.5       Expanded Voice reason protection in vSwitchHandler to prevent virtual indicator sync events from hijacking Voice transitions to Override
+ *      2026-08-11    jshimota      0.8.4       Trying to fix Voice Transition labeling 
+ *      2026-08-11    jshimota      0.8.3       Fixed reason hijacking by pre-stamping Voice state in alexaAwakeSwitchHandler and evaluateAndSetMode(); resolved duplicate ON commands to virtual switches
+ *      2026-08-11    jshimota      0.8.2       Decoupled vSwitchSleeping from Override hijacking; enforced unidirectional Alexa Awake input listener; explicitly passed 'sleeping' period key during Voice sleep transitions
+ *      2026-08-10    jshimota      0.8.1       Updated Step 5 preference UI notice clarifying that WARN and ERROR logs remain permanently enabled
+ *      2026-08-10    jshimota      0.8.0       Added uninstalled() cleanup handler; added collection null-safety across trigger switch iterators; optimized integer division in formatMinutes
+ *      2026-08-10    jshimota      0.7.5       Isolated checkTimePeriodConfiguration() to updated() with change hashing to eliminate repeated log noise; formatted logging change WARN messages to 'ENABLED -> DISABLED'
+ *      2026-08-10    jshimota      0.7.4       Preserved active pendingVSwitchSync and pendingMirrorSync maps during initialize() to retain in-flight event reservations across app updates
+ *      2026-08-10    jshimota      0.7.3       Invalidates and re-seeds state.lastHsmState upon manageHSM enablement to prevent stale cache lockouts
+ *      2026-08-10    jshimota      0.7.2       Added unschedule('disableDebugLogging') prior to runIn in updated() to eliminate duplicate scheduler timers
+ *      2026-08-10    jshimota      0.7.1       Removed submitOnChange from Step 5 logging inputs so preference changes process exclusively on page submission
+ *      2026-08-10    jshimota      0.7.0       Architectural bug fix: Removed syncAwakeState('on') from Normal transition to prevent time CRON boundaries from forcing Awake during Sleep state
+ *      2026-08-10    jshimota      0.6.5       Refactored checkLoggingChanges to generate individual logWarn messages per altered logging switch
+ *      2026-08-10    jshimota      0.6.4       Standardized settings boolean casting using getSettingBool helper to reliably detect Debug and Trace logging toggles
+ *      2026-08-10    jshimota      0.6.3       Refactored direct log.warn/log.error calls and fixed state tracking for logging setting changes
+ *      2026-08-10    jshimota      0.6.2       Added logWarn alert when logging configuration changes occur in preferences or auto-disable routines
+ *      2026-08-10    jshimota      0.6.1       Added null-safety guards to state map consumers, added execution debounce to vSwitchHandler, and optimized map instantiations
+ *      2026-08-10    jshimota      0.6.0       Fixed state map mutation tracking by explicitly reassigning pendingVSwitchSync/pendingMirrorSync back to state to fix false-positive Override race conditions
+ *      2026-08-10    jshimota      0.5.13      Preserved state.lastHsmState across app updates and seeded initial status directly from location.hsmStatus
+ *      2026-08-10    jshimota      0.5.12      Decoupled scheduling methods: introduced startPeriodSchedules() and stopPeriodSchedules() to isolate timer control
+ *      2026-08-10    jshimota      0.5.11      Centralized App Label rendering through changeMode() as the single standard update path
+ *      2026-08-10    jshimota      0.5.10      Standardized App Label badge rendering to format Normal mode as 'Mode (Normal)'
+ *      2026-08-10    jshimota      0.5.9       Fixed reason carry-over bug in evaluateAndSetMode: fallback to scheduled period resets reason to Normal or Normal - Rechecked
+ *      2026-08-10    jshimota      0.5.8       Clarified 'Normal - Rechecked' reason lifecycle: holds provenance badge until cleared by next scheduled period CRON boundary
+ *      2026-08-10    jshimota      0.5.7       Added 3000ms TTL expiration to pendingVSwitchSync and pendingMirrorSync reservation maps to prevent stale event suppression
+ *      2026-08-10    jshimota      0.5.6       Refined updateAppLabel badge renderer to accurately format Sleeping modes without clobbering governing Reason states
+ *      2026-08-10    jshimota      0.5.5       Converted alexaAwakeSwitchHandler to act purely as a state mirror input for awakeSwitch rather than forcing Voice reason mode changes
+ *      2026-08-10    jshimota      0.5.4       Fixed app initialization state clobbering: evaluate existing physical device states and preserve Override/Away/HSM states across updates
+ *      2026-08-10    jshimota      0.5.3       Bug check fixes: Resolved stale modeReason persistence during Voice triggers and synchronized HSM arming state during Owntracks transitions
+ *      2026-08-10    jshimota      0.5.2       Added autoReturnNormal user option to allow staying in Override until manual recheck vs returning on next period
+ *      2026-08-10    jshimota      0.5.1       Bug check fixes: Resolved Override CRON deadlock, recursive mirror loops, Voice target evaluation, and app badge formatting
+ *      2026-08-10    jshimota      0.5.0       Refactored core state engine logic flow and explicit Reason handling (Override, Owntracks, Voice, Normal - Rechecked, Normal)
+ *      2026-08-10    jshimota      0.4.19      Added execution debounce guards across trigger switch/button handlers and removed sendVSwitchCommand off reset to eliminate infinite loops
+ *      2026-08-09    jshimota      0.4.18      Added logInfo output when external trigger switches or buttons fire mode evaluations
+ *      2026-08-09    jshimota      0.4.17      Added help note under Step 4 trigger switches advising auto-off capability requirement
+ *      2026-08-09    jshimota      0.4.16      Refactored mainPage UI layout with HTML banners, subheadings, and status block; upgraded triggers to multi-select switches and buttons
+ *      2026-08-08    jshimota      0.4.13      Changed modeReason log output to logTrace; simplified Voice reason label text to 'Voice'
+ *      2026-08-08    jshimota      0.4.12      Extended VOICE modeSource protection in vSwitchHandler across all period switches transitioning from Sleeping
+ *      2026-08-08    jshimota      0.4.11      Prevented vSwitchHandler from overwriting active VOICE mode reason when sleeping switch turns ON
+ *      2026-08-08    jshimota      0.4.10      Added logInfo output to report state.modeReason updates
+ *      2026-08-08    jshimota      0.4.9       Enforced VOICE modeSource attribution across alexaAwakeSwitchHandler for both wake/sleep transitions
+ *      2026-08-08    jshimota      0.4.8       Replaced global boolean sync guard with per-device event reservation maps (pendingVSwitchSync & pendingMirrorSync)
+ *      2026-08-08    jshimota      0.4.7       Wrapped reverse-mirror switch commands in isSyncingVSwitches guard block to eliminate dual-firing race conditions
+ *      2026-08-08    jshimota      0.4.6       Renamed validateTimePeriods to checkTimePeriodConfiguration for informational compliance
+ *      2026-08-08    jshimota      0.4.5       Cleaned up updateAppLabel rendering to prevent redundant [Sleeping (Sleep)] badge text
+ *      2026-08-08    jshimota      0.4.4       Explicitly cleared state.modeSource across all handler resets to maintain strict state hygiene
+ *      2026-08-08    jshimota      0.4.3       Added state.isChangingAwakeForOverride transient guard flag to prevent race conditions during manual sleeping overrides
+ *      2026-08-08    jshimota      0.4.2       Refactored state architecture to separate control state (state.modeSource) from log diagnostics (state.modeReason)
+ *      2026-08-08    jshimota      0.4.1       Changed Alexa Sleeping Virtual Switch references to Alexa Awake Virtual Switch (alexaAwakeSwitch)
+ *      2026-08-08    jshimota      0.4.0       Standardized module block documentation and enhanced diagnostic logging
+ *      2026-08-08    jshimota      0.3.9       Converted internal inline comments to block-style comments
+ *      2026-08-08    jshimota      0.3.8       Expanded granular logTrace and logDebug checkpoints across all handlers and mathematical state methods
+ *      2026-08-08    jshimota      0.3.7       Added alexaSleepSwitch for Alexa Routine integration
+ *      2026-08-07    jshimota      0.3.6       Cleared state.modeReason during manual rechecks to immediately drop (Override) from app label
+ *      2026-08-07    jshimota      0.3.5       Streamlined updateAppLabel HTML rendering to create a concise green status badge
+ *      2026-08-07    jshimota      0.3.4       Added subscription and handler for awaySwitch so direct external toggles properly update homeSwitch
+ *      2026-08-07    jshimota      0.3.3       Added subscription and handler for sleepSwitch so direct Alexa/manual toggles properly update awakeSwitch
+ *      2026-08-07    jshimota      0.3.2       Fixed schedule overwrite bug by using schedule(timeDate, periodHandler) for each period
+ *      2026-08-07    jshimota      0.3.1       Promoted trace logging for high-frequency internal events; added logTraceEnable preference toggle
+ *      2026-08-07    jshimota      0.3.0       Added state.modeReason diagnostic engine for enhanced app list status display and troubleshooting logs
+ *      2026-08-07    jshimota      0.2.9       Updated state engine evaluation priority to: Manual Override > Away > Sleeping > Scheduled Time Period
+ *      2026-08-07    jshimota      0.2.8       Removed unused java.text.SimpleDateFormat import
+ *      2026-08-07    jshimota      0.2.7       Updated logMessage() so warnings and errors are always logged regardless of preference settings
+ *      2026-08-07    jshimota      0.2.6       Removed silent fallback to morningMode; added warning logging when period mode resolution fails
+ *      2026-08-07    jshimota      0.2.5       Added try-catch validation in schedulePeriodTime to handle malformed or transient settings safely
+ *      2026-08-07    jshimota      0.2.4       Wrapped updateVirtualModeSwitches in try-finally block to ensure sync guard flag is safely cleared
+ *      2026-08-07    jshimota      0.2.3       Added isSyncingVSwitches state guard in vSwitchHandler to prevent auto-sync events from triggering false manual overrides
+ *      2026-08-07    jshimota      0.2.2       Standardized presence and sleep architecture: homeSwitch and awakeSwitch act as primary authoritative inputs
+ *      2026-08-07    jshimota      0.2.1       Added state tracking for HSM arm/disarm commands to avoid duplicate event calls; added override invalidation on presence/sleep changes
+ *      2026-08-07    jshimota      0.2.0       Converted virtual indicators from Mode matching to unique Period Key matching to resolve duplicate mode conflicts
+ *      2026-08-07    jshimota      0.1.9       Enforced Hubitat location.timeZone and dynamic chronological sorting for time periods
+ *      2026-08-07    jshimota      0.1.8       Implemented recurring daily CRON schedules and streamlined presence event routing
+ *      2026-08-07    jshimota      0.1.7       Fixed race conditions on Home/Away and Awake/Sleeping reverse-mirrored switches
+ *      2026-08-06    jshimota      0.1.6       Added explicit log message specifying switch manual override action
+ *      2026-08-06    jshimota      0.1.5       Added explicit event logging when mode evaluation is triggered by virtual mode switch
+ *      2026-08-06    jshimota      0.1.4       Fixed switch synchronization logic to ensure manual virtual switch overrides turn off other period switches without self-canceling
+ *      2026-08-06    jshimota      0.1.3       Added dynamic green current mode display in Hubitat Apps list
+ *      2026-08-06    jshimota      0.1.2       Added standardized logging methods and 30-min auto-disable for debug logs
+ *      2026-08-06    jshimota      0.0.11      Added log.info event messaging for mode updates
+ *      2026-08-06    jshimota      0.0.10      Updated namespace to jshimota and author to James Shimota
+ *      2026-08-06    jshimota      0.0.9       Added manual mode override state tracking to prevent time calculation reset
+ *      2026-08-06    jshimota      0.0.8       Added subscriptions and handler for manual virtual mode switch toggles
+ *      2026-08-06    jshimota      0.0.7       Added trigger switch option to force app update/evaluation
+ *      2026-08-06    jshimota      0.0.6       Added Alexa Mode virtual switch sync and HSM integration
+ *      2026-08-06    jshimota      0.0.5       Added HTML table layout and dynamic time scheduling per period
+ *      2026-08-06    jshimota      0.0.4       Added reverse-mirrored Home/Away presence switches
+ *      2026-08-06    jshimota      0.0.3       Removed away mode requirement; changed to presence tracking
+ *      2026-08-06    jshimota      0.0.2       Connected virtual switches to app
+
