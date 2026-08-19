@@ -5,9 +5,6 @@
  * Licensed under the Apache License, Version 2.0
  *
  * Change History:
- * v1.2.3 (2026-08-18) - Code Integrity & Preference Rendering Optimization:
- *                        - Safe-guarded input parameter reads against null settings during initial lifecycle installation.
- *                        - Validated font size inputs in updateTileDisplay() to ensure robust relative 'em' fallback values.
  * v1.2.2 (2026-08-18) - Change History Log Restoration:
  *                        - Restored complete historical change log entries from v1.0.0 through v1.2.1 in driver header block.
  * v1.2.1 (2026-08-18) - Preferences Null Object Protection Fix:
@@ -47,7 +44,7 @@
  * v1.0.0 (2026-08-16) - Initial release of Virtual Status Tile & State Tracker Driver.
  */
 
-static String version() { return "1.2.3" }
+static String version() { return "1.2.2" }
 
 metadata {
     definition (
@@ -79,7 +76,9 @@ metadata {
     preferences {
         input name: "enableHtmlFormatting", type: "bool", title: "<b>Enable HTML Styling for Tile Attribute</b>", defaultValue: true, submitOnChange: true
 
-        if (settings?.enableHtmlFormatting != false) {
+        Boolean showHtmlOptions = (settings != null && settings.enableHtmlFormatting != null) ? settings.enableHtmlFormatting : true
+
+        if (showHtmlOptions) {
             input name: "modeFontSize", type: "text", title: "<b>Mode Font Size (em)</b> <i>(Default: 1.2em)</i>", defaultValue: "1.2em", required: true
             input name: "boldMode", type: "bool", title: "<b>Bold Mode Text?</b>", defaultValue: true
 
@@ -197,27 +196,21 @@ private String getReasonColor(String reasonVal) {
     }
 }
 
-private String sanitizeFontSize(String inputVal, String defaultVal) {
-    if (!inputVal) return defaultVal
-    String trimmed = inputVal.trim()
-    return (trimmed.endsWith("em") || trimmed.endsWith("px") || trimmed.endsWith("%")) ? trimmed : "${trimmed}em"
-}
-
 private void updateTileDisplay(String overrideMode = null, String overrideReason = null, String overrideTime = null) {
     String currentMode = overrideMode ?: device.currentValue("activeMode") ?: "Unknown"
     String currentReason = overrideReason ?: device.currentValue("activeReason") ?: "Unknown"
     String currentTime = overrideTime ?: device.currentValue("lastTransitionTime") ?: "None"
 
-    Boolean useHtml = (settings?.enableHtmlFormatting != false)
+    Boolean useHtml = (settings?.enableHtmlFormatting != null) ? settings.enableHtmlFormatting : true
 
     String formattedTile = ""
     if (useHtml) {
         String modeColor = getModeColor(currentMode)
         String reasonColor = getReasonColor(currentReason)
 
-        String mSize = sanitizeFontSize(settings?.modeFontSize, "1.2em")
-        String rSize = sanitizeFontSize(settings?.reasonFontSize, "0.95em")
-        String uSize = sanitizeFontSize(settings?.updatedFontSize, "0.85em")
+        String mSize = settings?.modeFontSize ?: "1.2em"
+        String rSize = settings?.reasonFontSize ?: "0.95em"
+        String uSize = settings?.updatedFontSize ?: "0.85em"
 
         String mWeight = (settings?.boldMode != false) ? "font-weight:bold;" : "font-weight:normal;"
         String rWeight = (settings?.boldReason != false) ? "font-weight:bold;" : "font-weight:normal;"

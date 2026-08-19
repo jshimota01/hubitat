@@ -1,4 +1,132 @@
-  * v1.0.60 (2026-08-16) - Sleeping State Output Switch Sync Fix:
+ * v1.0.99 (2026-08-19) - Alexa Ecosystem Source Attribution Refinement:
+ *                        - Refactored alexaAwakeSwitchHandler() to preserve 'Voice' reason for all Alexa Awake toggles while using consumeVoiceMarker() as secondary verification.
+ *                        - Differentiates source attribution between 'Alexa Voice Routine' (marker present) vs 'Alexa Dashboard' (marker absent/expired).
+ *                        - Added comprehensive trace and info logging to track marker verification state without altering pipeline reason ranks.
+ * v1.0.98 (2026-08-19) - Dynamic Alexa Awake Voice Marker Attribution:
+ *                        - Refactored alexaAwakeSwitchHandler() to dynamically evaluate consumeVoiceMarker() rather than using a hardcoded 'Voice' reason.
+ *                        - Added detailed trace and info logging to capture active marker status, remaining expiry window, and attributed reason.
+ * v1.0.97 (2026-08-19) - Enhanced Atomic Suppression Diagnostic Tracing:
+ *                        - Added pre/post atomic map state logging to syncSwitch() to verify state commitment prior to device command execution.
+ *                        - Expanded isInternalTransaction() trace logging to capture raw atomic map snapshots during key inspection.
+ * v1.0.96 (2026-08-19) - Behavioral Overlay Protection & Log Level Refinements:
+ *                        - Prevented CRON boundary triggers from releasing dynamic Voice/Presence states while actively Sleeping or Away.
+ *                        - Demoted internal evaluation, Voice marker arming, Alexa Awake switch toggles, and atomic suppression logs from INFO to TRACE.
+ * v1.0.95 (2026-08-18) - GUI Header & Subsection Numbering Cleanups:
+ *                        - Renamed 'Apps List Label Customization' header to 'App Label Customization' in App Preferences.
+ *                        - Streamlined Section 5 and Section 6 subsection subheaders by removing unnecessary numeric prefixes.
+ * v1.0.94 (2026-08-18) - Hub Reboot Notification & Pipeline Context Alignment:
+ *                        - Decoupled startup notification dispatch from state authority rank preemption.
+ *                        - Added `isStartupSync` flag propagation through calculateDecision() and syncOutputs().
+ *                        - Guaranteed `templateReboot` notification dispatch during boot alignment regardless of active Presence/Override state.
+ * v1.0.93 (2026-08-18) - Hub Information Driver v3 Integration & Dynamic Boot Health Guard:
+ *                        - Added hubInfoDevice selector to Section 8 to monitor the bear may's Hub Information Driver v3.
+ *                        - Added GUI switches for Uptime (1-5 min), Zigbee Radio Ready, ZWave Radio Ready, and CPU Load Normalization.
+ *                        - Implemented hybrid boot guard in delayedStartupHandler(): verifies device metrics before executing state pipeline.
+ *                        - Re-schedules iterative 15s re-checks if system metrics show radios or CPU load are still initializing/busy.
+ * v1.0.92 (2026-08-18) - Hub Boot Stabilization Guard & Category Label Restructure:
+ *                        - Added Section 8 (System Startup & Boot Guard) with configurable bootSyncDelay parameter (default: 30s).
+ *                        - Refactored hubStartupHandler() to use delayedStartupHandler() via runIn() timer to prevent boot race conditions.
+ *                        - Added state tracking for lastHubBootTime, lastStartupSyncTime, and isStartupPending.
+ *                        - Relabeled top-level GUI category headers to CATEGORY A, B, C, and D to eliminate numbering ambiguity.
+ * v1.0.91 (2026-08-17) - Settings Snapshot Expansion & Real-Time HSM UI Sync:
+ *                        - Expanded captureSettingsSnapshot() watch list to prevent unnecessary re-initializations on Done button clicks.
+ *                        - Added dynamic HSM status badge to Section 4 displaying current vs expected state and pending transitions.
+ *                        - Fixed transient state.isSettingsSaveEvent flag leak across app menu navigations.
+ *                        - Refactored alexaModeSwitchHandler to eliminate redundant logic and properly process voice marker overrides.
+ * * v1.0.90 (2026-08-18) - Pipeline Loopback Decoupling, Transient State Safety & Source Debounce:
+ *                        - Removed broad state.activeTransaction short-circuit from isInternalTransaction(); relies strictly on atomicState.pendingOutputSyncs.
+ *                        - Safe-guarded state.isSettingsSaveEvent lifecycle in dispatchTileNotification() by clearing flag immediately on entry.
+ *                        - Implemented per-source debouncing (state.lastTriggerTimes) with automatic pruning (cleanTriggerTimesMap).
+ *                        - Preserved complete change log history (v1.0.1 - v1.0.85) and all logTrace/logDebug diagnostic calls.
+ * v1.0.86 (2026-08-18) - Per-Source Debounce Refactoring:
+ *                        - Replaced global state.lastTriggerTime with per-source state.lastTriggerTimes map.
+ *                        - Isolated debounce windows per device ID and UI button key to prevent cross-event suppression.
+ *                        - Added automatic state map pruning helper (cleanTriggerTimesMap) to prevent long-term state bloat.
+ * v1.0.85 (2026-08-18) - App Settings Save Speech Notification Override:
+ *                        - Implemented state.isSettingsSaveEvent flag during updated() lifecycle when preferences change.
+ *                        - Overrides speech output payload to announce "Mode Manager settings changed and saved" on save events.
+ *                        - Retains silent execution when app is opened and exited without setting modifications.
+ * v1.0.84 (2026-08-18) - GUI Help Text Sync & Formatting Disambiguation:
+ *                        - Added explicit GUI clarification that Ground-Truth Status Tile Devices receive plain text and manage their own HTML rendering internally.
+ *                        - Updated Section 6 Push Notification Format help text to detail exact dynamic mode and reason color assignments when 'Formatted HTML' is selected.
+ * v1.0.83 (2026-08-18) - Dynamic Logical Color Mapping for Push Notifications:
+ *                        - Added mode color assignment: Blue (#2980B9) for Sleeping, Red (#C0392B) for Away, Green (#27AE60) for Period Modes.
+ *                        - Added reason color assignment: Slate (#2C3E50) for Scheduled, Orange (#D35400) for Voice, Teal (#16A085) for Presence, Red (#C0392B) for Override, Purple (#8E44AD) for Reboot.
+ *                        - Updated dispatchTileNotification() push payload builder to apply dynamic color wrappers.
+ * v1.0.82 (2026-08-18) - Responsive Push HTML Styling & UI Context Enhancement:
+ *                        - Converted fixed '13px' font size to responsive relative '1.0em' units in push notification wrapper.
+ *                        - Added clear UI help description under 'notificationFormat' detailing bold green styling effects vs. Plain Text.
+ * v1.0.81 (2026-08-18) - Push Notification Text Format Optimization:
+ *                        - Repositioned text format preference to Section 6 Push & Audio Notifications sub-section.
+ *                        - Renamed setting to 'notificationFormat' ("Push Notification Text Format").
+ *                        - Removed required setting constraint while retaining default fallback to 'plain'.
+ *                        - Refactored dispatchTileNotification() to evaluate notificationFormat for push messages.
+ * v1.0.80 (2026-08-18) - Change History Restoration & Header Sync:
+ *                        - Restored complete historical change log entries from v1.0.1 through v1.0.79 in file header block.
+ *                        - Verified complete logInfo, logDebug, logTrace diagnostic wrapper integrity across all pipeline handlers.
+ * v1.0.79 (2026-08-18) - Updated GitHub Tile Driver Repository Link Path:
+ *                        - Updated Section 6 HTML hyperlink URL to point directly to Drivers/virtual_mode_status_tracker_tile/virtual_mode_status_tracker_tile_device.groovy.
+ * v1.0.78 (2026-08-18) - Virtual Status Tile Driver GitHub Link Addition:
+ *                        - Added HTML hyperlink to paragraph description in Section 6 directing users directly to driver source code repository on GitHub.
+ * v1.0.77 (2026-08-18) - GUI Architectural Category Banners & Tile Device Re-alignment:
+ *                        - Grouped sections into 4 overarching architectural headers: INPUT ARCHITECTURE, SYSTEM INTEGRATIONS, OUTPUTS & NOTIFICATION ENGINE, and DIAGNOSTICS & CONTROL.
+ *                        - Moved Status Tile Device selector and Dashboard Tile Formatting options into SECTION 6 (Outputs & Notification Engine).
+ *                        - Re-ordered Diagnostic/Testing panel to SECTION 7 (System Diagnostics & Simulation Engine).
+ * v1.0.76 (2026-08-18) - Global Resynchronization Control UI Optimization:
+ *                        - Extracted system recheck button from Section 6 into a dedicated full-width footer section at the bottom of the main GUI.
+ *                        - Renamed button to 'Resynchronize System & Reset Active Mode' for clearer user intent.
+ *                        - Added clear explanatory banner describing system-wide ground-truth evaluation and output alignment.
+ * v1.0.75 (2026-08-18) - GUI Architectural Restructure & Integrations Decoupling:
+ *                        - Extracted HSM Integration into standalone Section 4 with live status card display.
+ *                        - Extracted Alexa Ecosystem & Voice Marker into standalone Section 5.
+ *                        - Clarified input architecture vs. downstream system integrations across all section headings and descriptions.
+ *                        - Fixed settings snapshot watch list and submitOnChange rendering for Section 4 HSM card.
+ * v1.0.74 (2026-08-18) - Refactored HSM State Machine & In-Flight Diagnostics:
+ *                        - Added location subscription to 'hsmStatus' for real-time confirmation and event-bus synchronization.
+ *                        - Implemented state tracking (pendingHsmTarget, pendingHsmDispatchedTime, pendingHsmExpires) to prevent duplicate command spam during rapid pipeline executions.
+ *                        - Separated terminology between expected state transitions and true desynchronization timeouts.
+ *                        - Added trace diagnostics detailing in-flight commands, original dispatch timestamps, and remaining window time.
+ * v1.0.73 (2026-08-17) - Voice Marker Expansion & Pipeline Architecture Refinements:
+ *                        - Expanded Alexa Voice Marker consumption to alexaModeSwitchHandler for Home/Away routines.
+ *                        - Fixed double-consumption race condition by assigning single-point voice marker consumption.
+ *                        - Updated non-voice manual awakeSwitch toggles to attribute as 'Override' instead of 'Scheduled'.
+ *                        - Implemented Option A passive output handling for sleepSwitch (removed event subscription).
+ *                        - Fixed updated() lifecycle logic to force re-initialization when state.lastSettingsSnapshot is null.
+ *                        - Refactored HSM state checking to compare directly against location.hsmStatus for self-healing repair.
+ *                        - Cleaned up remaining legacy 'Normal' code references across state logic and notification fallbacks.
+ * v1.0.72 (2026-08-17) - Section 5 UI Label & Example Text Update:
+ *                        - Updated template variable reference table and UI example text to use 'Evening' and 'Late Evening' instead of 'Night'.
+ * v1.0.71 (2026-08-17) - Voice Marker Logging & Diagnostics Expansion:
+ *                        - Added comprehensive logInfo, logDebug, and logTrace events to alexaVoiceMarkerSwitchHandler and consumeVoiceMarker to track voice source attribution.
+ * v1.0.70 (2026-08-17) - Alexa Voice Marker Integration:
+ *                        - Added alexaVoiceMarkerSwitch input field to Section 2 (Sleep Architecture GUI).
+ *                        - Added one-shot pulse handler (alexaVoiceMarkerSwitchHandler) that sets a 5-second expiration marker (atomicState.alexaVoiceMarkerExpires) and auto-reverts the marker switch OFF.
+ *                        - Updated alexaAwakeSwitchHandler and awakeSwitchHandler to check and consume the voice marker for explicit voice source attribution.
+ * v1.0.69 (2026-08-17) - Alexa Event Inspection Diagnostics:
+ *                        - Added log.warn diagnostic logging to alexaAwakeSwitchHandler to inspect evt properties (type, source, physical/digital flags, description).
+ * v1.0.68 (2026-08-17) - Atomic Suppression Pre-Registration Fix:
+ *                        - Fixed race condition where output switch execution occurred prior to atomic marker storage, preventing loopback triggers on Alexa Mode switch.
+ * v1.0.67 (2026-08-17) - Section 5 GUI Layout Restructure:
+ *                        - Separated Event Trigger switches from Custom Message text inputs into dedicated sub-sections.
+ *                        - Added variable reference table displaying %mode%, %prevMode%, %reason%, %prevReason%, and %time%.
+ * v1.0.66 (2026-08-17) - Semantic Reason Labeling Update:
+ *                        - Renamed 'Normal' evaluation reason to 'Scheduled' across all pipeline decision logic, handlers, state initializations, UI labels, and notification templates.
+ *                        - Improves log and tile readability by clearly attributing background time-table transitions as 'Scheduled'.
+ * v1.0.65 (2026-08-17) - Entry Handler Trace Framing:
+ *                        - Added context-aware trace log wrappers around external event handlers (updateButtonHandler, updateSwitchHandler, presenceHandler, etc.).
+ * v1.0.64 (2026-08-17) - Context-Aware Execution Trace Framing:
+ *                        - Updated '=== Mode Manager Adv Begins ===' and '=== Mode Manager Adv Ends ===' markers to include section, reason, and source context.
+ * v1.0.63 (2026-08-17) - Execution Framing & Wake Output Sync Fix:
+ *                        - Added execution framing log markers and removed trailing hyphen lines at end of transactions.
+ *                        - Fixed finalIsSleeping evaluation in calculateDecision() to ensure output switches properly sync on Wake transitions.
+ *                        - Optimized updated() lifecycle to prevent redundant re-initialization on save without settings changes.
+ * v1.0.62 (2026-08-16) - Presence Authority Pipeline Defect Fix:
+ *                        - Fixed calculateDecision() ignoring request.presenceValue from masterPresence events.
+ *                        - Established strict presence evaluation precedence: presenceValue -> simulatedHome -> homeSwitch.
+ * v1.0.61 (2026-08-16) - Notification Mute & Sleep Release Fix:
+ *                        - Fixed dispatchTileNotification() to evaluate isSleeping strictly against incoming target decision rather than stale state.modeReason.
+ *                        - Correctly allows audio notifications when waking up from Sleeping mode to Day/Morning.
+ * v1.0.60 (2026-08-16) - Sleeping State Output Switch Sync Fix:
  *                        - Fixed calculateDecision() and syncOutputs() so targetMode == sleepMode explicitly forces decision.isSleeping = true.
  *                        - Guarantees awakeSwitch (OFF), alexaAwakeSwitch (OFF), and sleepSwitch (ON) update when entering Sleeping mode via Voice or Override.
  * v1.0.59 (2026-08-16) - GUI Scroll Jump & Refresh Optimization:
