@@ -5,11 +5,11 @@
  * Licensed under the Apache License, Version 2.0
  *
  * Change History:
- * v1.4.2 (2026-08-21) - Minor Typography Tweaks:
- *                        - Reduced Updated timestamp font size by an additional ~33% (from 0.42em to 0.28em).
- *                        - Softened timestamp opacity to 0.65 to diminish visual weight.
- * v1.4.1 (2026-08-21) - Fine-Tuned Typography Sizing & Disarmed Contrast Fix.
- * v1.4.0 (2026-08-21) - Scaled Font Sizes & High-Contrast Dark Tile Color Palette.
+ * v1.4.0 (2026-08-21) - Scaled Font Sizes & High-Contrast Dark Tile Color Palette:
+ *                        - Reduced default font sizes by ~25% (Mode 0.9em, Reason/HSM 0.72em, Timestamp 0.6em).
+ *                        - Switched container text color to bright white (#FFFFFF).
+ *                        - Replaced dark/dull accent colors with vibrant high-contrast hex values for dark dashboard tiles.
+ *                        - Fixed disarmed state contrast (#2ECC71 bright emerald) and added explicit bright color for Morning (#3498DB / #F1C40F).
  * v1.3.0 (2026-08-21) - Native HSM Status Integration.
  * v1.2.3 (2026-08-18) - Code Integrity & Preference Rendering Optimization.
  * v1.2.2 (2026-08-18) - Change History Log Restoration.
@@ -19,7 +19,7 @@
  * v1.0.0 (2026-08-16) - Initial release of Virtual Status Tile & State Tracker Driver.
  */
 
-static String version() { return "1.4.2" }
+static String version() { return "1.4.0" }
 
 metadata {
     definition (
@@ -62,13 +62,13 @@ metadata {
             input name: "modeFontSize", type: "text", title: "<b>Mode Font Size (em)</b> <i>(Default: 0.9em)</i>", defaultValue: "0.9em", required: true
             input name: "boldMode", type: "bool", title: "<b>Bold Mode Text?</b>", defaultValue: true
 
-            input name: "reasonFontSize", type: "text", title: "<b>Reason Font Size (em)</b> <i>(Default: 0.8em)</i>", defaultValue: "0.8em", required: true
+            input name: "reasonFontSize", type: "text", title: "<b>Reason Font Size (em)</b> <i>(Default: 0.72em)</i>", defaultValue: "0.72em", required: true
             input name: "boldReason", type: "bool", title: "<b>Bold Reason Text?</b>", defaultValue: true
 
-            input name: "hsmFontSize", type: "text", title: "<b>HSM Status Font Size (em)</b> <i>(Default: 0.8em)</i>", defaultValue: "0.8em", required: true
+            input name: "hsmFontSize", type: "text", title: "<b>HSM Status Font Size (em)</b> <i>(Default: 0.72em)</i>", defaultValue: "0.72em", required: true
             input name: "boldHsm", type: "bool", title: "<b>Bold HSM Text?</b>", defaultValue: true
 
-            input name: "updatedFontSize", type: "text", title: "<b>Updated Timestamp Font Size (em)</b> <i>(Default: 0.28em)</i>", defaultValue: "0.28em", required: true
+            input name: "updatedFontSize", type: "text", title: "<b>Updated Timestamp Font Size (em)</b> <i>(Default: 0.6em)</i>", defaultValue: "0.6em", required: true
             input name: "boldUpdated", type: "bool", title: "<b>Bold Updated Timestamp Text?</b>", defaultValue: false
         }
 
@@ -173,7 +173,7 @@ def setStatus(String modeVal, String reasonVal, String timeVal = null, String hs
 private String getModeColor(String modeVal) {
     switch (modeVal) {
         case "Morning":  return "#F1C40F" // Bright Sun Yellow
-        case "Day":      return "#00FF66" // Vivid Electric Green
+        case "Day":      return "#2ECC71" // Vivid Green
         case "Evening":  return "#E67E22" // Vibrant Orange
         case "Night":    return "#9B59B6" // Bright Purple
         case "Sleeping": return "#3498DB" // Bright Sky Blue
@@ -186,7 +186,7 @@ private String getReasonColor(String reasonVal) {
     switch (reasonVal) {
         case "Scheduled": return "#00FFFF" // Vibrant Cyan
         case "Voice":     return "#FF8C00" // Bright Dark Orange
-        case "Presence":  return "#00FF66" // Vivid Emerald Green
+        case "Presence":  return "#2ECC71" // Vivid Emerald Green
         case "Override":  return "#FF007F" // Bright Neon Pink/Red
         case "Reboot":    return "#BB86FC" // High-Contrast Light Purple
         default:          return "#BDC3C7" // Silver/Light Grey
@@ -198,8 +198,8 @@ private String formatHsmDisplay(String rawHsm) {
         case "armedAway":   return "<span style='color:#FF4D4D; font-weight:bold;'>Armed Away</span>"
         case "armedNight":  return "<span style='color:#3498DB; font-weight:bold;'>Armed Night</span>"
         case "armedHome":   return "<span style='color:#FF9F43; font-weight:bold;'>Armed Home</span>"
-        case "disarmed":    return "<span style='color:#00FF66; font-weight:bold;'>Disarmed</span>"
-        case "allDisarmed": return "<span style='color:#00FF66; font-weight:bold;'>All Disarmed</span>"
+        case "disarmed":    return "<span style='color:#2ECC71; font-weight:bold;'>Disarmed</span>"
+        case "allDisarmed": return "<span style='color:#2ECC71; font-weight:bold;'>All Disarmed</span>"
         default:            return "<span style='color:#BDC3C7; font-weight:bold;'>${rawHsm}</span>"
     }
 }
@@ -225,20 +225,20 @@ private void updateTileDisplay(String overrideMode = null, String overrideReason
         String hsmHtml = formatHsmDisplay(currentHsm)
 
         String mSize = sanitizeFontSize(settings?.modeFontSize, "0.9em")
-        String rSize = sanitizeFontSize(settings?.reasonFontSize, "0.8em")
-        String hSize = sanitizeFontSize(settings?.hsmFontSize, "0.8em")
-        String uSize = sanitizeFontSize(settings?.updatedFontSize, "0.28em")
+        String rSize = sanitizeFontSize(settings?.reasonFontSize, "0.72em")
+        String hSize = sanitizeFontSize(settings?.hsmFontSize, "0.72em")
+        String uSize = sanitizeFontSize(settings?.updatedFontSize, "0.6em")
 
         String mWeight = (settings?.boldMode != false) ? "font-weight:bold;" : "font-weight:normal;"
         String rWeight = (settings?.boldReason != false) ? "font-weight:bold;" : "font-weight:normal;"
         String hWeight = (settings?.boldHsm != false) ? "font-weight:bold;" : "font-weight:normal;"
         String uWeight = (settings?.boldUpdated == true) ? "font-weight:bold;" : "font-weight:normal;"
 
-        formattedTile = "<div style='text-align:center; padding:0.15em; font-family:sans-serif; color:#FFFFFF; width:100%; box-sizing:border-box;'>" +
-                        "<div style='font-size:${mSize}; ${mWeight} color:#FFFFFF; margin-bottom:0.08em; line-height:1.15;'>Mode: <span style='color:${modeColor};'>${currentMode}</span></div>" +
-                        "<div style='font-size:${rSize}; color:#FFFFFF; margin-bottom:0.08em; line-height:1.15;'>Reason: <span style='color:${reasonColor}; ${rWeight}'>${currentReason}</span></div>" +
-                        "<div style='font-size:${hSize}; color:#FFFFFF; ${hWeight} margin-bottom:0.08em; line-height:1.15;'>HSM: ${hsmHtml}</div>" +
-                        "<div style='font-size:${uSize}; ${uWeight} color:#FFFFFF; opacity:0.65; line-height:1.1;'>Updated: ${currentTime}</div>" +
+        formattedTile = "<div style='text-align:center; padding:0.2em; font-family:sans-serif; color:#FFFFFF; width:100%; box-sizing:border-box;'>" +
+                        "<div style='font-size:${mSize}; ${mWeight} color:#FFFFFF; margin-bottom:0.1em; line-height:1.2;'>Mode: <span style='color:${modeColor};'>${currentMode}</span></div>" +
+                        "<div style='font-size:${rSize}; color:#FFFFFF; margin-bottom:0.1em; line-height:1.2;'>Reason: <span style='color:${reasonColor}; ${rWeight}'>${currentReason}</span></div>" +
+                        "<div style='font-size:${hSize}; color:#FFFFFF; ${hWeight} margin-bottom:0.1em; line-height:1.2;'>HSM: ${hsmHtml}</div>" +
+                        "<div style='font-size:${uSize}; ${uWeight} color:#FFFFFF; opacity:0.75; line-height:1.2;'>Updated: ${currentTime}</div>" +
                         "</div>"
     } else {
         formattedTile = "Mode: ${currentMode} | Reason: ${currentReason} | HSM: ${currentHsm} | Time: ${currentTime}"
@@ -248,7 +248,7 @@ private void updateTileDisplay(String overrideMode = null, String overrideReason
     sendEvent(name: "html", value: formattedTile)
 }
 
-def logInfo(String msg) {
+private void logInfo(String msg) {
     if (settings?.logInfoEnable != false) {
         log.info "${device.displayName}: ${msg}"
     }

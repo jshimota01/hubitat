@@ -5,10 +5,10 @@
  * Licensed under the Apache License, Version 2.0
  *
  * Change History:
- * v1.4.2 (2026-08-21) - Minor Typography Tweaks:
- *                        - Reduced Updated timestamp font size by an additional ~33% (from 0.42em to 0.28em).
- *                        - Softened timestamp opacity to 0.65 to diminish visual weight.
- * v1.4.1 (2026-08-21) - Fine-Tuned Typography Sizing & Disarmed Contrast Fix.
+ * v1.4.1 (2026-08-21) - Fine-Tuned Typography Sizing & Disarmed Contrast Fix:
+ *                        - Scaled Updated timestamp font down by 30% (from 0.6em to 0.42em) to clear bottom boundary.
+ *                        - Boosted HSM status font size by ~10% (from 0.72em to 0.8em) to closely match Reason sizing (0.8em).
+ *                        - Brightened Disarmed text (#00FF66 bright lime-emerald) to pop against medium/slate grey backgrounds.
  * v1.4.0 (2026-08-21) - Scaled Font Sizes & High-Contrast Dark Tile Color Palette.
  * v1.3.0 (2026-08-21) - Native HSM Status Integration.
  * v1.2.3 (2026-08-18) - Code Integrity & Preference Rendering Optimization.
@@ -19,7 +19,7 @@
  * v1.0.0 (2026-08-16) - Initial release of Virtual Status Tile & State Tracker Driver.
  */
 
-static String version() { return "1.4.2" }
+static String version() { return "1.4.1" }
 
 metadata {
     definition (
@@ -68,7 +68,7 @@ metadata {
             input name: "hsmFontSize", type: "text", title: "<b>HSM Status Font Size (em)</b> <i>(Default: 0.8em)</i>", defaultValue: "0.8em", required: true
             input name: "boldHsm", type: "bool", title: "<b>Bold HSM Text?</b>", defaultValue: true
 
-            input name: "updatedFontSize", type: "text", title: "<b>Updated Timestamp Font Size (em)</b> <i>(Default: 0.28em)</i>", defaultValue: "0.28em", required: true
+            input name: "updatedFontSize", type: "text", title: "<b>Updated Timestamp Font Size (em)</b> <i>(Default: 0.42em)</i>", defaultValue: "0.42em", required: true
             input name: "boldUpdated", type: "bool", title: "<b>Bold Updated Timestamp Text?</b>", defaultValue: false
         }
 
@@ -227,7 +227,7 @@ private void updateTileDisplay(String overrideMode = null, String overrideReason
         String mSize = sanitizeFontSize(settings?.modeFontSize, "0.9em")
         String rSize = sanitizeFontSize(settings?.reasonFontSize, "0.8em")
         String hSize = sanitizeFontSize(settings?.hsmFontSize, "0.8em")
-        String uSize = sanitizeFontSize(settings?.updatedFontSize, "0.28em")
+        String uSize = sanitizeFontSize(settings?.updatedFontSize, "0.42em")
 
         String mWeight = (settings?.boldMode != false) ? "font-weight:bold;" : "font-weight:normal;"
         String rWeight = (settings?.boldReason != false) ? "font-weight:bold;" : "font-weight:normal;"
@@ -238,7 +238,7 @@ private void updateTileDisplay(String overrideMode = null, String overrideReason
                         "<div style='font-size:${mSize}; ${mWeight} color:#FFFFFF; margin-bottom:0.08em; line-height:1.15;'>Mode: <span style='color:${modeColor};'>${currentMode}</span></div>" +
                         "<div style='font-size:${rSize}; color:#FFFFFF; margin-bottom:0.08em; line-height:1.15;'>Reason: <span style='color:${reasonColor}; ${rWeight}'>${currentReason}</span></div>" +
                         "<div style='font-size:${hSize}; color:#FFFFFF; ${hWeight} margin-bottom:0.08em; line-height:1.15;'>HSM: ${hsmHtml}</div>" +
-                        "<div style='font-size:${uSize}; ${uWeight} color:#FFFFFF; opacity:0.65; line-height:1.1;'>Updated: ${currentTime}</div>" +
+                        "<div style='font-size:${uSize}; ${uWeight} color:#FFFFFF; opacity:0.75; line-height:1.1;'>Updated: ${currentTime}</div>" +
                         "</div>"
     } else {
         formattedTile = "Mode: ${currentMode} | Reason: ${currentReason} | HSM: ${currentHsm} | Time: ${currentTime}"
