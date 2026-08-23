@@ -7,7 +7,7 @@
  *  --------------------------------------------------------------------------------------
  *  Date       Version   Author     Description
  *  --------------------------------------------------------------------------------------
- *  2026-08-22 v2.0.0    jshimota   Bumped definition name to v2 and updated child references.
+ *  2026-08-22 v2.0.0    jshimota   Bumped definition name to v2 and aligned icon/import URLs.
  *  ======================================================================================
  */
 
