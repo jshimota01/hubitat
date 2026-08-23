@@ -1,16 +1,26 @@
 /* 
- *  Advanced Virtual Thermostat Device Driver Custom
+ *  Advanced Virtual Thermostat Device Driver Custom v2
  *  Copyright 2020 Nelson Clark / Customizations by jshimota
+ *
+ *  ======================================================================================
+ *  CHANGELOG:
+ *  --------------------------------------------------------------------------------------
+ *  Date       Version   Author     Description
+ *  --------------------------------------------------------------------------------------
+ *  2026-08-22 v2.0.1    jshimota   Fixed evaluateMode() loop by assigning empty string "" 
+ *                                  instead of null to preEmergencyMode attribute. Renamed 
+ *                                  driver definition to Advanced vThermostat Device Custom v2.
+ *  ======================================================================================
  */
  
 import groovy.json.JsonOutput
 
 metadata {
     definition (
-        name: "Advanced vThermostat Device Custom", 
+        name: "Advanced vThermostat Device Custom v2", 
         namespace: "jshimota", 
         author: "Nelson Clark",
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/Advanced_vThermostat_Custom/Advanced_vThermostat_Custom-Device.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/advanced_virtual_thermostat_custom_v2advanced_vThermostat_driver_custom.groovy"
     ) {
         capability "Thermostat"
         capability "Sensor"
@@ -80,6 +90,7 @@ def installed() {
     sendEvent(name: "thermostatMode", value: "off")
     sendEvent(name: "thermostatOperatingState", value: "idle")
     sendEvent(name: "maxUpdateInterval", value: 65)
+    sendEvent(name: "preEmergencyMode", value: "")
     sendEvent(name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"]))
 }
 
@@ -142,10 +153,10 @@ def evaluateMode() {
         sendEvent(name: "thermostatOperatingState", value: "idle")
         runIn(2, 'evaluateMode')
         return
-    } else if (device.currentValue("preEmergencyMode") && (nowMs - lastUpdate < maxIntervalMili)) {
+    } else if (device.currentValue("preEmergencyMode") && device.currentValue("preEmergencyMode") != "" && (nowMs - lastUpdate < maxIntervalMili)) {
         logger("warn", "Sensors reporting again. Autorecovered to previous mode.")
         def prevMode = device.currentValue("preEmergencyMode")
-        sendEvent(name: "preEmergencyMode", value: null)
+        sendEvent(name: "preEmergencyMode", value: "")
         sendEvent(name: "thermostatMode", value: prevMode)
         runIn(2, 'evaluateMode')
         return

@@ -1,4 +1,41 @@
- * v1.0.99 (2026-08-19) - Alexa Ecosystem Source Attribution Refinement:
+ * v1.1.10 (2026-08-21) - Heap Lifecycle Reset & Fail-Safe Integration:
+ *                        - Added purgePendingAckTokens() to initialize() and updated() to ensure clean heap state across app reloads/reboots.
+ * v1.1.09 (2026-08-21) - Token Lifespan & Housekeeping Guard:
+ *                        - Added a 2.0s expiration timestamp to Single-Ack Tokens in registerExpectedAck().
+ *                        - Implemented lazy housekeeping eviction in consumeExpectedAck() to retire abandoned tokens.
+ * v1.1.08 (2026-08-21) - Deterministic Single-Ack Token Architecture Refactor:
+ *                        - Replaced generic time-window suppression with a deterministic Single-Ack Token Register (pendingAckTokens).
+ *                        - Implemented Three-Tier Role Isolation: Input-Only, Output-Only, and Bidirectional Controls.
+ *                        - Restricted single-ack token consumption exclusively to Tier 3 (Bidirectional Period Switches).
+ * v1.1.07 (2026-08-21) - Hubitat Sandbox Compatibility:
+ *                        - Replaced restricted java.lang.System.currentTimeMillis() with native sandbox method now().
+ * v1.1.06 (2026-08-21) - In-Memory High-Performance Suppression Architecture:
+ *                        - Replaced atomicState pendingOutputSyncs database serialization with a thread-safe heap-level ConcurrentHashMap (@Field).
+ *                        - Implemented single-use sub-millisecond suppression checks with immediate memory eviction to prevent thread-racing.
+ *                        - Reduced suppression guard window to a tight 1,500ms bus broadcast window, eliminating long time-delay locks.
+ *                        - Enforced isInternalTransaction() as the primary line guard across all event handlers.
+ * v1.1.05 (2026-08-21) - Pipeline & Exception Bug Fixes:
+ *                        - Relocated isInternalTransaction() to be the primary guard in vSwitchHandler() to prevent self-triggered Override pipeline shifts.
+ *                        - Removed invalid evt.isStateChange() call in hsmStatusHandler() to resolve MissingMethodException.
+ * v1.1.04 (2026-08-21) - Application Version Upgrade Logging Guard:
+ *                        - Added state.installedVersion tracking to installed() and updated().
+ *                        - Added high-visibility logWarn alert in updated() whenever a code update changes the app version.
+ * v1.1.03 (2026-08-21) - HSM Status Tile Rendering:
+ *                        - Added active HSM status formatting and state rendering to updateStatusTileDevice().
+ *                        - Added real-time tile device refreshes on external HSM status state changes in hsmStatusHandler().
+ * v1.1.02 (2026-08-21) - Structural Execution Pipeline & Diagnostic Refactoring:
+ *                        - Resolved sequence race condition by deferring sendLocationEvent to final phase of syncOutputs().
+ *                        - Fixed premature tile update by relocating updateStatusTileDevice() to Step 2 of syncOutputs().
+ *                        - Added verifyHsmSync retry guard and comprehensive trace/debug instrumentation across HSM & Tile outputs.
+ * v1.1.01 (2026-08-19) - Tile Notification Formatting:
+ *                        - Added 'white-space: nowrap; overflow-x: auto;' to HTML push notification output wrapper
+ *                          to prevent line wrapping on Notification Tiles while allowing horizontal scrolling.
+ * v1.1.00 (2026-08-19) - Runtime Robustness & Concurrency Protection:
+ *                        - Converted lastTriggerTimes to atomicState to guarantee thread safety during rapid multi-device event bursts.
+ *                        - Added parseBigDecimalSafely() and parseIntSafely() in delayedStartupHandler() to prevent NumberFormatException during early hub boot.
+ *                        - Added null guard around awakeSwitch evaluation in calculateDecision() to avoid NPE risks.
+ * v1.0.1  (2026-05-20) - Initial Architectural Concept:
+ *                        - Initial release of Mode Manager Advanced framework for Hubitat Elevation. * v1.0.99 (2026-08-19) - Alexa Ecosystem Source Attribution Refinement:
  *                        - Refactored alexaAwakeSwitchHandler() to preserve 'Voice' reason for all Alexa Awake toggles while using consumeVoiceMarker() as secondary verification.
  *                        - Differentiates source attribution between 'Alexa Voice Routine' (marker present) vs 'Alexa Dashboard' (marker absent/expired).
  *                        - Added comprehensive trace and info logging to track marker verification state without altering pipeline reason ranks.

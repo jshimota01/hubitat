@@ -11,7 +11,7 @@ definition(
     category: "Green Living",
 	iconUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo-small.png",
 	iconX2Url: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo.png",
-	importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-Parent_Custom.groovy",
+	importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/advanced_VThermostat_Child_Custom_v2.groovy",
     parent: "jshimota:Advanced vThermostat Manager Custom"
 )
 
@@ -72,7 +72,7 @@ def installed() {
     
     def thermostat = null
     try {
-        thermostat = addChildDevice("jshimota", "Advanced vThermostat Device Custom", state.deviceID, null, [label: label, name: label, completedSetup: true])
+        thermostat = addChildDevice("jshimota", "Advanced vThermostat Device Custom v2", state.deviceID, null, [label: label, name: label, completedSetup: true])
     } catch(e) {
         logger("error", "Error adding vThermostat child ${label}: ${e}")
     }
