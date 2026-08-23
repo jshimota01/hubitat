@@ -1,18 +1,26 @@
 /*
- *  Advanced vThermostat Child App
+ *  Advanced vThermostat Child App v2
  *  Copyright 2020 Nelson Clark / Customizations by jshimota
+ *
+ *  ======================================================================================
+ *  CHANGELOG:
+ *  --------------------------------------------------------------------------------------
+ *  Date       Version   Author     Description
+ *  --------------------------------------------------------------------------------------
+ *  2026-08-22 v2.0.0    jshimota   Bumped definition name to v2 and corrected child device creation.
+ *  ======================================================================================
  */
 
 definition(
-    name: "Advanced vThermostat Child Custom",
+    name: "Advanced vThermostat Child Custom v2",
     namespace: "jshimota",
     author: "Nelson Clark",
     description: "Join any sensor(s) with any outlet(s) for virtual thermostat control.",
     category: "Green Living",
-	iconUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo-small.png",
-	iconX2Url: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo.png",
-	importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/advanced_VThermostat_Child_Custom_v2.groovy",
-    parent: "jshimota:Advanced vThermostat Manager Custom"
+    iconUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom_v2/Advanced_vThermostat-logo-small.png",
+    iconX2Url: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom_v2/Advanced_vThermostat-logo.png",
+    importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom_v2/Advanced_vThermostat_Custom_Child_v2.groovy",
+    parent: "jshimota:Advanced vThermostat Manager Custom v2"
 )
 
 preferences {
@@ -64,7 +72,6 @@ def installed() {
     state.loggingLevel = settings.logLevel ? settings.logLevel.toInteger() : 3
     logger("trace", "Installed Running vThermostat: $app.label")
     
-    // Guaranteed-unique ID using app.id
     state.deviceID = "avt-" + app.id
 
     def label = app.getLabel()

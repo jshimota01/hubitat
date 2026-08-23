@@ -7,9 +7,9 @@
  *  --------------------------------------------------------------------------------------
  *  Date       Version   Author     Description
  *  --------------------------------------------------------------------------------------
- *  2026-08-22 v2.0.1    jshimota   Fixed evaluateMode() loop by assigning empty string "" 
- *                                  instead of null to preEmergencyMode attribute. Renamed 
- *                                  driver definition to Advanced vThermostat Device Custom v2.
+ *  2026-08-22 v2.0.1    jshimota   Fixed evaluateMode() loop by assigning "none" to 
+ *                                  preEmergencyMode attribute and eliminating re-entrant 
+ *                                  scheduled calls.
  *  ======================================================================================
  */
  
@@ -20,7 +20,7 @@ metadata {
         name: "Advanced vThermostat Device Custom v2", 
         namespace: "jshimota", 
         author: "Nelson Clark",
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/advanced_virtual_thermostat_custom_v2advanced_vThermostat_driver_custom.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/advanced_virtual_thermostat_custom_v2/Advanced_vThermostat_Custom_Driver_v2.groovy"
     ) {
         capability "Thermostat"
         capability "Sensor"
@@ -90,7 +90,7 @@ def installed() {
     sendEvent(name: "thermostatMode", value: "off")
     sendEvent(name: "thermostatOperatingState", value: "idle")
     sendEvent(name: "maxUpdateInterval", value: 65)
-    sendEvent(name: "preEmergencyMode", value: "")
+    sendEvent(name: "preEmergencyMode", value: "none")
     sendEvent(name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"]))
 }
 
@@ -107,10 +107,6 @@ def configure() {
 
 def parse(String description) {}
 
-/**
- * Helper routine to keep thermostatTemperatureSetpoint and thermostatSetpoint
- * synchronized based on current thermostat mode and setpoints.
- */
 def updateThermostatSetpoint(String units = null) {
     if (!units) units = getTemperatureScale()
     def mode = device.currentValue("thermostatMode") ?: "off"
@@ -143,22 +139,20 @@ def evaluateMode() {
     if (maxInterval > 180) maxInterval = 180
     
     def maxIntervalMili = maxInterval * 60000
+    def preMode = device.currentValue("preEmergencyMode")
 
     if (current == "idle" && (nowMs - lastUpdate >= maxIntervalMili)) {
         logger("debug", "Temp sensor maximum update interval exceeded ($maxInterval mins). Thermostat idle.")
     } else if (mode != "off" && current != "idle" && (nowMs - lastUpdate >= maxIntervalMili)) {
         logger("error", "Temp sensor update timeout exceeded. Enforcing EMERGENCY STOP.")
         sendEvent(name: "preEmergencyMode", value: mode)
-        sendEvent(name: "thermostatMode", value: "off") // Standard Google Home mode
+        sendEvent(name: "thermostatMode", value: "off")
         sendEvent(name: "thermostatOperatingState", value: "idle")
-        runIn(2, 'evaluateMode')
         return
-    } else if (device.currentValue("preEmergencyMode") && device.currentValue("preEmergencyMode") != "" && (nowMs - lastUpdate < maxIntervalMili)) {
-        logger("warn", "Sensors reporting again. Autorecovered to previous mode.")
-        def prevMode = device.currentValue("preEmergencyMode")
-        sendEvent(name: "preEmergencyMode", value: "")
-        sendEvent(name: "thermostatMode", value: prevMode)
-        runIn(2, 'evaluateMode')
+    } else if (preMode && preMode != "none" && preMode != "" && preMode != "null" && (nowMs - lastUpdate < maxIntervalMili)) {
+        logger("warn", "Sensors reporting again. Autorecovered to previous mode: ${preMode}")
+        sendEvent(name: "preEmergencyMode", value: "none")
+        setThermostatMode(preMode)
         return
     }
 
