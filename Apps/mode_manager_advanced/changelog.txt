@@ -1,4 +1,127 @@
- * v1.1.10 (2026-08-21) - Heap Lifecycle Reset & Fail-Safe Integration:
+ * v1.1.49 (2026-08-24) - GUI Section Collapse State Retention Fix:
+ *                        - Fixed Section 8 collapsing on submitOnChange UI re-renders during template preview changes.
+ *                        - Section 8 now dynamically evaluates 'hidden' based on user interaction state to stay open during edits.
+ * v1.1.48 (2026-08-24) - Hubitat Sandbox Compatibility Fix:
+ *                        - Removed forbidden java.util.concurrent.atomic.AtomicLong import.
+ *                        - Implemented thread-safe synchronized static helper method (getNextTxId) for sub-millisecond TxId generation.
+ * v1.1.47 (2026-08-24) - Intent-Based Voice Routing & Attribution Refactor:
+ *                        - Separated command authority (Rank) from trigger attribution (Source) for voice commands.
+ *                        - Validated voice marker events now execute with Override authority (Rank 4) to win arbitration over Presence (Rank 3).
+ *                        - Attached transient isVoiceAttributed flag to preserve 'Voice' as the authoritative state.modeReason and Section 8 notification trigger.
+ * v1.1.46 (2026-08-24) - Sub-Millisecond TxId Uniqueness Refactor:
+ *                        - Added AtomicLong txCounter to append an atomic incrementing sequence to all txId strings (tx_<now>_<seq>).
+ *                        - Eliminated same-millisecond txId collision risk across rapid async execution threads.
+ * v1.1.45 (2026-08-24) - GUI De-Cluttering & Dynamic Template Preview Refactor:
+ *                        - Refactored Section 3 virtual switch labels to "Period Indicator / Override Switch" with explanatory context notes.
+ *                        - Added clean matrix column header row (EVENT TRIGGER | PUSH | PUSH MOBILE | AUDIO) in Section 8.
+ *                        - Removed redundant per-row toggle switch titles ("Push?", "Push Mobile?", "Audio/Speech?") across all 8 trigger cards.
+ *                        - Upgraded Live Template Preview card with an interactive trigger cause selector dropdown.
+ * v1.1.44 (2026-08-24) - In-Flight Transaction & Ack Register Lifecycle Protection:
+ *                        - Protected pending Ack tokens (pendingAckTokens) and in-flight HSM state (pendingHsmTarget) from being wiped during initialize() 
+ * 						  - \execution on preference edits.
+ *                        - Isolated token purging and HSM state clears strictly to true lifecycle resets (installed, uninstalled, hub startup).
+ * v1.1.43 (2026-08-24) - Settings Save Event State-Leak Bug Fix:
+ *                        - Removed persistent state.isSettingsSaveEvent variable to prevent stale flag leakage into future events.
+ *                        - Converted settings save notifications into transient pipeline parameters (isSaveEvent) in decision map.
+ *                        - Forced syncOutputs execution on settings save to guarantee immediate flag consumption without lingering in state.
+ * v1.1.42 (2026-08-24) - Notification Matrix & Template Re-Integration Refactor:
+ *                        - Re-integrated the Event Trigger Dispatch Matrix toggles directly alongside their corresponding message text fields in Section 8.
+ *                        - Dedicated Section 7 strictly to Global Notification Preferences, Master Switches, and Mute Controls.
+ *                        - Consolidated each trigger cause into a unified row card containing trigger cause notes, output toggles (Push, Mobile, Audio), 
+ * 						  - and template input fields.
+ * v1.1.41 (2026-08-24) - Architectural Bug Fixes & Thread Safety Refactor:
+ *                        - Timezone-safe CRON generator in toCronExpression() using explicit timeZone formatting.
+ *                        - Migrated isTriggerDebounced() to a thread-safe ConcurrentHashMap (lastTriggerTimes) to prevent atomicState map race conditions.
+ *                        - Hardened timeToMinutes() ISO string parser using toDateTime() to prevent NumberFormatException.
+ *                        - Updated Section 7 & 8 titles and added a Live Notification Template Preview card in Section 8.
+ *                        - Preserved existing voice marker consumption behavior.
+ * v1.1.40 (2026-08-24) - UI De-Clutter & Section Architectural Split:
+ *                        - Split former Section 7 into Section 7 (Notification Output Controls & Matrix) and Section 8 (Notification Message Templates & Placeholders).
+ *                        - Renumbered Diagnostics to Section 9 and Startup Guard to Section 10.
+ *                        - Reworded master notification toggle to "Enable All Notification Outputs" for clear ON/OFF semantics.
+ *                        - Renamed sub-header to "Enabled Notification Types (Master Triggers)".
+ *                        - Cleaned up preference DOM structure by removing raw HTML div wrappers around Hubitat preference input elements.  * v1.1.39 (2026-08-24) - Behavioral Sleep State Correctness Fix:
+ *                        - Discarded mode-name string comparison (targetMode == configuredSleepMode) in calculateDecision().
+ *                        - Preserved direct Awake Switch behavioral state (isSleeping) throughout the decision pipeline.
+ *                        - Prevented false sleep overlays, improper audio muting, and unintended HSM Night arming when daytime modes match the sleep mode name.
+ * v1.1.38 (2026-08-24) - Notification Matrix Expansion & Placeholder Table Card Styling:
+ *                        - Expanded Section 7 trigger rows to support 3 distinct switches per trigger: Push, Push Mobile, and Audio/Speech.
+ *                        - Updated dispatchTileNotification engine to track push<Trigger>, pushMobile<Trigger>, and audio<Trigger>.
+ *                        - Refactored the Notification Template Placeholders table with a narrower centered container card and subtle box-shadow styling.
+ * v1.1.37 (2026-08-24) - UI Collapse & Section State Retention Fix:
+ *                        - Fixed section collapse bug triggered when toggling switches in Section 7.
+ *                        - Standardized section rendering to prevent full page redraws from collapsing hideable sections.
+ *                        - Ensured notification toggles preserve open section state upon user interaction.
+ * v1.1.36 (2026-08-24) - UI Visual Hierarchy Refactor:
+ *                        - Indented the 3 master notification switches (Push, Push Mobile, Audio) using a styled container box.
+ *                        - Clarified structural hierarchy under the primary 'Disable/Enable All Notification Outputs' master toggle.
+ * v1.1.35 (2026-08-24) - Dual Push & Master Output Toggles Refactor:
+ *                        - Split Push inputs into standard Push Devices and Push (Mobile) Devices with independent text formatters.
+ *                        - Added 3 master output switches for Push, Push Mobile, and Audio types.
+ *                        - Updated section header text to 'Notification Preferences (Push/Mobile/Audio)'.
+ *                        - Updated master toggle label to 'Disable/Enable All Notification Outputs'.
+ * v1.1.34 (2026-08-24) - Trigger Switch Refactor:
+ *                        - Replaced dropdown/radio controls with Hubitat native boolean toggle switches (type: "bool").
+ *                        - Maintained side-by-side grid layout for Push and Audio toggles on top row next to trigger title.
+ *                        - Updated notification dispatch handler to evaluate boolean switch inputs directly.
+ * v1.1.33 (2026-08-24) - UI Grid & Version Alignment Refactor:
+ *                        - Updated Section 6 subheader to "Notification Target Device(s) Selection".
+ *                        - Restored native Hubitat radio button controls (style: "radio") for discrete On/Off selection.
+ *                        - Moved Push and Audio radio selectors up to align horizontally with the trigger title row (Width 3 each).
+ *                        - Expanded message template text input fields to full width on their own row below (Width 12).
+ * v1.1.32 (2026-08-24) - Section Architecture Refactor:
+ *                        - Split former Section 6 into Section 6 (Status Tile(s) and Output Devices) and Section 7 (Notification Matrix & Alerts Engine).
+ *                        - Relocated notification preferences to top of Section 7 and Placeholders table above Matrix card grid.
+ *                        - Renumbered Diagnostics (Section 8) and Startup Guard (Section 9).
+ * v1.1.31 (2026-08-24) - Trigger Cause Help Integration:
+ *                        - Integrated trigger cause (%reason%) reference notes inline into each corresponding row card in Section 7.
+ *                        - Restructured matrix cards into cohesive informational components per event cause.
+ * v1.1.30 (2026-08-24) - Section Control Layout Facelift:
+ *                        - Restructured notification configuration into unified row cards per trigger cause.
+ *                        - Replaced toggle switches with radio controls for discrete Push and Audio selection per trigger cause.
+ *                        - Expanded matrix to include Reason Changed Only and Mode Changed Only templates.
+ *                        - Relocated output device selections under status tile configuration and moved master toggles to section footer.* v1.1.29 (2026-08-24) - Trace Logging Verbosity Adjustments:
+ *                        - Demoted Alexa Mode, Alexa Awake, and Alexa Voice Marker event logging from INFO to TRACE.
+ *                        - Demoted routine HSM event status updates, sync state evaluations, and confirmation checks from INFO/DEBUG to TRACE.
+ *                        - Retained WARNING logging for critical HSM desynchronization timeouts and verification failures.
+ * v1.1.28 (2026-08-23) - Notification Gating Logic & Reason-Only Branch Fix:
+ *                        - Refactored dispatchTileNotification() to evaluate Mode-Only and Reason-Only branches against category settings.
+ *                        - Fixed edge case where transitioning from Override to Scheduled without a Mode change was suppressed if Reason-Only template was blank or notifyOnScheduled was false.
+ *                        - Ensures transitions releasing an Override properly dispatch notifications when notifyOnOverride or category settings are active.
+ * v1.1.27 (2026-08-23) - UI Trigger Cause Table Card:
+ *                        - Exposed Supported Trigger Causes / Evaluation Reasons table in UI (%reason% reference card).
+ *                        - Explicitly documented Scheduled, Presence, Voice, Override, and Reboot trigger causes for user template authoring.
+ * v1.1.26 (2026-08-23) - Tile Metadata Integration & Extended Diagnostic Telemetry:
+ *                        - Updated updateStatusTileDevice() to pass extended decision metadata (prevMode, prevReason, periodKey, isSleeping, txId, source) to Tile Driver v1.5.0.
+ *                        - Added graceful fallback in updateStatusTileDevice() to support legacy 3- and 4-argument setStatus() tile command signatures.
+ * v1.1.25 (2026-08-23) - Safe Type Coercion, Period Sorting & Multi-Event Voice Window:
+ *                        - Added periodChanged and previousPeriodAtStart tracking to decision Map for intra-mode period boundary transitions.
+ *                        - Added dynamic start-time sorting to getActiveTimePeriodInfo() to guarantee accuracy regardless of UI entry order.
+ *                        - Hardened parseLongSafely() across consumeVoiceMarker(), verifyHsmSync(), and syncHsmState().
+ *                        - Updated consumeVoiceMarker() to inspect non-destructive TTL window so multi-device Alexa routine bursts retain Voice attribution.
+ *                        - Updated timeToMinutes() to return fallback default instead of silently defaulting to midnight (0).
+ *                        - Guarded state.activeTransaction reset to ensure transactions only clear their own ID.
+ * v1.1.24 (2026-08-23) - Obsolete HSM Retry Guard & Pure Transaction Notification Attributes:
+ *                        - Fixed race condition in verifyHsmSync by validating expected target against state.pendingHsmTarget to prevent stale retries.
+ *                        - Removed state.previousMode and state.previousReason mutations in dispatchTileNotification to guarantee 100% transaction isolation.
+ * v1.1.23 (2026-08-23) - Pipeline Integrity, Voice Marker Alignment & UI Reference Card:
+ *                        - Added Notification Variable Reference Table to UI (restored %prevMode% and %prevReason%).
+ *                        - Refactored applyDecision() to return Boolean status; processStatePipeline() short-circuits on false.
+ *                        - Gated syncOutputs() behind decision.stateChanged or explicit force flags (isButtonTrigger/isStartupSync).
+ *                        - Populated immutable transaction flags (modeChanged, reasonChanged, stateChanged) on decision Map.
+ *                        - Enforced Path A Voice Marker validation across alexaModeSwitchHandler() and alexaAwakeSwitchHandler() (falls back to Override if marker absent).
+ * v1.1.22 (2026-08-22) - Section Expansion & Collapse Memory Fix
+ * v1.1.21 (2026-08-22) - Color Palette Synchronization
+ * v1.1.20 (2026-08-22) - GUI Expansion & Audio Suppression Fixes
+ * v1.1.19 (2026-08-22) - UI Button Resync Logging & Audio Integrity
+ * v1.1.18 (2026-08-22) - UI Button Event Isolation Guard
+ * v1.1.17 (2026-08-22) - Snapshot Key Isolation Guard
+ * v1.1.16 (2026-08-22) - Dynamic Settings Snapshot Refactor
+ * v1.1.15 (2026-08-22) - Settings Snapshot Key Coverage Fix
+ * v1.1.14 (2026-08-22) - Alexa Voice Marker Window Optimization
+ * v1.1.13 (2026-08-22) - Structural Optimization & Retry Safety Guard
+ * v1.1.12 (2026-08-22) - Memory & Diagnostic Instrumentation Refactor
+ * v1.1.11 (2026-08-22) - Authoritative Input Echo Suppression Guard * v1.1.10 (2026-08-21) - Heap Lifecycle Reset & Fail-Safe Integration:
  *                        - Added purgePendingAckTokens() to initialize() and updated() to ensure clean heap state across app reloads/reboots.
  * v1.1.09 (2026-08-21) - Token Lifespan & Housekeeping Guard:
  *                        - Added a 2.0s expiration timestamp to Single-Ack Tokens in registerExpectedAck().

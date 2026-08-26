@@ -1,5 +1,5 @@
 /* 
- *  Advanced Virtual Thermostat Device Driver Custom v2
+ *  Advanced Virtual Thermostat Custom Device Driver v2
  *  Copyright 2020 Nelson Clark / Customizations by jshimota
  *
  *  ======================================================================================

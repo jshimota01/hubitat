@@ -5,23 +5,24 @@
  * Licensed under the Apache License, Version 2.0
  *
  * Change History:
+ * v1.5.0 (2026-08-23) - Downstream Diagnostic Attributes & Flexible Payload Overload:
+ *                        - Added structured non-HTML attributes: previousMode, previousReason, activePeriodKey, isSleeping, lastTransactionId, lastTriggerSource, lastTransitionEpoch, mode.
+ *                        - Expanded setStatus() command to accept optional Map/JSON metadata payloads without altering HTML tile visual layout.
  * v1.4.3 (2026-08-22) - Updated Sleeping Mode Color:
  *                        - Lightened Sleeping color from #3498DB to vivid cyan (#00FFFF) for enhanced contrast/readability.
- * v1.4.2 (2026-08-21) - Minor Typography Tweaks:
- *                        - Reduced Updated timestamp font size by an additional ~33% (from 0.42em to 0.28em).
- *                        - Softened timestamp opacity to 0.65 to diminish visual weight.
- * v1.4.1 (2026-08-21) - Fine-Tuned Typography Sizing & Disarmed Contrast Fix.
- * v1.4.0 (2026-08-21) - Scaled Font Sizes & High-Contrast Dark Tile Color Palette.
- * v1.3.0 (2026-08-21) - Native HSM Status Integration.
- * v1.2.3 (2026-08-18) - Code Integrity & Preference Rendering Optimization.
- * v1.2.2 (2026-08-18) - Change History Log Restoration.
- * v1.2.1 (2026-08-18) - Preferences Null Object Protection Fix.
- * v1.2.0 (2026-08-18) - Responsive Font Sizing, Bold Styling Preferences & UI Help.
- * v1.1.0 (2026-08-18) - Logical Color Mapping Integration.
+ * v1.4.2 (2026-08-21) - Minor Typography Tweaks
+ * v1.4.1 (2026-08-21) - Fine-Tuned Typography Sizing & Disarmed Contrast Fix
+ * v1.4.0 (2026-08-21) - Scaled Font Sizes & High-Contrast Dark Tile Color Palette
+ * v1.3.0 (2026-08-21) - Native HSM Status Integration
+ * v1.2.3 (2026-08-18) - Code Integrity & Preference Rendering Optimization
+ * v1.2.2 (2026-08-18) - Change History Log Restoration
+ * v1.2.1 (2026-08-18) - Preferences Null Object Protection Fix
+ * v1.2.0 (2026-08-18) - Responsive Font Sizing, Bold Styling Preferences & UI Help
+ * v1.1.0 (2026-08-18) - Logical Color Mapping Integration
  * v1.0.0 (2026-08-16) - Initial release of Virtual Status Tile & State Tracker Driver.
  */
 
-static String version() { return "1.4.3" }
+static String version() { return "1.5.0" }
 
 metadata {
     definition (
@@ -34,13 +35,23 @@ metadata {
         capability "Sensor"
         capability "Initialize"
 
-        // Custom Ground-Truth Attributes
+        // Primary Display Attributes
         attribute "activeMode", "string"
         attribute "activeReason", "string"
         attribute "hsmStatus", "string"
         attribute "lastTransitionTime", "string"
         attribute "tile", "string"
         attribute "html", "string"
+
+        // Extended Diagnostic Telemetry Attributes (v1.5.0)
+        attribute "mode", "string"
+        attribute "previousMode", "string"
+        attribute "previousReason", "string"
+        attribute "activePeriodKey", "string"
+        attribute "isSleeping", "string"
+        attribute "lastTransactionId", "string"
+        attribute "lastTriggerSource", "string"
+        attribute "lastTransitionEpoch", "number"
 
         // Custom Commands for Direct Control
         command "setActiveMode", ["string"]
@@ -52,7 +63,8 @@ metadata {
             [name: "Mode", type: "STRING"],
             [name: "Reason", type: "STRING"],
             [name: "Time", type: "STRING"],
-            [name: "HSM Status", type: "STRING"]
+            [name: "HSM Status", type: "STRING"],
+            [name: "Extended Metadata (Map/JSON)", type: "STRING"]
         ]
         command "refreshTile"
     }
@@ -93,9 +105,18 @@ def initialize() {
     
     // Seed initial attribute states if empty
     if (device.currentValue("activeMode") == null) sendEvent(name: "activeMode", value: "Unknown")
+    if (device.currentValue("mode") == null) sendEvent(name: "mode", value: "Unknown")
     if (device.currentValue("activeReason") == null) sendEvent(name: "activeReason", value: "Unknown")
     if (device.currentValue("hsmStatus") == null) sendEvent(name: "hsmStatus", value: "disarmed")
     if (device.currentValue("lastTransitionTime") == null) sendEvent(name: "lastTransitionTime", value: "None")
+    
+    if (device.currentValue("previousMode") == null) sendEvent(name: "previousMode", value: "Unknown")
+    if (device.currentValue("previousReason") == null) sendEvent(name: "previousReason", value: "Unknown")
+    if (device.currentValue("activePeriodKey") == null) sendEvent(name: "activePeriodKey", value: "none")
+    if (device.currentValue("isSleeping") == null) sendEvent(name: "isSleeping", value: "false")
+    if (device.currentValue("lastTransactionId") == null) sendEvent(name: "lastTransactionId", value: "none")
+    if (device.currentValue("lastTriggerSource") == null) sendEvent(name: "lastTriggerSource", value: "Initialization")
+    if (device.currentValue("lastTransitionEpoch") == null) sendEvent(name: "lastTransitionEpoch", value: now())
 
     updateTileDisplay()
 }
@@ -105,10 +126,6 @@ def parse(String description) {
     updateTileDisplay()
 }
 
-/* =========================================================================================
-   DRIVER COMMANDS
-   ========================================================================================= */
-
 def refreshTile() {
     updateTileDisplay()
 }
@@ -117,6 +134,7 @@ def setActiveMode(String modeVal) {
     if (modeVal != null) {
         logInfo "Setting activeMode -> '${modeVal}'"
         sendEvent(name: "activeMode", value: modeVal)
+        sendEvent(name: "mode", value: modeVal)
         updateTileDisplay(modeVal, null, null, null)
     }
 }
@@ -141,6 +159,7 @@ def setLastTransitionTime(String timeVal) {
     if (timeVal != null) {
         logInfo "Setting lastTransitionTime -> '${timeVal}'"
         sendEvent(name: "lastTransitionTime", value: timeVal)
+        sendEvent(name: "lastTransitionEpoch", value: now())
         updateTileDisplay(null, null, timeVal, null)
     }
 }
@@ -152,16 +171,37 @@ def setTile(String tileContent) {
     }
 }
 
-def setStatus(String modeVal, String reasonVal, String timeVal = null, String hsmVal = null) {
+def setStatus(String modeVal, String reasonVal, String timeVal = null, String hsmVal = null, def metadataInput = null) {
     String currentMode = modeVal ?: device.currentValue("activeMode") ?: "Unknown"
     String currentReason = reasonVal ?: device.currentValue("activeReason") ?: "Unknown"
     String currentTime = timeVal ?: new Date().format("hh:mm:ss a", location.timeZone ?: TimeZone.getDefault())
     String currentHsm = hsmVal ?: device.currentValue("hsmStatus") ?: "disarmed"
 
     sendEvent(name: "activeMode", value: currentMode)
+    sendEvent(name: "mode", value: currentMode)
     sendEvent(name: "activeReason", value: currentReason)
     sendEvent(name: "hsmStatus", value: currentHsm)
     sendEvent(name: "lastTransitionTime", value: currentTime)
+    sendEvent(name: "lastTransitionEpoch", value: now())
+
+    // Process Extended Telemetry Payload if provided
+    Map meta = [:]
+    if (metadataInput instanceof Map) {
+        meta = metadataInput
+    } else if (metadataInput instanceof String && metadataInput.trim().startsWith("{")) {
+        try {
+            meta = new groovy.json.JsonSlurper().parseText(metadataInput) as Map
+        } catch (Exception e) {
+            logInfo "Unable to parse metadata JSON payload: ${e.message}"
+        }
+    }
+
+    if (meta.prevMode != null) sendEvent(name: "previousMode", value: meta.prevMode.toString())
+    if (meta.prevReason != null) sendEvent(name: "previousReason", value: meta.prevReason.toString())
+    if (meta.periodKey != null) sendEvent(name: "activePeriodKey", value: meta.periodKey.toString())
+    if (meta.isSleeping != null) sendEvent(name: "isSleeping", value: meta.isSleeping.toString())
+    if (meta.txId != null) sendEvent(name: "lastTransactionId", value: meta.txId.toString())
+    if (meta.source != null) sendEvent(name: "lastTriggerSource", value: meta.source.toString())
 
     logInfo "Status Batch Update -> Mode: '${currentMode}' | Reason: '${currentReason}' | HSM: '${currentHsm}' | Time: '${currentTime}'"
     
