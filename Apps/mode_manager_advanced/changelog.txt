@@ -1,4 +1,28 @@
- * v1.1.49 (2026-08-24) - GUI Section Collapse State Retention Fix:
+ * v1.1.59 (2026-08-25) - Sleep Intent Calculation & Synchronization Fix:
+ *                        - Fixed race condition in calculateDecision() where incoming Alexa sleep transitions evaluated stale physical awake switch states.
+ *                        - Enforced authoritative isSleeping intent mapping to prevent syncOutputs from falsely turning awake switches back ON.
+ * v1.1.58 (2026-08-25) - Variable & Setting Naming Refactor:
+ *                        - Renamed alexaModeSwitch setting, handler, and references to alexaPresenceSwitch to explicitly denote Home/Away presence functionality.
+ * v1.1.57 (2026-08-25) - Alexa Integration & State Pipeline Refactor:
+ *                        - Decoupled alexaPresenceSwitch (Home/Away presence) from alexaAwakeSwitch (Awake/Sleeping state).
+ *                        - Fixed output synchronization bug where Home presence triggers forced alexaPresenceSwitch state during sleep transitions.
+ * v1.1.56 (2026-08-25) - State Persistence & Schedule Period Recovery Patch:
+ *                        - Added active period key recovery block inside initialize() to store state.activePeriodKey across version upgrades and app updates.
+ *                        - Added debounce guard inside alexaAwakeSwitchHandler to prevent state corruption during rapid Alexa routine switch toggles.
+ * v1.1.55 (2026-08-24) - Complete Multi-System Logic Patch & Time Engine Refactor:
+ *                        - Fixed Mobile Push plain-text %prevReason% fallback variable substitution typo.
+ *                        - Rebuilt timeToMinutes() with native 12-Hour AM/PM parsing for full sandbox stability.
+ *                        - Added automated duplicate schedule start time detection & warning logging in startPeriodSchedules().
+ *                        - Added UI explanatory banners for circular midnight wrap-around and suspendScheduler interactions.
+ * v1.1.54 (2026-08-24) - Schedule Time Parsing & Block Calculation Refactor:
+ *                        - Overhauled getActiveTimePeriodInfo() and timeToMinutes() to handle Date objects, ISO strings, and standard "HH:mm" time strings reliably.
+ *                        - Prevents string parsing fallbacks from breaking schedule sorting and falsely defaulting to "Late Evening".
+ * v1.1.53 (2026-08-24) - Sandbox-Compliant Timestamp Fix:
+ *                        - Replaced System.currentTimeMillis() with new Date().getTime() in static methods.
+ *                        - Fixes Hubitat security sandbox compilation error on line 36.
+ * v1.1.52 (2026-08-24) - Static Scope Method Resolution Fix.
+ * v1.1.51 (2026-08-24) - Native 12-Column Grid Alignment Refactor.
+ * v1.1.50 (2026-08-24) - GUI Column Alignment & Table Layout Refactor. * v1.1.49 (2026-08-24) - GUI Section Collapse State Retention Fix:
  *                        - Fixed Section 8 collapsing on submitOnChange UI re-renders during template preview changes.
  *                        - Section 8 now dynamically evaluates 'hidden' based on user interaction state to stay open during edits.
  * v1.1.48 (2026-08-24) - Hubitat Sandbox Compatibility Fix:

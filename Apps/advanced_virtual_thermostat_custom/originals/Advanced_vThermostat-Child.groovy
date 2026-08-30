@@ -16,50 +16,21 @@
  * 
  */
 
- /*
- * Advanced vThermostat Child Custom App
- *
- *  Licensed Virtual the Apache License, Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License. You may obtain a copy of the License at:
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *  for the specific language governing permissions and limitations under the License.
- *    
- *  This driver and app are based on Nelson Clark project - modified to adjust for additions and fixes needed for usability by James Shimota
- *
- *  Change History:
- *
- *      Date          Source        Version     What                                              URL
- *      ----          ------        -------     ----                                              ---
- *      2024-01-30    jshimota      0.2.1.9      Starting version
- *      2021-02-01    jshimota      0.3.0.0      Full fork - including previously made driver customization done previously
- *
- */
-
-
-static String version() { return '0.3.0.0' }
-
 definition(
-	name: "Advanced vThermostat Child Custom",
-	namespace: "jshimota",
-	author: "James Shimota",
+	name: "Advanced vThermostat Child",
+	namespace: "nclark",
+	author: "Nelson Clark",
 	description: "Join any sensor(s) with any outlet(s) for virtual thermostat control.",
 	category: "Green Living",
-	iconUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo-small.png",
-	iconX2Url: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo.png",
-	importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-Child_Custom.groovy",
-
-	parent: "jshimota:Advanced vThermostat Manager Custom"
+	iconUrl: "https://raw.githubusercontent.com/NelsonClark/Hubitat/main/Apps/Advanced_vThermostat/Advanced_vThermostat-logo-small.png",
+	iconX2Url: "https://raw.githubusercontent.com/NelsonClark/Hubitat/main/Apps/Advanced_vThermostat/Advanced_vThermostat-logo.png",
+	importUrl: "https://raw.githubusercontent.com/NelsonClark/Hubitat/main/Apps/Advanced_vThermostat/Advanced_vThermostat-Child.groovy",
+	parent: "nclark:Advanced vThermostat Manager"
 )
 
 
 preferences {
 	page(name: "pageConfig") // Doing it this way elimiates the default app name/mode options.
-    input name: "dbgEnable", type: "bool", title: "Enable debug logging", submitOnChange: true, defaultValue: false
-    input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", submitOnChange: true, defaultValue: true
 }
 
 
@@ -116,8 +87,6 @@ def pageConfig() {
 		section("Log Settings...") {
 			input (name: "logLevel", type: "enum", title: "Live Logging Level: Messages with this level and higher will be logged", options: [[0: 'Disabled'], [1: 'Error'], [2: 'Warning'], [3: 'Info'], [4: 'Debug'], [5: 'Trace']], defaultValue: 3)
 			input "logDropLevelTime", "decimal", title: "Drop down to Info Level Minutes", required: true, defaultValue: 5
-			input name: "dbgEnable", type: "bool", title: "Enable debug logging", submitOnChange: true, defaultValue: false
-			input name: "txtEnable", type: "bool", title: "Enable descriptionText logging", submitOnChange: true, defaultValue: true
 		}
 
 	}
@@ -145,8 +114,8 @@ def installed() {
 	logger("info", "Creating vThermostat : ${label} with device id: ${state.deviceID}")
 	try {
 		//** Should we add isComponent in the properties of the child device to make sure we can't remove the Device, will this make it that we can't change settings in it? 
-		thermostat = addChildDevice("jshimota", "Advanced vThermostat Device Custom", state.deviceID, null, [label: label, name: label, completedSetup: true]) //** Deprecated hubIDl no longer passed since 2.1.9
-		//thermostat = addChildDevice("jshimota", "Advanced vThermostat Device Custom", state.deviceID, [label: label, name: label, completedSetup: true]) //** This will only work with ver 2.1.9 and up, let's wait a bit
+		thermostat = addChildDevice("nclark", "Advanced vThermostat Device", state.deviceID, null, [label: label, name: label, completedSetup: true]) //** Deprecated hubIDl no longer passed since 2.1.9
+		//thermostat = addChildDevice("nclark", "Advanced vThermostat Device", state.deviceID, [label: label, name: label, completedSetup: true]) //** This will only work with ver 2.1.9 and up, let's wait a bit
 	} catch(e) {
 		logger("error", "Error adding vThermostat child ${label}: ${e}") //*** Not 100% sure about this one, test message outside loop to be sure ***
 		//*** Original code: log.error("Could not create vThermostat; caught exception", e)

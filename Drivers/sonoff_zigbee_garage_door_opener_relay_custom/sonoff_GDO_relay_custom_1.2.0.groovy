@@ -26,10 +26,11 @@
  * ver  1.1.0f 2024-09-24 jshimota - removed more stuff - set open and close just to pass through
  * ver  1.1.0g 2026-05-24 jshimota - fixed an NPE, gemini optimized
  * ver  1.1.0h 2026-05-27 jshimota - rebuilt for Sonoff Mini-ZBD
+ * ver  1.2.0  2026-08-27 jshimota - added refresh/ping capabilities and automated variable scheduled health checks
  */
 
-def version() { "1.1.0h" }
-def timeStamp() {"2026/05/27 6:30 PM"}
+def version() { "1.2.0" }
+def timeStamp() {"2026/08/27 9:45 AM"}
 
 import hubitat.device.HubAction
 import hubitat.device.Protocol
@@ -45,14 +46,19 @@ metadata {
         capability "Configuration"
         capability "Switch"
         capability "GarageDoorControl"
+        capability "Refresh"
+        capability "Initialize"
+
+        command "ping"
 
         if (_DEBUG) {
             command "initialize", [[name: "Manually initialize the device after switching drivers.\n\r     ***** Will load device default values! *****" ]]
         }
-			fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B05,FC57,FC11", outClusters:"0003,0006,0019", model:"MINI-ZBD", manufacturer:"SONOFF", controllerType: "ZGB", deviceJoinName: "Sonoff Garage Door Opener Relay"
+        fingerprint profileId:"0104", endpointId:"01", inClusters:"0000,0003,0004,0005,0006,0B05,FC57,FC11", outClusters:"0003,0006,0019", model:"MINI-ZBD", manufacturer:"SONOFF", controllerType: "ZGB", deviceJoinName: "Sonoff Garage Door Opener Relay"
     }
 
     preferences {
+        input (name: "healthCheckInterval", type: "enum", title: "<b>Health Check Schedule</b>", description: "<i>Automatically ping device on a regular interval to verify presence and update last activity.</i>", options: ["0":"Disabled", "1":"Every Hour", "3":"Every 3 Hours", "6":"Every 6 Hours", "12":"Every 12 Hours", "24":"Every 24 Hours"], defaultValue: "3")
         input (name: "logEnable", type: "bool", title: "<b>Text logging</b>", description: "<i>Text information, useful for basic logging. Recommended value is <b>true</b></i>", defaultValue: true)
         input (name: "txtEnable", type: "bool", title: "<b>Description text logging</b>", description: "<i>Display measured values in HE log page. Recommended value is <b>true</b></i>", defaultValue: true)
         input (name: "dbgEnable", type: "bool", title: "<b>Debug logging</b>", description: "<i>Debug information, useful for troubleshooting. Recommended value is <b>false</b></i>", defaultValue: false)
@@ -104,6 +110,9 @@ def parse(String description) {
                 if (logEnable) log.warn "${device.displayName} NOT PROCESSED COMMAND Sonoff cmd ${descMap?.command} : dp=${descMap?.data[2]} value=${descMap?.data[3]} descMap.data = ${descMap?.data}"
             }
         } 
+        else if ((descMap?.cluster == "0000" || descMap?.clusterInt == 0) && descMap?.attrId == "0000") {
+            if (dbgEnable) log.debug "${device.displayName} Health check response / presence confirmed."
+        }
         else if (descMap?.cluster == "0000" && descMap?.attrId == "0001") {
             if (dbgEnable) log.debug "${device.displayName} Sonoff check-in: ${descMap}"
         } else {
@@ -159,6 +168,16 @@ def relayOff() {
     sendZigbeeCommands(zigbee.command(0x006, 0x00, "00010101000100"))
 }
 
+def refresh() {
+    if (dbgEnable) log.debug "${device.displayName} refresh() requested"
+    return ping()
+}
+
+def ping() {
+    if (dbgEnable) log.debug "${device.displayName} sending health check ping (Basic Cluster read)..."
+    sendZigbeeCommands(zigbee.readAttribute(0x0000, 0x0000))
+}
+
 def sendSwitchEvent(state, isDigital=false) {
     // Prevent redundant event writes if the state hasn't changed
     if (device.currentValue("switch") == state) {
@@ -176,6 +195,42 @@ def sendSwitchEvent(state, isDigital=false) {
     sendEvent(map)
 }
 
+void scheduleHealthCheck() {
+    unschedule('healthCheck')
+    String interval = settings?.healthCheckInterval ?: "3"
+    
+    switch (interval) {
+        case "1":
+            schedule("0 0 */1 ? * * *", healthCheck)
+            if (dbgEnable) log.debug "${device.displayName} scheduled health check every hour"
+            break
+        case "3":
+            schedule("0 0 */3 ? * * *", healthCheck)
+            if (dbgEnable) log.debug "${device.displayName} scheduled health check every 3 hours"
+            break
+        case "6":
+            schedule("0 0 */6 ? * * *", healthCheck)
+            if (dbgEnable) log.debug "${device.displayName} scheduled health check every 6 hours"
+            break
+        case "12":
+            schedule("0 0 */12 ? * * *", healthCheck)
+            if (dbgEnable) log.debug "${device.displayName} scheduled health check every 12 hours"
+            break
+        case "24":
+            schedule("0 0 3 ? * * *", healthCheck) // Runs daily at 3:00 AM
+            if (dbgEnable) log.debug "${device.displayName} scheduled health check daily at 3:00 AM"
+            break
+        default:
+            if (dbgEnable) log.debug "${device.displayName} scheduled health checks disabled"
+            break
+    }
+}
+
+def healthCheck() {
+    if (dbgEnable) log.debug "${device.displayName} executing scheduled health check..."
+    ping()
+}
+
 void initializeVars( boolean fullInit = true ) {
     if (logEnable) log.info "${device.displayName} InitializeVars()... fullInit = ${fullInit}" 
     if (fullInit) {
@@ -184,12 +239,14 @@ void initializeVars( boolean fullInit = true ) {
     }
     if (fullInit || settings?.logEnable == null) device.updateSetting("logEnable", [value:"false", type:"bool"]) 
     if (fullInit || settings?.txtEnable == null) device.updateSetting("txtEnable", [value:"true", type:"bool"]) 
+    if (fullInit || settings?.healthCheckInterval == null) device.updateSetting("healthCheckInterval", [value:"3", type:"enum"])
 }
 
 def initialize() {
     if (txtEnable) log.info "${device.displayName} Initialize()..."
     unschedule()
     initializeVars()
+    scheduleHealthCheck()
     sendEvent(name: "power_retvalue", value: "1")
     updated()            
 }
@@ -212,6 +269,7 @@ def configure() {
 
 def updated() {
     checkDriverVersion()
+    scheduleHealthCheck()
     log.info "${device.displayName} debug logging is: ${dbgEnable == true}"
     log.info "${device.displayName} description logging is: ${txtEnable == true}"
     if (txtEnable) log.info "${device.displayName} Updated..."
@@ -223,6 +281,8 @@ def installed() {
     log.info "Debug logging will be automatically disabled after 30 minutes"
     device.updateSetting("dbgEnable", [type:"bool", value:"false"])
     device.updateSetting("txtEnable", [type:"bool", value:"true"])
+    device.updateSetting("healthCheckInterval", [type:"enum", value:"3"])
+    scheduleHealthCheck()
     if (dbgEnable) runIn(1800, logsOff, [overwrite: true])
 }
 
