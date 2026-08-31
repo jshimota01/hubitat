@@ -27,6 +27,9 @@
  *  2. Select temperature sensors, heating outlets, and cooling outlets to pair.
  *  
  *  Changelog:
+ *  v2.3.5    08/30/26    jshimota    Converted current temperature check to Double comparison and added [DEVICE CREATION FAILED] badge
+ *  v2.3.4    08/30/26    jshimota    Confirmed co-located importUrl paths under Apps directory on GitHub
+ *  v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub
  *  v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement
  *  v2.3.1    08/30/26    jshimota    Added automatic assignment of new child devices to 'Virtual' room
  *  v2.3.0    08/30/26    jshimota    Added automated device creation help callout and applied v1.1.0 App Master Template
@@ -37,8 +40,8 @@
  *  v2.0.0    08/22/26    jshimota    Bumped definition name to v2 and corrected child device creation
  **/
 
-static String version() { return '2.3.2' }
-def timeStamp() { return "2026/08/30 09:33 AM" }
+static String version() { return '2.3.5' }
+def timeStamp() { return "2026/08/30 10:28 AM" }
 
 definition(
     name: "Advanced vThermostat Child (Custom)",
@@ -128,12 +131,6 @@ private void checkAndLogVersionDemarcation() {
     }
 }
 
-// NPE-Safe Timestamp Helper Routine
-private String getTimestamp() {
-    TimeZone tz = location?.timeZone ?: TimeZone.getDefault()
-    return new Date().format("yyyy-MM-dd HH:mm:ss", tz)
-}
-
 // Dynamic App Label Badging Helper
 private void updateAppLabel(String statusText = null) {
     Boolean showVersion = getSettingBool("showVersionInLabel", true)
@@ -194,6 +191,7 @@ void installed() {
         )
     } catch(e) {
         logError "Error adding vThermostat child device ${label}: ${e}"
+        updateAppLabel("DEVICE CREATION FAILED")
     }
     
     state.lastSettingsSnapshot = captureSettingsSnapshot()
@@ -206,15 +204,16 @@ void updated() {
 
     String currentSnapshot = captureSettingsSnapshot()
     Boolean settingsChanged = (state.lastSettingsSnapshot == null || state.lastSettingsSnapshot != currentSnapshot)
+    Boolean codeVersionChanged = (state.lastInitializedVersion != version())
 
-    if (settingsChanged) {
-        logInfo "Settings modification detected. Re-establishing subscriptions and schedules..."
+    if (settingsChanged || codeVersionChanged) {
+        logInfo "Settings or code version modification detected. Re-establishing subscriptions and schedules..."
         state.lastSettingsSnapshot = currentSnapshot
         unsubscribe()
         unschedule()
         initialize(getThermostat(), false)
     } else {
-        logDebug "Child app closed without setting changes. Skipping re-initialization."
+        logDebug "Child app closed without setting or version changes. Skipping re-initialization."
     }
     
     def thermostat = getThermostat()
@@ -232,9 +231,11 @@ void uninstalled() {
 }
 
 private void initialize(thermostatInstance = null, Boolean isInstall = false) {
+    state.lastInitializedVersion = version()
     if (!thermostatInstance) thermostatInstance = getThermostat()
     if (!thermostatInstance) {
         logError "initialize() - Device instance not found."
+        updateAppLabel("DEVICE NOT FOUND")
         return
     }
 
@@ -280,7 +281,6 @@ void disableDebugLogging() {
     if (getSettingBool("logDebugEnable", false)) {
         logWarn "30 minutes have elapsed. Automatically disabling debug logging."
         app.updateSetting("logDebugEnable", [type: "bool", value: false])
-        state.lastLogDebugEnable = false
     }
 }
 
@@ -320,7 +320,11 @@ def updateTemperature() {
 
     def avgTemp = (validTemps.sum() / validTemps.size()).toDouble().round(1)
     
-    if (thermostat.currentValue("temperature") != avgTemp) {
+    // Convert currentValue to double safely to prevent String vs Double comparison mismatch
+    def currentValRaw = thermostat.currentValue("temperature")
+    Double currentTemp = (currentValRaw != null && currentValRaw.toString().isNumber()) ? currentValRaw.toString().toDouble() : null
+
+    if (currentTemp == null || currentTemp != avgTemp) {
         thermostat.setTemperature(avgTemp)
     }
     return avgTemp

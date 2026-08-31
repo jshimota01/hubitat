@@ -1,0 +1,69 @@
+ *	v0.9.8	  08/07/26	  Gemini	  Added inline Elvis operator guards (?:) on table additions to permanently resolve null+1 NPE in mainPage
+ *	v0.9.7	  08/07/26	  Gemini	  Fixed NullPointerException in mainPage AQI tier limits table rendering
+ *	v0.9.6	  08/07/26	  Gemini	  Refactored updateTile() to accept pre-captured evaluation context map to eliminate duplicate reads
+ *	v0.9.5	  08/07/26	  Gemini	  Updated AQI validation error message text to 'strictly positive'
+ *	v0.9.4	  08/07/26	  Gemini	  Validated before unscheduling in updated(), eliminated duplicate thermostat/AQI snapshot reads, and added schedule time string validation
+ *	v0.9.3	  08/07/26	  Gemini	  Fixed fan ownership bug: only claim fanOwned when MEM explicitly issues a fanOn command
+ *	v0.9.2	  08/07/26	  Gemini	  Fixed NullPointerException in getAqiTierLimits when settings values are uninitialized
+ *	v0.9.1	  08/07/26	  Gemini	  Fixed UI HTML StringBuilder chaining compilation error in mainPage
+ *	v0.9.0	  08/07/26	  Gemini	  Implemented unified evaluation pipeline pass, explicit state device ownership tracking (fan, rgb, filter), and centralized validateConfiguration validation engine
+ *	v0.8.7	  08/07/26	  Gemini	  Added fan input range validation, converted setpoints to BigDecimal, and unified tile evaluation pipeline context
+ *	v0.8.6	  08/07/26	  Gemini	  Made secondary AQI sensor optional, updated filter wording, verified actual filter state, and cleared RGB on disable
+ *	v0.8.5	  08/07/26	  Gemini	  Hardened AQI sensor value parser against non-numeric payloads
+ *	v0.8.4	  08/07/26	  Gemini	  Added validateAqiThresholds validation helper and UI error alerting
+ *	v0.8.3	  08/07/26	  Gemini	  Made toggleFanCirculation callback authoritative via targetPhase parameter
+ *	v0.8.2	  08/07/26	  Gemini	  Implemented state.fanControlOwned tracking to safely restore fan to AUTO on disable
+ *	v0.8.1	  08/07/26	  Gemini	  Fixed critical schedule overwrite bug by passing [overwrite: false] to schedule()
+ *	v0.8.0	  08/07/26	  Gemini	  Executed comprehensive bug audit and optimized tile HTML synchronization pass
+ *	v0.7.8	  08/07/26	  Gemini	  Updated Room Air Filter Control description text
+ *	v0.7.7	  08/07/26	  Gemini	  Renamed Room Air Filter setting labels to 'Enable Automated Room Air Filter Control' and 'Select Room Air Filter Switch/Device'
+ *	v0.7.6	  08/07/26	  Gemini	  Updated Room Air Filter table headers to 'Indicator Light' and 'Room Air Filter State'
+ *	v0.7.5	  08/07/26	  Gemini	  Fixed NullPointerException in mainPage UI table rendering using safeToInt helper
+ *	v0.7.4	  08/07/26	  Gemini	  Restricted active RGB indicator output strictly to Home or Awake modes
+ *	v0.7.3	  08/07/26	  Gemini	  Turn off RGB light when Hub Mode (or override switch) is Sleeping or Away
+ *	v0.7.2	  08/07/26	  Gemini	  Updated updateRGB to turn off RGB light when AQI is Good
+ *	v0.7.1	  08/05/26	  Gemini	  Added AQI health action strings to status mapping and tile HTML renderer
+ *	v0.7.0	  08/05/26	  Gemini	  Implemented 6-tier EPA AQI thresholds, configurable override boundaries, and updated UI tables
+ *	v0.6.1	  08/05/26	  Gemini	  Audited structural organization across all 10 conceptual sections
+ *	v0.6.0	  08/05/26	  Gemini	  Enforced strict architectural separation: mainPage UI passes are now strictly read-only
+ *	v0.5.3	  08/05/26	  Gemini	  Consolidated fragmented device attribute reads into unified thermostat state map snapshots
+ *	v0.5.2	  08/05/26	  Gemini	  Decomposed AQI Engine into readSensors, calculateAverage, determineStatus, updateRGB, updateAirFilter, updateDashboard
+ *	v0.5.1	  08/05/26	  Gemini	  Decomposed Dashboard Tile Engine into buildTileHtml, updateTile, and ensureChildDevice
+ *	v0.5.0	  08/05/26	  Gemini	  Reorganized full codebase into 10 explicit functional architecture sections
+ *	v0.4.1	  08/05/26	  Gemini	  Converted schedule evaluation from Date objects to minutes-since-midnight arithmetic
+ *	v0.4.0	  08/05/26	  Gemini	  Added comprehensive Javadoc/GroovyDoc documentation to all methods
+ *	v0.3.9	  08/05/26	  Gemini	  Expanded top-level header metadata block
+ *	v0.3.8	  08/05/26	  Gemini	  Standardized method typing: private void for actions, explicit object types for returns
+ *	v0.3.7	  08/05/26	  Gemini	  Wrapped all device state queries and command dispatches in missing device recovery handlers
+ *	v0.3.6	  08/05/26	  Gemini	  Centralized AQI threshold evaluation into getAqiStatus(avg) helper
+ *	v0.3.5	  08/05/26	  Gemini	  Replaced 5-min polling loop with exact schedule boundary scheduling
+ *	v0.3.4	  08/05/26	  Gemini	  Replaced HTML string concatenations with StringBuilder
+ *	v0.3.3	  08/05/26	  Gemini	  Decomposed evaluateAirQuality into modular sub-routines (SRP)
+ *	v0.3.2	  08/05/26	  Gemini	  Cached logging flags during initialize() to eliminate repeated settings lookups
+ *	v0.3.1	  08/05/26	  Gemini	  Hardened fan circulation loop timers against reboot/orphan states
+ *	v0.3.0	  08/05/26	  Gemini	  Cached targetThermostat attribute reads into single-pass local variables
+ *	v0.2.9	  08/05/26	  Gemini	  Removed evaluateAirQuality side-effects from mainPage UI rendering
+ *	v0.2.8	  08/05/26	  Gemini	  Renamed helper routines to sendIfChangedStateValue and sendIfChangedAttributeValue
+ *	v0.2.7	  08/05/26	  Gemini	  Separated sendIfChanged into updateStateValue and updateDeviceAttribute
+ *	v0.2.6	  08/05/26	  Gemini	  Standardized event dispatches to route exclusively through sendIfChanged
+ *	v0.2.5	  08/05/26	  Gemini	  Added memTile HTML string comparison guard to suppress redundant tile events
+ *	v0.2.4	  08/05/26	  Gemini	  Refactored transient state variables into local variables to reduce DB writes
+ *	v0.2.3	  08/05/26	  Gemini	  Completed comprehensive 17-point verification audit and code pass
+ *	v0.2.2	  08/05/26	  Gemini	  Updated ensureChildDevice to target custom 'MEM Dashboard Tile' driver
+ *	v0.2.1	  08/05/26	  jshimota	  Fixed ensureChildDevice syntax error and map bracket structure
+ *	v0.2.0	  08/05/26	  Gemini	  Fixed UnknownDeviceTypeException by switching child device type to 'Virtual Variable'
+ *	v0.1.9	  08/05/26	  Gemini	  Execute dynamic AQI evaluation directly inside mainPage UI render pass
+ *	v0.1.8	  08/05/26	  Gemini	  Made AQI range thresholds fully configurable via app settings
+ *	v0.1.6	  08/05/26	  Gemini	  Fixed AQI evaluation null guard on initialize, forced direct switch state refresh
+ *	v0.1.5	  08/05/26	  jshimota	  Immediate Air Filter switch status evaluation on app save/initialize
+ *	v0.1.4	  08/05/26	  jshimota	  Added AQI thresholds and color table to Air Quality Monitoring section UI
+ *	v0.1.3	  08/05/26	  jshimota	  Renamed section to Room Air Filter Control, default ON, added numerical AQI threshold table
+ *	v0.1.2	  08/05/26	  jshimota	  Execute immediate AQI evaluation and average upon pressing Done (installed/updated)
+ *	v0.1.1	  08/05/26	  Gemini	  Updated AQI sensor pick list to Hubitat capability.airQuality
+ *	v0.1.0	  08/05/26	  Gemini	  Made Air Filter independently toggleable
+ *	v0.0.9	  08/05/26	  Gemini	  Replaced Mode overrides with Switch devices, split Air Filter into separate section
+ *	v0.0.8	  08/05/26	  jshimota	  Added child tile device support and HTML memTile attribute output
+ *	v0.0.7	  08/05/26	  Gemini	  Bug check fix: quoted subscribe/schedule handlers, fixed boundary condition in isTimeBetween
+ *	v0.0.6	  08/05/26	  jshimota	  Renamed app to Multiperiod Environment Manager
+ *	v0.0.5	  08/05/26	  jshimota	  Implemented unified logging, auto-debug disable, and sendIfChanged routine
+ *	v0.0.4	  08/01/26	  Gemini	  Added Air Filter AQI control

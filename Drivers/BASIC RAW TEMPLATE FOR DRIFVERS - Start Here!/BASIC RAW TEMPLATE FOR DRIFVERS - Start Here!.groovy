@@ -1,8 +1,6 @@
 /**
- * [Driver Name]
- * Platform: Hubitat Elevation
- * Notes: [Key details, compatibility, or implementation notes]
- * Capabilities: [List primary capabilities supported by this driver]
+ * Driver Name (Custom)
+ * Device Driver for Hubitat Elevation
  **/
 /**
  * Copyright 2026 James Shimota
@@ -21,40 +19,33 @@
  **/
 /**
  *  Purpose:
- *
- *  Instructions:
+ *  Detailed breakdown of driver purpose and supported functionality.
  *  
  *  Changelog:
- *  v1.0.4    08/30/26    jshimota    Applied trace deduplication, null-safe location/time Zone checks, and forced isStateChange initializations
- *  v1.0.3    08/29/26    jshimota    Added setupSchedule call to updated() for automatic schedule re-evaluations
- *  v1.0.2    08/29/26    jshimota    Added updateFirmware command routine and GUI version force updates
- *  v1.0.1    08/29/26    jshimota    Added type-safe preference parsing and non-overwriting debug timers
- *  v1.0.0    08/28/26    jshimota    Initial starting code
+ *  v1.0.6    08/30/26    jshimota    Added auto-reinitialization initialize(false) inside resetDriver() routine
+ *  v1.0.0    08/30/26    jshimota    Initial release of standardized template
  **/
 // [KEEP-EXACT] See possible changelog.txt for past changelog history.
 
-static String version() { return '1.0.4' }
-def timeStamp() { return "2026/08/30 08:10 AM" }
+static String version() { return '1.0.6' }
+def timeStamp() { return "2026/08/30 11:35 AM" }
 
 metadata {
-    definition(
-        name: "[Driver Name]",
-        namespace: "jshimota",
-        author: "James Shimota",
-        importUrl: "https://raw.githubusercontent.com/jshimota/Hubitat/Drivers/[filename].groovy"
+    definition (
+        name: "Driver Name (Custom)", 
+        namespace: "jshimota", 
+        author: "James Shimota", 
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/driver_directory/Driver_File.groovy"
     ) {
-        // Capabilities
+        capability "Actuator"
         capability "Configuration"
         capability "Refresh"
 
-        // Custom Attributes
+        // Attributes
         attribute "driverVersion", "string"
 
         // Custom Commands
         command "resetDriver"
-        command "updateFirmware"
-        
-        // Fingerprints (if applicable)
     }
 
     preferences {
@@ -82,9 +73,13 @@ private String getTimestamp() {
     return new Date().format("yyyy-MM-dd HH:mm:ss", tz)
 }
 
-// Scheduled Cron / Interval Setup Helper (Implement per driver)
-def setupSchedule() {
-    // Override in specific drivers to manage runEveryX or schedule() routines
+void parse(String description) {
+    logDebug "parse(): ${description}"
+}
+
+def refresh() {
+    logInfo "refresh() requested"
+    return []
 }
 
 // Hubitat Lifecycle Routines
@@ -97,50 +92,30 @@ void installed() {
 
 void updated() {
     checkAndLogVersionDemarcation()
-    logInfo "Updating preferences..."
+    logInfo "Preferences updated"
     sendEvent(name: "driverVersion", value: version(), isStateChange: true)
     initialize(false)
-    setupSchedule()
 }
 
-// Return dynamic List for Zigbee/Z-Wave radio command transmission
 def configure() {
     checkAndLogVersionDemarcation()
     logInfo "Configuring device..."
     sendEvent(name: "driverVersion", value: version(), isStateChange: true)
     initialize(false)
-
-    setupSchedule()
-    
-    // Example: Safe preference integer conversion pattern
-    // Integer checkInHours = (checkInInterval ?: "12").toString().toInteger()
-    
-    List<String> cmds = []
-    logDebug "configure() sending Zigbee/Z-Wave payload -> ${cmds}"
-    return cmds
-}
-
-def refresh() {
-    logDebug "Executing refresh()..."
-    List<String> cmds = []
-    return cmds
-}
-
-// Update Firmware Command Routine (Zigbee OTA trigger) [Optional]
-List<String> updateFirmware() {
-    logInfo "Checking for firmware updates..."
-    return zigbee.updateFirmware()
+    return []
 }
 
 private void initialize(Boolean isInstall = false) {
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    state.lastInitializedVersion = version()
+    sendEvent(name: "driverVersion", value: version())
+    unschedule("disableDebugLogging")
 
     if (isInstall) {
         device.updateSetting("logDebugEnable", [type: "bool", value: true])
         logInfo "Debug logging enabled for 30 minutes."
         runIn(1800, "disableDebugLogging")
     } else if (getSettingBool("logDebugEnable", false)) {
-        logInfo "Debug logging active. Automatic turn-off scheduled."
+        logInfo "Debug logging enabled. Will automatically turn off in 30 minutes."
         runIn(1800, "disableDebugLogging", [overwrite: false])
     } else {
         unschedule("disableDebugLogging")
@@ -152,7 +127,6 @@ void disableDebugLogging() {
     if (getSettingBool("logDebugEnable", false)) {
         logWarn "30 minutes have elapsed. Automatically disabling debug logging."
         device.updateSetting("logDebugEnable", [type: "bool", value: false])
-        state.lastLogDebugEnable = false
     }
 }
 
@@ -162,7 +136,8 @@ void resetDriver() {
     clearAllSchedules()
     clearAllAttributes()
     clearAllDriverStates()
-    logInfo "Driver reset process completed."
+    initialize(false)
+    logInfo "Driver reset process completed and re-initialized."
 }
 
 // Individual Utility Routines
@@ -204,7 +179,8 @@ private void sendIfChanged(Map args) {
         if (args.isStateChange != null) eventMap.isStateChange = args.isStateChange
 
         sendEvent(eventMap)
-        logTrace "${desc}"
+        logInfo "${desc}"
+        logDebug "Event triggered: ${nameStr} -> ${args.value}"
     }
 }
 

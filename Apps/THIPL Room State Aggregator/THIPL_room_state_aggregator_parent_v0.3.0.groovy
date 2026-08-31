@@ -1,57 +1,41 @@
-/**
- * Advanced vThermostat Manager (Custom) Parent App
+/*
+ * THIPL Room State Aggregator
+ * Parent application to manage multiple THIPL room state aggregator instances.
  * Platform: Hubitat Elevation
- * Notes: Custom parent manager app for organizing Advanced vThermostat Child (Custom) instances
- **/
-/**
- * Copyright 2026 James Shimota / Original 2020 Nelson Clark
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at:
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
-/**
- *  Purpose:
- *  Parent application container for managing child instances of Advanced vThermostat Child (Custom).
+ *  Change History:
  *
- *  Instructions:
- *  1. Install this parent application.
- *  2. Add new virtual thermostat instances from within this parent app interface.
- *  
- *  Changelog:
- *  v2.3.5    08/30/26    jshimota    Upgraded to App Master Template v1.2.0 (code version re-init trigger and dead state cleanup)
- *  v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub
- *  v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement
- *  v2.3.1    08/30/26    jshimota    Finalized refactor alignment for App Master Template v1.1.0
- *  v2.3.0    08/30/26    jshimota    Applied v1.1.0 App Master Template (styled banner, badging, collapsible prefs, settings snapshot hash)
- *  v2.2.1    08/30/26    jshimota    Updated definition display name to Advanced vThermostat Manager (Custom)
- *  v2.2.0    08/30/26    jshimota    Applied initial App Master Template
- *  v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style
- *  v2.1.0    08/30/26    jshimota    Removed v2 identifiers and updated references
- *  v2.0.0    08/22/26    jshimota    Bumped definition name and aligned icon/import URLs
- **/
+ *      Date          Source        Version     What                                                URL
+ *      ----          ------        -------     ----                                                ---
+ *      2026-06-01    jshimota      0.0.1       Initial release as THIP Averager Parent
+ *      2026-08-01    Gemini        0.0.2       Renamed to THIP Room Averager Parent and added standard header
+ *      2026-08-02    Gemini        0.0.3       Renamed to ATHIP Room Averager Parent
+ *      2026-08-03    Gemini        0.1.0       Renamed to THIPL Room State Aggregator Parent
+ *      2026-08-09    jshimota      0.1.1       Fixed Namespace issue
+ *      2026-08-30    Gemini        0.2.0       Removed 'Parent' suffix from application display name
+ *      2026-08-30    jshimota      0.3.0       Applied App Master Template v1.2.1: dark mode header banner, central logging engine, snapshotting, and version demarcation.
+ *
+ */
 
-static String version() { return '2.3.5' }
-def timeStamp() { return "2026/08/30 10:28 AM" }
+// [KEEP-EXACT] See possible changelog.txt for past changelog history.
+
+static String version() { return '0.3.0' }
+def timeStamp() { return "2026/08/30 02:48 PM" }
 
 definition(
-    name: "Advanced vThermostat Manager (Custom)",
+    name: "THIPL Room State Aggregator",
     namespace: "jshimota",
-    author: "Nelson Clark / Customizations by jshimota",
-    description: "Join any sensor(s) with any outlet(s) for virtual thermostat control.",
-    category: "Green Living",
-    iconUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo-small.png",
-    iconX2Url: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo.png",
-    importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Parent.groovy",
-    singleInstance: true
+    author: "James Shimota",
+    description: "Parent app to manage multiple THIPL room state aggregator instances.",
+    category: "Convenience",
+    iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
+    iconXUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png",
+    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png"
 )
 
 preferences {
@@ -65,24 +49,29 @@ def mainPage() {
         /* Styled App Header Banner */
         section() {
             paragraph "<div style='background-color:#1A252F; color:#FFFFFF; padding:12px; border-radius:6px; text-align:center; margin-bottom:10px;'>" +
-                      "<h2 style='color:#FFFFFF; margin:0; font-size:20px; font-weight:600;'>Advanced vThermostat Manager (Custom)</h2>" +
+                      "<h2 style='color:#FFFFFF; margin:0; font-size:20px; font-weight:600;'>THIPL Room State Aggregator</h2>" +
                       "<span style='font-size:12px; opacity:0.8;'>Version ${currentVersion} (${timeStamp()})</span></div>"
         }
 
-        section("<b>Installed Thermostats</b>") {
-            app(name: "thermostats", appName: "Advanced vThermostat Child (Custom)", namespace: "jshimota", title: "Add New Advanced vThermostat Instance", multiple: true)
+        /* Child Application Instances */
+        section("<b>Child Aggregator Instances</b>") {
+            app name: "childApps", 
+                appName: "THIPL Room State Aggregator Child", 
+                namespace: "jshimota", 
+                title: "Add New THIPL Room State Aggregator Instance", 
+                multiple: true
         }
 
-        /* Collapsible App Preferences & Logging */
+        /* Collapsible App Preferences & Logging Options */
         section("<b>App Preferences & Logging Options</b>", hideable: true, hidden: true) {
             input name: "showVersionInLabel", type: "bool", title: "Show Version in App Label?", defaultValue: true
-            
+
             paragraph "<hr style='border:0; border-top:1px solid #E0E0E0; margin:8px 0;'/>"
 
             input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
             input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", defaultValue: true, required: true
             input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", defaultValue: true, required: true
-            input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", defaultValue: false, required: true
+            input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", defaultValue: true, required: true
             input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", defaultValue: false, required: true
         }
     }
@@ -100,7 +89,7 @@ private void checkAndLogVersionDemarcation() {
 // Dynamic App Label Badging Helper
 private void updateAppLabel() {
     Boolean showVersion = getSettingBool("showVersionInLabel", true)
-    String baseLabel = "Advanced vThermostat Manager (Custom)"
+    String baseLabel = "THIPL Room State Aggregator"
     if (showVersion) baseLabel += " v${version()}"
 
     if (app.label != baseLabel) {
@@ -124,43 +113,35 @@ private String captureSettingsSnapshot() {
 // Hubitat App Lifecycle Routines
 void installed() {
     checkAndLogVersionDemarcation()
-    logInfo "Installing app v${version()} (${timeStamp()})..."
+    logInfo "Installing parent app v${version()} (${timeStamp()})..."
     state.lastSettingsSnapshot = captureSettingsSnapshot()
     initialize(true)
 }
 
 void updated() {
     checkAndLogVersionDemarcation()
-    logInfo "Updating configuration..."
+    logInfo "Updating parent app configuration..."
 
     String currentSnapshot = captureSettingsSnapshot()
     Boolean settingsChanged = (state.lastSettingsSnapshot == null || state.lastSettingsSnapshot != currentSnapshot)
     Boolean codeVersionChanged = (state.lastInitializedVersion != version())
 
     if (settingsChanged || codeVersionChanged) {
-        logInfo "Settings or code version modification detected. Re-establishing manager configuration..."
+        logInfo "Settings or code version modification detected. Refreshing configuration..."
         state.lastSettingsSnapshot = currentSnapshot
-        unsubscribe()
-        unschedule()
         initialize(false)
     } else {
-        logDebug "Manager app closed without setting or version changes. Skipping re-initialization."
+        logDebug "App closed without setting or version changes. Skipping re-initialization."
     }
     updateAppLabel()
 }
 
 void uninstalled() {
-    logInfo "Uninstalling manager app..."
-    unsubscribe()
-    unschedule()
+    logInfo "Uninstalling parent app..."
 }
 
 private void initialize(Boolean isInstall = false) {
     state.lastInitializedVersion = version()
-    logDebug "Initializing Manager App; ${childApps.size()} child instance(s) connected."
-    childApps.each { child -> 
-        logTrace "  child app registered: ${child.label}"
-    }
 
     updateAppLabel()
 
@@ -188,12 +169,12 @@ void disableDebugLogging() {
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String appLabel = app.label ?: app.name ?: "App"
-    
+
     String settingKey = "log${lowerLevel.capitalize()}Enable"
     Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
 
     if (getSettingBool(settingKey, defaultEnabled)) {
-        log."${lowerLevel}" "${appLabel}: ${msg}"
+        log."${lowerLevel}" "${appLabel}${lowerLevel == 'warn' ? ' WARNING' : lowerLevel == 'error' ? ' ERROR' : ''}: ${msg}"
     }
 }
 

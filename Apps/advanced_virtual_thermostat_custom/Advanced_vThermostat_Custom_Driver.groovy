@@ -27,6 +27,8 @@
  *  1. This device is automatically created and managed by the Advanced vThermostat Child (Custom) app.
  *  
  *  Changelog:
+ *  v2.2.3    08/30/26    jshimota    Added input validation for threshold/interval, manual override safety for preEmergencyMode, and boundary checks
+ *  v2.2.2    08/30/26    jshimota    Updated importUrl target to Apps directory on GitHub for co-located deployment
  *  v2.2.1    08/30/26    jshimota    Fixed bracket typo in cool() and method target in setMaxHeatTemp()
  *  v2.2.0    08/30/26    jshimota    Applied v1.0.4 Driver Master Template (centralized logging, sendIfChanged, NPE safe checks, debug timers)
  *  v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style
@@ -34,19 +36,18 @@
  *  v2.0.1    08/22/26    jshimota    Fixed evaluateMode() loop by assigning "none" to preEmergencyMode attribute
  *  v2.0.0    08/22/26    jshimota    Initial custom overhaul
  **/
-// [KEEP-EXACT] See possible changelog.txt for past changelog history.
 
 import groovy.json.JsonOutput
 
-static String version() { return '2.2.1' }
-def timeStamp() { return "2026/08/30 08:27 AM" }
+static String version() { return '2.2.3' }
+def timeStamp() { return "2026/08/30 10:28 AM" }
 
 metadata {
     definition (
         name: "Advanced vThermostat Device (Custom)",
         namespace: "jshimota",
         author: "Nelson Clark / Customizations by jshimota",
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Driver.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Driver.groovy"
     ) {
         capability "Thermostat"
         capability "Sensor"
@@ -100,12 +101,6 @@ private void checkAndLogVersionDemarcation() {
     }
 }
 
-// NPE-Safe Timestamp Helper Routine
-private String getTimestamp() {
-    TimeZone tz = location?.timeZone ?: TimeZone.getDefault()
-    return new Date().format("yyyy-MM-dd HH:mm:ss", tz)
-}
-
 // Scheduled Cron / Interval Setup Helper
 def setupSchedule() {
     // Managed dynamically via evaluateMode runIn schedules
@@ -144,8 +139,9 @@ def configure() {
     return []
 }
 
+// Intentionally unsupported endpoint; required for Thermostat capability compatibility.
 def refresh() {
-    logDebug "Executing refresh()..."
+    logDebug "Executing refresh() - No-op for virtual thermostat driver."
     return []
 }
 
@@ -210,7 +206,6 @@ void disableDebugLogging() {
     if (getSettingBool("logDebugEnable", false)) {
         logWarn "30 minutes have elapsed. Automatically disabling debug logging."
         device.updateSetting("logDebugEnable", [type: "bool", value: false])
-        state.lastLogDebugEnable = false
     }
 }
 
@@ -283,6 +278,7 @@ def evaluateMode() {
     def lastUpdate = state.lastTempUpdate ?: nowMs
     def maxInterval = (device.currentValue("maxUpdateInterval") ?: 180) as Long
     if (maxInterval > 180) maxInterval = 180
+    if (maxInterval < 1) maxInterval = 1
     
     def maxIntervalMili = maxInterval * 60000
     def preMode = device.currentValue("preEmergencyMode")
@@ -304,8 +300,8 @@ def evaluateMode() {
 
     def callFor = "idle"
 
-    if (!threshold) {
-        logError "evaluateMode() - Threshold not set."
+    if (!threshold || threshold <= 0) {
+        logError "evaluateMode() - Threshold not set or invalid: ${threshold}"
     } else {
         def units = getTemperatureScale()
         if (mode in ["heat", "emergency heat"]) {
@@ -338,6 +334,7 @@ def emergencyStop() {
     setThermostatMode("off") 
 }
 
+// Maps directly to normal heat mode for capability compatibility
 def emergencyHeat() { 
     setThermostatMode("heat") 
 }
@@ -354,6 +351,12 @@ def setHeatingSetpoint(Object value) {
     def heatmin = device.currentValue("minHeatTemp") ?: 35.0
     def heatmax = device.currentValue("maxHeatTemp") ?: 80.0
     def coolingSetpoint = device.currentValue("coolingSetpoint") ?: 76.0
+
+    // Prevent heating setpoint from forcing cooling setpoint beyond coolmax
+    if (newHeatingSetpoint > (coolmax - setpointDistance)) {
+        logWarn "setHeatingSetpoint() requested ${newHeatingSetpoint} which would exceed cooling max boundary. Capping."
+        newHeatingSetpoint = coolmax - setpointDistance
+    }
 
     Double newCoolingSetpoint = null
     if (newHeatingSetpoint > (coolingSetpoint - setpointDistance)) {
@@ -388,6 +391,12 @@ def setCoolingSetpoint(Object value) {
     def heatmin = device.currentValue("minHeatTemp") ?: 35.0
     def heatingSetpoint = device.currentValue("heatingSetpoint") ?: 70.0
 
+    // Prevent cooling setpoint from forcing heating setpoint below heatmin
+    if (newCoolingSetpoint < (heatmin + setpointDistance)) {
+        logWarn "setCoolingSetpoint() requested ${newCoolingSetpoint} which would violate heating minimum boundary. Capping."
+        newCoolingSetpoint = heatmin + setpointDistance
+    }
+
     Double newHeatingSetpoint = null
     if ((newCoolingSetpoint - setpointDistance) < heatingSetpoint) {
         newHeatingSetpoint = newCoolingSetpoint - setpointDistance
@@ -410,6 +419,10 @@ def setCoolingSetpoint(Object value) {
 def setThermostatThreshold(Object value) {
     if (value == null || !value.toString().isNumber()) return
     Double dVal = value.toString().toDouble()
+    if (dVal <= 0) {
+        logWarn "setThermostatThreshold() ignoring invalid non-positive value (${dVal}). Threshold must be > 0."
+        return
+    }
     if (dVal != device.currentValue("thermostatThreshold")) {
         sendIfChanged([name: "thermostatThreshold", value: dVal, unit: getTemperatureScale()])
         runIn(2, 'evaluateMode')
@@ -417,14 +430,24 @@ def setThermostatThreshold(Object value) {
 }
 
 def setMaxUpdateInterval(BigDecimal minutes) {
-    if (minutes != device.currentValue("maxUpdateInterval")) {
-        sendIfChanged([name: "maxUpdateInterval", value: minutes])
+    if (minutes == null) return
+    BigDecimal clampedMins = minutes
+    if (clampedMins < 1) clampedMins = 1
+    if (clampedMins > 180) clampedMins = 180
+
+    if (clampedMins != device.currentValue("maxUpdateInterval")) {
+        sendIfChanged([name: "maxUpdateInterval", value: clampedMins])
         runIn(2, 'evaluateMode')
     }
 }
 
 def setThermostatMode(String value) {
     if (value != device.currentValue("thermostatMode")) {
+        // Clear emergency recovery marker if user manually changes mode while sensor is offline
+        if (device.currentValue("preEmergencyMode") != "none") {
+            logInfo "Manual thermostat mode change to '${value}' detected during offline emergency. Clearing preEmergencyMode."
+            sendIfChanged([name: "preEmergencyMode", value: "none"])
+        }
         sendIfChanged([name: "thermostatMode", value: value])
         updateThermostatSetpoint()
         runIn(2, 'evaluateMode')
@@ -506,6 +529,7 @@ def setMaxHeatTemp(Double value) {
     if (device.currentValue("heatingSetpoint") > value) setHeatingSetpoint(value)
 }
 
+// Capability compatibility stubs required by Hubitat / Alexa integrations
 def fanAuto() {}
 def fanCirculate() {}
 def fanOn() {}

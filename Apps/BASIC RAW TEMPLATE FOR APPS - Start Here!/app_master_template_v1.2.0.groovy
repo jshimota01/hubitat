@@ -1,57 +1,21 @@
 /**
- * Advanced vThermostat Manager (Custom) Parent App
+ * App Master Template
  * Platform: Hubitat Elevation
- * Notes: Custom parent manager app for organizing Advanced vThermostat Child (Custom) instances
- **/
-/**
- * Copyright 2026 James Shimota / Original 2020 Nelson Clark
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at:
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
-/**
- *  Purpose:
- *  Parent application container for managing child instances of Advanced vThermostat Child (Custom).
- *
- *  Instructions:
- *  1. Install this parent application.
- *  2. Add new virtual thermostat instances from within this parent app interface.
- *  
- *  Changelog:
- *  v2.3.5    08/30/26    jshimota    Upgraded to App Master Template v1.2.0 (code version re-init trigger and dead state cleanup)
- *  v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub
- *  v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement
- *  v2.3.1    08/30/26    jshimota    Finalized refactor alignment for App Master Template v1.1.0
- *  v2.3.0    08/30/26    jshimota    Applied v1.1.0 App Master Template (styled banner, badging, collapsible prefs, settings snapshot hash)
- *  v2.2.1    08/30/26    jshimota    Updated definition display name to Advanced vThermostat Manager (Custom)
- *  v2.2.0    08/30/26    jshimota    Applied initial App Master Template
- *  v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style
- *  v2.1.0    08/30/26    jshimota    Removed v2 identifiers and updated references
- *  v2.0.0    08/22/26    jshimota    Bumped definition name and aligned icon/import URLs
+ * Version: 1.2.0
  **/
 
-static String version() { return '2.3.5' }
+static String version() { return '1.2.0' }
 def timeStamp() { return "2026/08/30 10:28 AM" }
 
 definition(
-    name: "Advanced vThermostat Manager (Custom)",
+    name: "App Master Template",
     namespace: "jshimota",
-    author: "Nelson Clark / Customizations by jshimota",
-    description: "Join any sensor(s) with any outlet(s) for virtual thermostat control.",
-    category: "Green Living",
-    iconUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo-small.png",
-    iconX2Url: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo.png",
-    importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Parent.groovy",
-    singleInstance: true
+    author: "James Shimota",
+    description: "Standardized Hubitat App Master Template featuring styled UI headers, version tracking, and settings snapshot hashing.",
+    category: "Convenience",
+    iconUrl: "",
+    iconX2Url: "",
+    importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/templates/App_Master_Template.groovy"
 )
 
 preferences {
@@ -65,15 +29,15 @@ def mainPage() {
         /* Styled App Header Banner */
         section() {
             paragraph "<div style='background-color:#1A252F; color:#FFFFFF; padding:12px; border-radius:6px; text-align:center; margin-bottom:10px;'>" +
-                      "<h2 style='color:#FFFFFF; margin:0; font-size:20px; font-weight:600;'>Advanced vThermostat Manager (Custom)</h2>" +
+                      "<h2 style='color:#FFFFFF; margin:0; font-size:20px; font-weight:600;'>App Master Template</h2>" +
                       "<span style='font-size:12px; opacity:0.8;'>Version ${currentVersion} (${timeStamp()})</span></div>"
         }
 
-        section("<b>Installed Thermostats</b>") {
-            app(name: "thermostats", appName: "Advanced vThermostat Child (Custom)", namespace: "jshimota", title: "Add New Advanced vThermostat Instance", multiple: true)
+        section("<b>Main Configuration</b>") {
+            paragraph "App settings go here..."
         }
 
-        /* Collapsible App Preferences & Logging */
+        /* Collapsible App Preferences & Logging Options */
         section("<b>App Preferences & Logging Options</b>", hideable: true, hidden: true) {
             input name: "showVersionInLabel", type: "bool", title: "Show Version in App Label?", defaultValue: true
             
@@ -98,10 +62,12 @@ private void checkAndLogVersionDemarcation() {
 }
 
 // Dynamic App Label Badging Helper
-private void updateAppLabel() {
+private void updateAppLabel(String statusText = null) {
     Boolean showVersion = getSettingBool("showVersionInLabel", true)
-    String baseLabel = "Advanced vThermostat Manager (Custom)"
+    String baseLabel = "App Master Template"
+    
     if (showVersion) baseLabel += " v${version()}"
+    if (statusText) baseLabel += " - [${statusText}]"
 
     if (app.label != baseLabel) {
         app.updateLabel(baseLabel)
@@ -131,37 +97,32 @@ void installed() {
 
 void updated() {
     checkAndLogVersionDemarcation()
-    logInfo "Updating configuration..."
+    logInfo "Updating app configuration..."
 
     String currentSnapshot = captureSettingsSnapshot()
     Boolean settingsChanged = (state.lastSettingsSnapshot == null || state.lastSettingsSnapshot != currentSnapshot)
     Boolean codeVersionChanged = (state.lastInitializedVersion != version())
 
     if (settingsChanged || codeVersionChanged) {
-        logInfo "Settings or code version modification detected. Re-establishing manager configuration..."
+        logInfo "Configuration or code version update detected (Code changed: ${codeVersionChanged}, Settings changed: ${settingsChanged}). Re-initializing..."
         state.lastSettingsSnapshot = currentSnapshot
         unsubscribe()
         unschedule()
         initialize(false)
     } else {
-        logDebug "Manager app closed without setting or version changes. Skipping re-initialization."
+        logDebug "App closed without setting or version changes. Skipping re-initialization."
     }
     updateAppLabel()
 }
 
 void uninstalled() {
-    logInfo "Uninstalling manager app..."
+    logInfo "Uninstalling app..."
     unsubscribe()
     unschedule()
 }
 
 private void initialize(Boolean isInstall = false) {
     state.lastInitializedVersion = version()
-    logDebug "Initializing Manager App; ${childApps.size()} child instance(s) connected."
-    childApps.each { child -> 
-        logTrace "  child app registered: ${child.label}"
-    }
-
     updateAppLabel()
 
     if (isInstall) {
