@@ -1,0 +1,23 @@
+ * v1.25    08/31/26    jshimota    Unified health check scheduling inside initialize() and bound parseReadReportingConfigResponse byte-slicing to explicit DataType length.
+ * v1.24    08/31/26    jshimota    Aligned updated() fallback interval to 480 (8 Hours) to prevent orphaned 10-minute schedules.
+ * v1.23    08/31/26    jshimota    Updated Health Check Interval options (1h, 4h, 8h, 12h, 24h), set default to 8h (480 mins), and updated scheduler cases.
+ * v1.22    08/31/26    jshimota    Lifted On/Off reporting verification outside supportsPowerMeter() block, added descMap guards in parse(), and removed dead getTimestamp() code.
+ * v1.21    08/31/26    jshimota    Added 'powerMeterCapable' custom attribute ("Yes" / "No") to provide user-visible capability identification on device page.
+ * v1.20    08/31/26    jshimota    Restored zigbee.configureReporting() in configure(), isolated timeout cancellation to PING_ATTR_ID, fixed "Every Hour" interval (60), hardened array parsing, quieted routine info logging to debug.
+ * v1.19    08/31/26    jshimota    Bug check & hardening: Added NPE-safe preference delta parsing, schedule cleanup safety, and model capability guards.
+ * v1.18    08/31/26    jshimota    Updated driver title to "Third Reality Plug w/Power Meter Support (Custom)" in definition and header.
+ * v1.17    08/31/26    jshimota    Applied Template v1.0.7: Consolidated Purpose into top comment block.
+ * v1.16    08/31/26    jshimota    Added model-based power meter capability detection (3RSP02028BZ vs 3RSP019BZ), conditional reporting/verification, and updated title naming convention.
+ * v1.15    08/31/26    jshimota    Applied Master Template v1.0.6: Modularized Health Check routines, standardized logging engine, version demarcation, and driver reset.
+ * v1.14    08/31/26    jshimota    Removed enableReporting preference, enforced reporting verification state tracking, and routed responses to trace/debug logs.
+ * v1.13    08/31/26    jshimota    Cleaned Health Check logging and GUI terminology.
+ * v1.12    08/13/26    jshimota    Force health check pong to emit event (isStateChange: true) to update Last Activity At.
+ * v1.11    08/11/26    jshimota    Added 4-Hour health check option and randomized 5-minute schedule offset system with state retention and manual segment override.
+ * v1.10    07/10/26    jshimota    Fixed redundant Ping/Pong Schedule.
+ * v1.09    06/07/26    jshimota    Final Code Clean-up and Syntax Patch.
+ * v1.08    06/07/26    jshimota    Gemini Scan with 3 fixes.
+ * v1.07    06/04/26    jshimota    Add additional fingerprint for newer model.
+ * v1.06    05/22/26    jshimota    Fix bug Null Pointer Exception due to reversed result/currentValue.
+ * v1.05    05/21/26    jshimota    Performance Optimizations: Fixed isDelta zero-watt bug, removed scheduler thrashing, fixed race conditions, and event deduplication.
+ *           01/26/24    thanhl94    Fix add of preference option for warnings.
+ *           01/24/24    thanhl94    Prevent log warn when 0x0510 is received and will only log when debug is enabled.

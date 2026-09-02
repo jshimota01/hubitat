@@ -1,6 +1,16 @@
 /**
  * Driver Name (Custom)
  * Device Driver for Hubitat Elevation
+ *
+ * Purpose:
+ * Detailed breakdown of driver purpose and supported functionality.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Hubitat's native capability exposes an unwanted "Ping" UI control button
+ *   and does not provide the phase-anchored scheduling, timeout guards, or trace 
+ *   logging behavior required by this driver architecture.
  **/
 /**
  * Copyright 2026 James Shimota
@@ -18,17 +28,20 @@
  * limitations under the License.
  **/
 /**
- *  Purpose:
- *  Detailed breakdown of driver purpose and supported functionality.
- *  
- *  Changelog:
- *  v1.0.6    08/30/26    jshimota    Added auto-reinitialization initialize(false) inside resetDriver() routine
- *  v1.0.0    08/30/26    jshimota    Initial release of standardized template
+ * Changelog:
+ * v1.0.10   08/31/26    jshimota    Updated Health Check interval option label from 'Once a Day' to 'Every 24 Hours'.
+ * v1.0.9    08/31/26    jshimota    Enforced immediate Health Check execution on configure() and guaranteed healthStatus initialization on reset/initialize.
+ * v1.0.8    08/31/26    jshimota    Integrated standardized custom Health Check architecture, Notes header block, and consolidated version tracking.
+ * v1.0.7    08/31/26    jshimota    Moved Purpose block into top header comment block.
+ * v1.0.6    08/30/26    jshimota    Added auto-reinitialization initialize(false) inside resetDriver() routine.
+ * v1.0.0    08/30/26    jshimota    Initial release of standardized template.
  **/
 // [KEEP-EXACT] See possible changelog.txt for past changelog history.
 
-static String version() { return '1.0.6' }
-def timeStamp() { return "2026/08/30 11:35 AM" }
+static String version() { return '1.0.10' }
+def timeStamp() { return "2026/08/31 08:30 PM" }
+
+import groovy.transform.Field
 
 metadata {
     definition (
@@ -42,13 +55,16 @@ metadata {
         capability "Refresh"
 
         // Attributes
-        attribute "driverVersion", "string"
+        attribute "healthStatus", "enum", ["unknown", "offline", "online"]
 
         // Custom Commands
+        command "Health Check"
         command "resetDriver"
     }
 
     preferences {
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check (Ping/Pong) Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver sends a Health Check Ping to verify device online status.<br><b>Note:</b> This is a custom driver ping/pong routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
         input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", description: "Enable to output error activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -58,19 +74,13 @@ metadata {
     }
 }
 
-// Single-Shot Version Demarcation Trace Logging Helper
+// Single-Shot Version Demarcation Trace Logging Helper Routine
 private void checkAndLogVersionDemarcation() {
     String currentVer = version()
-    if (state.lastLoggedVersion != currentVer) {
+    if (state.driverVersion != currentVer) {
         logTrace "=================== DRIVER VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
-        state.lastLoggedVersion = currentVer
+        state.driverVersion = currentVer
     }
-}
-
-// NPE-Safe Timestamp Helper Routine
-private String getTimestamp() {
-    TimeZone tz = location?.timeZone ?: TimeZone.getDefault()
-    return new Date().format("yyyy-MM-dd HH:mm:ss", tz)
 }
 
 void parse(String description) {
@@ -82,33 +92,57 @@ def refresh() {
     return []
 }
 
-// Hubitat Lifecycle Routines
+/* =========================================================================================
+   HUBITAT LIFECYCLE ROUTINES
+   ========================================================================================= */
+
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    
+    initializeHealthCheckPhase()
+    sendEvent(name: "healthStatus", value: "unknown")
+
     initialize(true)
 }
 
 void updated() {
     checkAndLogVersionDemarcation()
     logInfo "Preferences updated"
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    
     initialize(false)
 }
 
 def configure() {
     checkAndLogVersionDemarcation()
     logInfo "Configuring device..."
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    
     initialize(false)
-    return []
+    
+    List<String> cmds = []
+    
+    // Immediately execute a Health Check to establish online healthStatus right away
+    cmds += executePing()
+    
+    return cmds
 }
 
 private void initialize(Boolean isInstall = false) {
-    state.lastInitializedVersion = version()
-    sendEvent(name: "driverVersion", value: version())
+    checkAndLogVersionDemarcation()
     unschedule("disableDebugLogging")
+
+    // Ensure healthStatus attribute exists on initialize/reset
+    if (device.currentValue("healthStatus") == null) {
+        sendEvent(name: "healthStatus", value: "unknown")
+    }
+
+    // Centralized Health Check Scheduler
+    final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
+    if (interval > 0) {
+        scheduleHealthCheck("executePing", interval)
+    } else {
+        unschedule("executePing")
+    }
 
     if (isInstall) {
         device.updateSetting("logDebugEnable", [type: "bool", value: true])
@@ -121,6 +155,92 @@ private void initialize(Boolean isInstall = false) {
         unschedule("disableDebugLogging")
     }
 }
+
+/* =========================================================================================
+   HEALTH CHECK ROUTINE TEMPLATE (CUSTOM DRIVER PING/PONG ARCHITECTURE)
+   ========================================================================================= */
+
+/**
+ * Public GUI Command Entry Point.
+ * Single entry point exposed on the Device Detail page to avoid Hubitat UI button duplication.
+ **/
+List<String> "Health Check"() {
+    return executePing()
+}
+
+/**
+ * Private Ping Execution Helper.
+ * Transmits underlying device ping/read request, registers timeout check,
+ * and remains hidden from the Hubitat GUI command interface.
+ **/
+private List<String> executePing() {
+    logDebug "Health Check Ping sent..."
+    scheduleCommandTimeoutCheck()
+    
+    // Example: Return device-specific ping/read command list here
+    return []
+}
+
+/**
+ * Modular Health Check Scheduler with Persistent Phase-Anchoring.
+ * Anchors check schedules to a persistent random daily time offset to stagger hub network traffic.
+ **/
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60:
+            schedule("0 ${m} * ? * * *", methodToSchedule)
+            break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
+            break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
+            break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
+            break
+        case 1440:
+            schedule("0 ${m} ${h} ? * * *", methodToSchedule)
+            break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
+    }
+}
+
+private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
+    runIn(delay, "deviceCommandTimeout")
+}
+
+void deviceCommandTimeout() {
+    logWarn "No Health Check Pong received (device offline?)"
+    updateAttribute("healthStatus", "offline")
+}
+
+/* =========================================================================================
+   MASTER UTILITY ROUTINES & LOGGING ENGINE
+   ========================================================================================= */
 
 // Auto-Disable Debug Routine
 void disableDebugLogging() {
@@ -159,29 +279,13 @@ void clearAllSchedules() {
     logInfo "All scheduled jobs have been successfully cleared."
 }
 
-// State-De-Duplication Helper Routine
-private void sendIfChanged(Map args) {
-    if (!args || !args.name) return
+private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
+    final String currentVal = device.currentValue(attribute)?.toString()
+    if (currentVal == value?.toString()) return
 
-    String nameStr = args.name as String
-    String oldVal = device.currentValue(nameStr)?.toString()
-    String newVal = args.value != null ? args.value.toString() : ""
-
-    if (oldVal != newVal) {
-        String desc = args.descriptionText ?: "${nameStr} set to ${args.value}"
-        Map eventMap = [
-            name: nameStr, 
-            value: args.value, 
-            descriptionText: desc
-        ]
-        if (args.unit) eventMap.unit = args.unit
-        if (args.type) eventMap.type = args.type
-        if (args.isStateChange != null) eventMap.isStateChange = args.isStateChange
-
-        sendEvent(eventMap)
-        logInfo "${desc}"
-        logDebug "Event triggered: ${nameStr} -> ${args.value}"
-    }
+    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
+    logInfo descriptionText
+    sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
 
 // Centralized Logging Engine
@@ -206,3 +310,11 @@ private void logError(String msg) { logMessage("error", msg) }
 private Boolean getSettingBool(String key, Boolean defaultVal = false) {
     return settings[key] != null ? settings[key] as Boolean : defaultVal
 }
+
+// Constants
+@Field static final Map HealthCheckIntervalOpts = [
+    defaultValue: 480,
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
+]
+
+@Field static final int COMMAND_TIMEOUT = 10

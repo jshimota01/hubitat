@@ -1,46 +1,15 @@
 /**
  * Advanced Virtual Thermostat Device Driver (Custom)
  * Platform: Hubitat Elevation
- * Notes: Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets
- * Capabilities: Thermostat, Sensor, TemperatureMeasurement, Refresh, Configuration
- **/
-/**
- * Copyright 2026 James Shimota / Original 2020 Nelson Clark
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at:
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- **/
-/**
- *  Purpose:
- *  Provides a virtual thermostat capability endpoint managed by the Advanced vThermostat Child (Custom) app.
- *
- *  Instructions:
- *  1. This device is automatically created and managed by the Advanced vThermostat Child (Custom) app.
- *  
- *  Changelog:
- *  v2.2.3    08/30/26    jshimota    Added input validation for threshold/interval, manual override safety for preEmergencyMode, and boundary checks
- *  v2.2.2    08/30/26    jshimota    Updated importUrl target to Apps directory on GitHub for co-located deployment
- *  v2.2.1    08/30/26    jshimota    Fixed bracket typo in cool() and method target in setMaxHeatTemp()
- *  v2.2.0    08/30/26    jshimota    Applied v1.0.4 Driver Master Template (centralized logging, sendIfChanged, NPE safe checks, debug timers)
- *  v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style
- *  v2.1.0    08/30/26    jshimota    Removed v2 identifiers, updated definition name & URLs
- *  v2.0.1    08/22/26    jshimota    Fixed evaluateMode() loop by assigning "none" to preEmergencyMode attribute
- *  v2.0.0    08/22/26    jshimota    Initial custom overhaul
+ * Notes: Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
+ *        Updated with Thermostat Controller functionality.
+ * Capabilities: Thermostat, ThermostatController, Sensor, TemperatureMeasurement, Refresh, Configuration
  **/
 
 import groovy.json.JsonOutput
 
-static String version() { return '2.2.3' }
-def timeStamp() { return "2026/08/30 10:28 AM" }
+static String version() { return '2.3.0' }
+def timeStamp() { return "2026/09/01 09:00 AM" }
 
 metadata {
     definition (
@@ -50,6 +19,7 @@ metadata {
         importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Driver.groovy"
     ) {
         capability "Thermostat"
+        capability "ThermostatController"
         capability "Sensor"
         capability "TemperatureMeasurement"
         capability "Refresh"
@@ -71,12 +41,15 @@ metadata {
         attribute "maxHeatingSetpoint", "number"     
         attribute "thermostatTemperatureSetpoint", "number"
         attribute "preEmergencyMode", "string"
+        attribute "controllerState", "string"
 
         // Custom Commands
         command "heatUp"
         command "heatDown"
         command "coolUp"
         command "coolDown"
+        command "controlHeat", ["string"]
+        command "controlCool", ["string"]
         command "setMaxUpdateInterval", ["number"]
         command "resetDriver"
         command "setLogLevel", ["number"]
@@ -87,12 +60,11 @@ metadata {
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
         input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", description: "Enable to output error activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
         input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", description: "Enable to output warning activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
-        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", description: "Enable to output debugging activity to log<br>Default: <b>Off</b><br>(Is turned on for 30 minutes after Initialized or first installed)", defaultValue: false, required: true
+        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", description: "Enable to output debugging activity to log<br>Default: <b>Off</b>", defaultValue: false, required: true
         input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", description: "Enable to output tracing activity to log<br>Default: <b>Off</b>", defaultValue: false, required: true
     }
 }
 
-// Single-Shot Version Demarcation Trace Logging Helper
 private void checkAndLogVersionDemarcation() {
     String currentVer = version()
     if (state.lastLoggedVersion != currentVer) {
@@ -101,16 +73,10 @@ private void checkAndLogVersionDemarcation() {
     }
 }
 
-// Scheduled Cron / Interval Setup Helper
-def setupSchedule() {
-    // Managed dynamically via evaluateMode runIn schedules
-}
-
 void parse(String description) {
     logDebug "parse(): ${description}"
 }
 
-// Hubitat Lifecycle Routines
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
@@ -139,9 +105,9 @@ def configure() {
     return []
 }
 
-// Intentionally unsupported endpoint; required for Thermostat capability compatibility.
 def refresh() {
-    logDebug "Executing refresh() - No-op for virtual thermostat driver."
+    logDebug "Executing refresh() - Updating controller state."
+    evaluateMode()
     return []
 }
 
@@ -184,6 +150,7 @@ private void initialize(Boolean isInstall = false) {
         state.lastTempUpdate = now()
         sendIfChanged([name: "thermostatMode", value: "off"])
         sendIfChanged([name: "thermostatOperatingState", value: "idle"])
+        sendIfChanged([name: "controllerState", value: "idle"])
         sendIfChanged([name: "maxUpdateInterval", value: 65])
         sendIfChanged([name: "preEmergencyMode", value: "none"])
         sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"])])
@@ -201,7 +168,6 @@ private void initialize(Boolean isInstall = false) {
     }
 }
 
-// Auto-Disable Debug Routine
 void disableDebugLogging() {
     if (getSettingBool("logDebugEnable", false)) {
         logWarn "30 minutes have elapsed. Automatically disabling debug logging."
@@ -209,7 +175,6 @@ void disableDebugLogging() {
     }
 }
 
-// Compatibility Helper for Legacy App Log Commands
 def setLogLevel(level) {
     int lvl = level ? level.toInteger() : 3
     Boolean dbg = lvl >= 4
@@ -219,7 +184,6 @@ def setLogLevel(level) {
     logWarn "Logging levels updated via app request -> Debug: ${dbg}, Trace: ${trc}"
 }
 
-// Master Utility Routine for Driver GUI Button
 void resetDriver() {
     logInfo "Starting full driver reset..."
     clearAllSchedules()
@@ -228,26 +192,41 @@ void resetDriver() {
     logInfo "Driver reset process completed."
 }
 
-// Individual Utility Routines
 void clearAllDriverStates() {
-    logInfo "Clearing all driver states..."
     state.clear()
-    logInfo "All states have been cleared."
 }
 
 void clearAllAttributes() {
-    logInfo "Clearing all attributes..."
     device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
-    logInfo "All attributes have been cleared."
 }
 
 void clearAllSchedules() {
-    logInfo "Clearing all scheduled jobs..."
     unschedule()
-    logInfo "All scheduled jobs have been successfully cleared."
 }
 
-// Thermostat Core Logic Routines
+// Controller Specific Commands
+def controlHeat(String action) {
+    logInfo "Thermostat Controller driving Heating: ${action}"
+    if (action?.toLowerCase() == "on") {
+        sendIfChanged([name: "thermostatOperatingState", value: "heating"])
+        sendIfChanged([name: "controllerState", value: "controlling heat"])
+    } else {
+        sendIfChanged([name: "thermostatOperatingState", value: "idle"])
+        sendIfChanged([name: "controllerState", value: "idle"])
+    }
+}
+
+def controlCool(String action) {
+    logInfo "Thermostat Controller driving Cooling: ${action}"
+    if (action?.toLowerCase() == "on") {
+        sendIfChanged([name: "thermostatOperatingState", value: "cooling"])
+        sendIfChanged([name: "controllerState", value: "controlling cool"])
+    } else {
+        sendIfChanged([name: "thermostatOperatingState", value: "idle"])
+        sendIfChanged([name: "controllerState", value: "idle"])
+    }
+}
+
 def updateThermostatSetpoint(String units = null) {
     if (!units) units = getTemperatureScale()
     def mode = device.currentValue("thermostatMode") ?: "off"
@@ -290,6 +269,7 @@ def evaluateMode() {
         sendIfChanged([name: "preEmergencyMode", value: mode])
         sendIfChanged([name: "thermostatMode", value: "off"])
         sendIfChanged([name: "thermostatOperatingState", value: "idle"])
+        sendIfChanged([name: "controllerState", value: "idle"])
         return
     } else if (preMode && preMode != "none" && preMode != "" && preMode != "null" && (nowMs - lastUpdate < maxIntervalMili)) {
         logWarn "Sensors reporting again. Autorecovered to previous mode: ${preMode}"
@@ -326,6 +306,7 @@ def evaluateMode() {
     if (current != callFor) {
         logDebug "sendEvent : thermostatOperatingState = $callFor"
         sendIfChanged([name: "thermostatOperatingState", value: callFor])
+        sendIfChanged([name: "controllerState", value: callFor == "idle" ? "idle" : "controlling ${callFor}"])
     }
 }
 
@@ -334,7 +315,6 @@ def emergencyStop() {
     setThermostatMode("off") 
 }
 
-// Maps directly to normal heat mode for capability compatibility
 def emergencyHeat() { 
     setThermostatMode("heat") 
 }
@@ -352,7 +332,6 @@ def setHeatingSetpoint(Object value) {
     def heatmax = device.currentValue("maxHeatTemp") ?: 80.0
     def coolingSetpoint = device.currentValue("coolingSetpoint") ?: 76.0
 
-    // Prevent heating setpoint from forcing cooling setpoint beyond coolmax
     if (newHeatingSetpoint > (coolmax - setpointDistance)) {
         logWarn "setHeatingSetpoint() requested ${newHeatingSetpoint} which would exceed cooling max boundary. Capping."
         newHeatingSetpoint = coolmax - setpointDistance
@@ -391,7 +370,6 @@ def setCoolingSetpoint(Object value) {
     def heatmin = device.currentValue("minHeatTemp") ?: 35.0
     def heatingSetpoint = device.currentValue("heatingSetpoint") ?: 70.0
 
-    // Prevent cooling setpoint from forcing heating setpoint below heatmin
     if (newCoolingSetpoint < (heatmin + setpointDistance)) {
         logWarn "setCoolingSetpoint() requested ${newCoolingSetpoint} which would violate heating minimum boundary. Capping."
         newCoolingSetpoint = heatmin + setpointDistance
@@ -443,7 +421,6 @@ def setMaxUpdateInterval(BigDecimal minutes) {
 
 def setThermostatMode(String value) {
     if (value != device.currentValue("thermostatMode")) {
-        // Clear emergency recovery marker if user manually changes mode while sensor is offline
         if (device.currentValue("preEmergencyMode") != "none") {
             logInfo "Manual thermostat mode change to '${value}' detected during offline emergency. Clearing preEmergencyMode."
             sendIfChanged([name: "preEmergencyMode", value: "none"])
@@ -529,7 +506,6 @@ def setMaxHeatTemp(Double value) {
     if (device.currentValue("heatingSetpoint") > value) setHeatingSetpoint(value)
 }
 
-// Capability compatibility stubs required by Hubitat / Alexa integrations
 def fanAuto() {}
 def fanCirculate() {}
 def fanOn() {}
@@ -556,7 +532,6 @@ def roundDegrees(Double value) {
     }
 }
 
-// State-De-Duplication Helper Routine
 private void sendIfChanged(Map args) {
     if (!args || !args.name) return
 
@@ -580,7 +555,6 @@ private void sendIfChanged(Map args) {
     }
 }
 
-// Centralized Logging Engine
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String devName = device.displayName ?: "Device Driver"
