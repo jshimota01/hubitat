@@ -1,15 +1,48 @@
 /**
  * Advanced Virtual Thermostat Device Driver (Custom)
- * Platform: Hubitat Elevation
- * Notes: Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
- *        Updated with Thermostat Controller functionality.
- * Capabilities: Thermostat, ThermostatController, Sensor, TemperatureMeasurement, Refresh, Configuration
+ * Device Driver for Hubitat Elevation
+ *
+ * Purpose:
+ * Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
+ * Features Thermostat Controller functionality, locked 'Auto' dashboard dual-setpoint display support,
+ * custom health tracking, and maintenance routines.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Hubitat's native capability exposes an unwanted "Ping" UI control button
+ *   and does not provide the phase-anchored scheduling, timeout guards, or trace 
+ *   logging behavior required by this driver architecture.
+ **/
+/**
+ * Copyright 2026 James Shimota / Original 2020 Nelson Clark
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+/**
+ * Changelog:
+ * v2.4.2    09/03/26    jshimota    Cleaned up UI language by purging leftover 'ping' terminology from preferences/descriptions in favor of Health Check. Hardened setThermostatMode() with strict validation and normalization against unexpected input values.
+ * v2.4.1    09/03/26    jshimota    Removed invalid capability 'ThermostatController' to fix platform compilation error while maintaining all custom control commands.
+ * v2.4.0    09/03/26    jshimota    Integrated standard driver template architecture (custom Health Check, healthStatus attribute, phase-anchored ping scheduler, command timeout checks, and master maintenance routines). Preserved locked Auto dashboard tile logic and virtual thermostat execution engine.
+ * v2.3.1    09/03/26    jshimota    Added lockDashboardToAuto preference and physicalThermostatMode tracking to preserve dual-setpoint dashboard tiles.
+ * v2.3.0    09/01/26    jshimota    Updated with Thermostat Controller functionality.
  **/
 
 import groovy.json.JsonOutput
+import groovy.transform.Field
 
-static String version() { return '2.3.0' }
-def timeStamp() { return "2026/09/01 09:00 AM" }
+static String version() { return '2.4.2' }
+def timeStamp() { return "2026/09/03 08:52 AM" }
 
 metadata {
     definition (
@@ -18,15 +51,16 @@ metadata {
         author: "Nelson Clark / Customizations by jshimota",
         importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Driver.groovy"
     ) {
+        capability "Actuator"
         capability "Thermostat"
-        capability "ThermostatController"
         capability "Sensor"
         capability "TemperatureMeasurement"
         capability "Refresh"
         capability "Configuration"
 
-        // Custom Attributes
+        // Attributes
         attribute "driverVersion", "string"
+        attribute "healthStatus", "enum", ["unknown", "offline", "online"]
         attribute "thermostatThreshold", "number"
         attribute "minHeatTemp", "number"
         attribute "maxHeatTemp", "number"
@@ -42,8 +76,10 @@ metadata {
         attribute "thermostatTemperatureSetpoint", "number"
         attribute "preEmergencyMode", "string"
         attribute "controllerState", "string"
+        attribute "physicalThermostatMode", "string"
 
         // Custom Commands
+        command "Health Check"
         command "heatUp"
         command "heatDown"
         command "coolUp"
@@ -56,20 +92,24 @@ metadata {
     }
 
     preferences {
+        input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i>When enabled, locks thermostatMode attribute to 'auto' so dashboard tiles preserve dual heat/cool setpoint controls.</i>", defaultValue: true, required: true
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify temperature sensor updates.<br><b>Note:</b> This is a custom driver health check routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
         input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", description: "Enable to output error activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
         input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", description: "Enable to output warning activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
-        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", description: "Enable to output debugging activity to log<br>Default: <b>Off</b>", defaultValue: false, required: true
+        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", description: "Enable to output debugging activity to log<br>Default: <b>Off</b><br>(Is turned on for 30 minutes after Initialized or first installed)", defaultValue: false, required: true
         input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", description: "Enable to output tracing activity to log<br>Default: <b>Off</b>", defaultValue: false, required: true
     }
 }
 
+// Single-Shot Version Demarcation Trace Logging Helper Routine
 private void checkAndLogVersionDemarcation() {
     String currentVer = version()
-    if (state.lastLoggedVersion != currentVer) {
+    if (state.driverVersion != currentVer) {
         logTrace "=================== DRIVER VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
-        state.lastLoggedVersion = currentVer
+        state.driverVersion = currentVer
     }
 }
 
@@ -77,17 +117,26 @@ void parse(String description) {
     logDebug "parse(): ${description}"
 }
 
+/* =========================================================================================
+   HUBITAT LIFECYCLE ROUTINES
+   ========================================================================================= */
+
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    updateAttribute("driverVersion", version())
+    
+    initializeHealthCheckPhase()
+    updateAttribute("healthStatus", "unknown")
+
     initialize(true)
 }
 
 void updated() {
     checkAndLogVersionDemarcation()
     logInfo "Updating preferences..."
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    updateAttribute("driverVersion", version())
+    
     initialize(false)
     
     def hubScale = getTemperatureScale()
@@ -99,20 +148,31 @@ void updated() {
 def configure() {
     checkAndLogVersionDemarcation()
     logInfo "Configuring device..."
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    updateAttribute("driverVersion", version())
+    
     initialize(false)
     sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["auto", "cool", "heat", "off"])])
-    return []
+    
+    List<String> cmds = []
+    cmds += executePing()
+    return cmds
 }
 
 def refresh() {
-    logDebug "Executing refresh() - Updating controller state."
+    logInfo "refresh() requested - Updating controller state."
     evaluateMode()
     return []
 }
 
 private void initialize(Boolean isInstall = false) {
-    sendEvent(name: "driverVersion", value: version(), isStateChange: true)
+    checkAndLogVersionDemarcation()
+    unschedule("disableDebugLogging")
+
+    updateAttribute("driverVersion", version())
+
+    if (device.currentValue("healthStatus") == null) {
+        updateAttribute("healthStatus", "unknown")
+    }
 
     def hubScale = getTemperatureScale()
     state.currentUnit = hubScale
@@ -148,12 +208,27 @@ private void initialize(Boolean isInstall = false) {
         
         updateThermostatSetpoint(hubScale)
         state.lastTempUpdate = now()
-        sendIfChanged([name: "thermostatMode", value: "off"])
+        sendIfChanged([name: "physicalThermostatMode", value: "off"])
+        
+        if (getSettingBool("lockDashboardToAuto", true)) {
+            sendIfChanged([name: "thermostatMode", value: "auto"])
+        } else {
+            sendIfChanged([name: "thermostatMode", value: "off"])
+        }
+
         sendIfChanged([name: "thermostatOperatingState", value: "idle"])
         sendIfChanged([name: "controllerState", value: "idle"])
         sendIfChanged([name: "maxUpdateInterval", value: 65])
         sendIfChanged([name: "preEmergencyMode", value: "none"])
         sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"])])
+    }
+
+    // Centralized Health Check Scheduler
+    final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
+    if (interval > 0) {
+        scheduleHealthCheck("executePing", interval)
+    } else {
+        unschedule("executePing")
     }
 
     if (isInstall) {
@@ -168,12 +243,104 @@ private void initialize(Boolean isInstall = false) {
     }
 }
 
-void disableDebugLogging() {
-    if (getSettingBool("logDebugEnable", false)) {
-        logWarn "30 minutes have elapsed. Automatically disabling debug logging."
-        device.updateSetting("logDebugEnable", [type: "bool", value: false])
+/* =========================================================================================
+   HEALTH CHECK ROUTINE ARCHITECTURE (CUSTOM DRIVER HEALTH CHECK)
+   ========================================================================================= */
+
+/**
+ * Public GUI Command Entry Point.
+ * Single entry point exposed on the Device Detail page to avoid Hubitat UI button duplication.
+ **/
+List<String> "Health Check"() {
+    return executePing()
+}
+
+/**
+ * Private Health Check Execution Helper.
+ * Evaluates temperature sensor freshness, registers timeout check,
+ * and remains hidden from the Hubitat GUI command interface.
+ **/
+private List<String> executePing() {
+    logDebug "Executing Health Check..."
+    scheduleCommandTimeoutCheck()
+    
+    // Virtual thermostat validates live temperature sensor updates for online evaluation
+    def nowMs = now()
+    def lastUpdate = state.lastTempUpdate ?: nowMs
+    def maxInterval = (device.currentValue("maxUpdateInterval") ?: 180) as Long
+    def maxIntervalMs = maxInterval * 60000
+
+    if ((nowMs - lastUpdate) < maxIntervalMs) {
+        unschedule("deviceCommandTimeout")
+        updateAttribute("healthStatus", "online")
+    } else {
+        logWarn "Virtual thermostat temperature sensor health status is stale (last update > ${maxInterval} mins)."
+    }
+
+    return []
+}
+
+/**
+ * Modular Health Check Scheduler with Persistent Phase-Anchoring.
+ * Anchors check schedules to a persistent random daily time offset to stagger hub network traffic.
+ **/
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60:
+            schedule("0 ${m} * ? * * *", methodToSchedule)
+            break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
+            break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
+            break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
+            break
+        case 1440:
+            schedule("0 ${m} ${h} ? * * *", methodToSchedule)
+            break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
     }
 }
+
+private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
+    unschedule("deviceCommandTimeout")
+    runIn(delay, "deviceCommandTimeout")
+}
+
+void deviceCommandTimeout() {
+    logWarn "No Health Check response received within timeout window (sensor offline?)"
+    updateAttribute("healthStatus", "offline")
+}
+
+/* =========================================================================================
+   VIRTUAL THERMOSTAT CORE CONTROL LOGIC
+   ========================================================================================= */
 
 def setLogLevel(level) {
     int lvl = level ? level.toInteger() : 3
@@ -182,26 +349,6 @@ def setLogLevel(level) {
     device.updateSetting("logDebugEnable", [type: "bool", value: dbg])
     device.updateSetting("logTraceEnable", [type: "bool", value: trc])
     logWarn "Logging levels updated via app request -> Debug: ${dbg}, Trace: ${trc}"
-}
-
-void resetDriver() {
-    logInfo "Starting full driver reset..."
-    clearAllSchedules()
-    clearAllAttributes()
-    clearAllDriverStates()
-    logInfo "Driver reset process completed."
-}
-
-void clearAllDriverStates() {
-    state.clear()
-}
-
-void clearAllAttributes() {
-    device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
-}
-
-void clearAllSchedules() {
-    unschedule()
 }
 
 // Controller Specific Commands
@@ -229,7 +376,7 @@ def controlCool(String action) {
 
 def updateThermostatSetpoint(String units = null) {
     if (!units) units = getTemperatureScale()
-    def mode = device.currentValue("thermostatMode") ?: "off"
+    def mode = device.currentValue("physicalThermostatMode") ?: "off"
     def targetVal
     
     if (mode == "cool") {
@@ -251,7 +398,7 @@ def evaluateMode() {
     def coolingSetpoint = device.currentValue("coolingSetpoint")
     def threshold = device.currentValue("thermostatThreshold")
     def current = device.currentValue("thermostatOperatingState")
-    def mode = device.currentValue("thermostatMode")
+    def mode = device.currentValue("physicalThermostatMode") ?: "off"
 
     def nowMs = now()
     def lastUpdate = state.lastTempUpdate ?: nowMs
@@ -264,18 +411,23 @@ def evaluateMode() {
 
     if (current == "idle" && (nowMs - lastUpdate >= maxIntervalMili)) {
         logDebug "Temp sensor maximum update interval exceeded ($maxInterval mins). Thermostat idle."
+        updateAttribute("healthStatus", "offline")
     } else if (mode != "off" && current != "idle" && (nowMs - lastUpdate >= maxIntervalMili)) {
         logError "Temp sensor update timeout exceeded. Enforcing EMERGENCY STOP."
+        updateAttribute("healthStatus", "offline")
         sendIfChanged([name: "preEmergencyMode", value: mode])
-        sendIfChanged([name: "thermostatMode", value: "off"])
+        setThermostatMode("off")
         sendIfChanged([name: "thermostatOperatingState", value: "idle"])
         sendIfChanged([name: "controllerState", value: "idle"])
         return
     } else if (preMode && preMode != "none" && preMode != "" && preMode != "null" && (nowMs - lastUpdate < maxIntervalMili)) {
         logWarn "Sensors reporting again. Autorecovered to previous mode: ${preMode}"
+        updateAttribute("healthStatus", "online")
         sendIfChanged([name: "preEmergencyMode", value: "none"])
         setThermostatMode(preMode)
         return
+    } else if ((nowMs - lastUpdate) < maxIntervalMili) {
+        updateAttribute("healthStatus", "online")
     }
 
     def callFor = "idle"
@@ -284,7 +436,7 @@ def evaluateMode() {
         logError "evaluateMode() - Threshold not set or invalid: ${threshold}"
     } else {
         def units = getTemperatureScale()
-        if (mode in ["heat", "emergency heat"]) {
+        if (mode in ["heat", "emergency heat", "emergencyHeat"]) {
             updateThermostatSetpoint(units)
             if ((current == "idle" && (heatingSetpoint - temp) > threshold) || (current == "heating" && (temp - heatingSetpoint) < threshold)) {
                 callFor = "heating"
@@ -311,7 +463,7 @@ def evaluateMode() {
 }
 
 def emergencyStop() { 
-    sendIfChanged([name: "preEmergencyMode", value: device.currentValue("thermostatMode")])
+    sendIfChanged([name: "preEmergencyMode", value: device.currentValue("physicalThermostatMode")])
     setThermostatMode("off") 
 }
 
@@ -420,15 +572,33 @@ def setMaxUpdateInterval(BigDecimal minutes) {
 }
 
 def setThermostatMode(String value) {
-    if (value != device.currentValue("thermostatMode")) {
-        if (device.currentValue("preEmergencyMode") != "none") {
-            logInfo "Manual thermostat mode change to '${value}' detected during offline emergency. Clearing preEmergencyMode."
-            sendIfChanged([name: "preEmergencyMode", value: "none"])
-        }
-        sendIfChanged([name: "thermostatMode", value: value])
-        updateThermostatSetpoint()
-        runIn(2, 'evaluateMode')
+    if (value == null) return
+    
+    // Normalize string input
+    String normMode = value.toString().trim()
+    if (normMode == "emergency heat") normMode = "emergencyHeat"
+    
+    List<String> validModes = ["off", "heat", "cool", "auto", "emergencyHeat"]
+    if (!(normMode in validModes)) {
+        logError "setThermostatMode() received invalid thermostat mode: '${value}'. Request ignored."
+        return
     }
+
+    sendIfChanged([name: "physicalThermostatMode", value: normMode])
+
+    if (getSettingBool("lockDashboardToAuto", true)) {
+        sendIfChanged([name: "thermostatMode", value: "auto"])
+    } else {
+        sendIfChanged([name: "thermostatMode", value: normMode])
+    }
+
+    if (device.currentValue("preEmergencyMode") != "none" && normMode != "off") {
+        logInfo "Manual thermostat mode change to '${normMode}' detected during offline emergency. Clearing preEmergencyMode."
+        sendIfChanged([name: "preEmergencyMode", value: "none"])
+    }
+    
+    updateThermostatSetpoint()
+    runIn(2, 'evaluateMode')
 }
 
 def off()  { setThermostatMode("off") }
@@ -455,6 +625,7 @@ def setTemperature(value) {
     def units = getTemperatureScale()
     sendIfChanged([name: "temperature", value: dVal, unit: units])
     state.lastTempUpdate = now()
+    updateAttribute("healthStatus", "online")
     runIn(2, 'evaluateMode')
 }
 
@@ -532,6 +703,44 @@ def roundDegrees(Double value) {
     }
 }
 
+/* =========================================================================================
+   MASTER UTILITY ROUTINES & LOGGING ENGINE
+   ========================================================================================= */
+
+void disableDebugLogging() {
+    if (getSettingBool("logDebugEnable", false)) {
+        logWarn "30 minutes have elapsed. Automatically disabling debug logging."
+        device.updateSetting("logDebugEnable", [type: "bool", value: false])
+    }
+}
+
+void resetDriver() {
+    logInfo "Starting full driver reset..."
+    clearAllSchedules()
+    clearAllAttributes()
+    clearAllDriverStates()
+    initialize(false)
+    logInfo "Driver reset process completed and re-initialized."
+}
+
+void clearAllDriverStates() {
+    logInfo "Clearing all driver states..."
+    state.clear()
+    logInfo "All states have been cleared."
+}
+
+void clearAllAttributes() {
+    logInfo "Clearing all attributes..."
+    device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
+    logInfo "All attributes have been cleared."
+}
+
+void clearAllSchedules() {
+    logInfo "Clearing all scheduled jobs (including orphaned schedules)..."
+    unschedule()
+    logInfo "All scheduled jobs have been successfully cleared."
+}
+
 private void sendIfChanged(Map args) {
     if (!args || !args.name) return
 
@@ -555,6 +764,15 @@ private void sendIfChanged(Map args) {
     }
 }
 
+private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
+    final String currentVal = device.currentValue(attribute)?.toString()
+    if (currentVal == value?.toString()) return
+
+    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
+    logInfo descriptionText
+    sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
+}
+
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String devName = device.displayName ?: "Device Driver"
@@ -576,3 +794,10 @@ private void logError(String msg) { logMessage("error", msg) }
 private Boolean getSettingBool(String key, Boolean defaultVal = false) {
     return settings[key] != null ? settings[key] as Boolean : defaultVal
 }
+
+@Field static final Map HealthCheckIntervalOpts = [
+    defaultValue: 480,
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
+]
+
+@Field static final int COMMAND_TIMEOUT = 10

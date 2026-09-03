@@ -17,34 +17,44 @@ Besides the power this app is showing to me (well. I wrote it so.. yea.) I've ju
 
 Updates overview as of 08/12/2022
 
- Change History:
- 
-Date         Source      Version What                                        URL
-----         ------      ------- ----                                        ---
-2022-01-19   jshimota    0.1.0   Starting version
-2022-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components   https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
-2022-01-19   jshimota    0.1.2   Alpha release for testing
-2022-01-20   jshimota    0.1.3   Worked on Scheduling cleanup and logging
-2022-01-20   jshimota    0.1.4   First efforts to identify workarounds on php variations not found in Java
-2022-01-20   jshimota    0.1.5   Heavy work done on basic function cleanup, as well as optimization
-2022-01-20   jshimota    0.1.6   Added final missing attributes - DST, ObservesDST, LeapYear, Day Suffix and Ordinal
-2022-01-20   jshimota    0.1.7   Tried adding Simons time and date stuff back, changed mind
-2022-01-20   jshimota    0.1.8   Added update schedule ability
-2022-01-20   jshimota    0.1.9   Commented tile features completely - no intent to support
-2022-01-20   jshimota    0.2.0   Release (getting HPM value for package)
-2022-01-20   jshimota    0.2.1   Added user compare value requests
-2022-01-21   jshimota    0.2.2   Fixed switch case for Suffix, added noLead to minutes var, scheduler drop down and values
-2022-01-22   jshimota    0.2.3   Added WeekOfYearOdd/Even for garbage cans.
-2022-01-22   jshimota    0.2.4   with SBurke help - fixed boolean's  not supported by HE on comparators
-2022-01-22   jshimota    0.2.5   Add of Even/Odd value to day of month number variables
-2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables
-2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line
-2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user
-2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop
-2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well
-2022-08-15   jshimota    0.3.1   Typo error found in Week of Mon variables
-2025-03-14   jshimota    0.3.2   Added daily schedule run time to after HE and DST changes (2:45am)
-2025-10-19   jshimota    0.3.3   Added debug log - restructured log reporting
+ * Change History:
+ *
+ * Date         Source      Version What       URL
+ * ----         ------      ------- ---- 
+ * 2026-09-03   jshimota    0.4.4   Renamed custom command scheduleRefresh to Refresh Scheduler for clearer administrative intent.
+ * 2026-09-03   jshimota    0.4.3   Restored v0.3.8 string format preservation for lead/no-lead attributes (preventing .toInteger() truncation), while retaining schedule optimizations, 5-tier logging, and lastUpdate tracking.
+ * 2026-09-03   jshimota    0.4.1   Streamlined execution paths: eliminated schedule churn in mySchedule/dailySchedule, shifted attribute logs to logDebug, added lastUpdate attribute, and removed Health Check/Reset driver routines.
+ * 2026-09-03   jshimota    0.4.0   Integrated Driver Template v1.0.11 architecture: standardized 5-tier logging engine, 30-min debug auto-off timer, version demarcation tracing, healthStatus tracking, and resetDriver routine.
+ * 2026-06-22   jshimota    0.3.9   Gemini Optimization-Modernized refactor 2026.
+ * 2026-05-14   jshimota    0.3.8   Fix package json to required true.
+ * 2026-05-01   jshimota    0.3.7   Bug on 176 log enabled should be txtEnable.
+ * 2026-03-08   jshimota    0.3.6   Moved daily schedule to 3:15 to get past Hub hour update on DST.
+ * 2026-01-10   jshimota    0.3.5   Changed log dbg and txt params for debugging.
+ * 2025-10-20   jshimota    0.3.4   Added dailyRefresh.
+ * 2025-10-19   jshimota    0.3.3   Added debug log - restructured log reporting.
+ * 2025-03-14   jshimota    0.3.2   Added daily schedule run time to after HE and DST changes (2:45am).
+ * 2022-08-15   jshimota    0.3.1   Typo error found in Week of Mon variables.
+ * 2022-08-12   jshimota    0.3.0   Week of Year was case sensitive and showing week of month, added week of month as well.
+ * 2022-04-30   jshimota    0.2.9   2 minor text changes for clarity, attempt to fix schedule loop.
+ * 2022-01-26   jshimota    0.2.8   Added String versions of comparison date times for user.
+ * 2022-01-23   jshimota    0.2.7   TimeHour24NumNoLead fixed - added debug logging check to a line.
+ * 2022-01-22   jshimota    0.2.6   Add of Even/Odd value to day of year number variables.
+ * 2022-01-22   jshimota    0.2.5   Add of Even/Odd value to day of month number variables.
+ * 2022-01-22   jshimota    0.2.4   With SBurke help - fixed booleans not supported by HE on comparators.
+ * 2022-01-22   jshimota    0.2.3   Added WeekOfYearOdd/Even for garbage cans.
+ * 2022-01-21   jshimota    0.2.2   Fixed switch case for Suffix, added Nolead to minutes var, scheduler drop down and values.
+ * 2022-01-20   jshimota    0.2.1   Added user compare value requests.
+ * 2022-01-20   jshimota    0.2.0   Release (getting HPM value for package).
+ * 2022-01-20   jshimota    0.1.9   Commented tile features completely - no intent to support.
+ * 2022-01-20   jshimota    0.1.8   Added update schedule ability.
+ * 2022-01-20   jshimota    0.1.7   Tried adding Simons time and date stuff back, changed mind.
+ * 2022-01-20   jshimota    0.1.6   Added final missing attributes - DST, ObservesDST, LeapYear, Day Suffix and Ordinal.
+ * 2022-01-20   jshimota    0.1.5   Heavy work done on basic function cleanup, as well as optimization.
+ * 2022-01-20   jshimota    0.1.4   First efforts to identify workarounds on php variations not found in Java.
+ * 2022-01-20   jshimota    0.1.3   Worked on Scheduling cleanup and logging.
+ * 2022-01-19   jshimota    0.1.2   Alpha release for testing.
+ * 2021-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components  https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
+ * 2022-01-19   jshimota    0.1.0   Starting version.
  
 Description
 

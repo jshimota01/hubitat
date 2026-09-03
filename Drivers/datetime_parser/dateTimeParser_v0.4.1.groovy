@@ -24,10 +24,8 @@
 /**
  * Change History:
  *
- * Date         Source      Version What       URL
- * ----         ------      ------- ---- 
- * 2026-09-03   jshimota    0.4.4   Renamed custom command scheduleRefresh to Refresh Scheduler for clearer administrative intent.
- * 2026-09-03   jshimota    0.4.3   Restored v0.3.8 string format preservation for lead/no-lead attributes (preventing .toInteger() truncation), while retaining schedule optimizations, 5-tier logging, and lastUpdate tracking.
+ * Date         Source      Version What
+ * ----         ------      -------  ---
  * 2026-09-03   jshimota    0.4.1   Streamlined execution paths: eliminated schedule churn in mySchedule/dailySchedule, shifted attribute logs to logDebug, added lastUpdate attribute, and removed Health Check/Reset driver routines.
  * 2026-09-03   jshimota    0.4.0   Integrated Driver Template v1.0.11 architecture: standardized 5-tier logging engine, 30-min debug auto-off timer, version demarcation tracing, healthStatus tracking, and resetDriver routine.
  * 2026-06-22   jshimota    0.3.9   Gemini Optimization-Modernized refactor 2026.
@@ -65,8 +63,8 @@
 import java.text.SimpleDateFormat
 import groovy.transform.Field
 
-static String version() { return '0.4.4' }
-def timeStamp() { return "2026/09/03 09:52 AM" }
+static String version() { return '0.4.1' }
+def timeStamp() { return "2026/09/03 09:30 AM" }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) return "th"
@@ -141,7 +139,7 @@ metadata {
         attribute "comparisonTimeStr", "string"
 
         // Custom Commands
-        command "Refresh Scheduler"
+        command "scheduleRefresh"
     }
 
     preferences {
@@ -213,8 +211,8 @@ def dailyRefresh() {
     runCmd()
 }
 
-def "Refresh Scheduler"() {
-    logDebug "Refresh Scheduler requested"
+def scheduleRefresh() {
+    logDebug "scheduleRefresh() requested"
     manageSchedules()
 }
 
@@ -268,7 +266,7 @@ void dailySchedule() {
 void runCmd() {
     def now = new Date()
     
-    // Reuse SimpleDateFormat instances across pattern evaluations
+    // Reuse one SimpleDateFormat instance while extracting all date/time fields
     def sdf = new SimpleDateFormat()
 
     sdf.applyPattern('EEEE'); def DayName = sdf.format(now)
@@ -297,89 +295,53 @@ void runCmd() {
     sdf.applyPattern('z');    def TZIDText3 = sdf.format(now)
     sdf.applyPattern('Z');    def GMTDiffHours = sdf.format(now)
 
-    // Comparison values preserved exactly as original string concatenations
-    def comparisonDate = YearNum4Dig + MonthNum + DayOfMonNum
-    def comparisonTime = TimeHour24Num + TimeMinNum
-    def comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
+    def comparisonDate = "${YearNum4Dig}${MonthNum}${DayOfMonNum}".toInteger()
+    def comparisonTime = "${TimeHour24Num}${TimeMinNum}".toInteger()
+    def comparisonDateTime = "${YearNum4Dig}${MonthNum}${DayOfMonNum}${TimeHour24Num}${TimeMinNum}".toLong()
 
-    int iYear = Integer.parseInt(YearNum4Dig)
-    int iMonth = Integer.parseInt(MonthNum) - 1 
-    int iDay = Integer.parseInt(DayOfMonNum)
+    int iYear = YearNum4Dig.toInteger()
+    int iMonth = MonthNum.toInteger() - 1 
+    int iDay = DayOfMonNum.toInteger()
     
-    GregorianCalendar currentCal = new GregorianCalendar(iYear, iMonth, iDay)
+    def currentCal = new GregorianCalendar(iYear, iMonth, iDay)
     def DaysInMonthNum = currentCal.getActualMaximum(Calendar.DAY_OF_MONTH)
     def LeapYearBool = currentCal.isLeapYear(iYear)
 
-    TimeZone timezonedefault = TimeZone.getDefault()
+    def timezonedefault = TimeZone.getDefault()
     def ObservesDST = timezonedefault.observesDaylightTime()
     def DSTActiveBool = timezonedefault.inDaylightTime(now)
 
-    int iDayOfMonNum = Integer.parseInt(DayOfMonNum)
-    boolean DayOfMonNumEven = (iDayOfMonNum % 2 == 0)
+    def DayOfMonNumEven = (DayOfMonNum.toInteger() % 2 == 0)
+    def DayOfYearNumEven = (DayOfYearNum.toInteger() % 2 == 0)
+    def WeekOfMonNumEven = (WeekOfMonNum.toInteger() % 2 == 0)
+    def WeekOfYearNumEven = (WeekOfYearNum.toInteger() % 2 == 0)
 
-    int iDayOfYearNum = Integer.parseInt(DayOfYearNum)
-    boolean DayOfYearNumEven = (iDayOfYearNum % 2 == 0)
-
-    int iWeekOfMonNum = Integer.parseInt(WeekOfMonNum)
-    boolean WeekOfMonNumEven = (iWeekOfMonNum % 2 == 0)
-
-    int iWeekOfYearNum = Integer.parseInt(WeekOfYearNum)
-    boolean WeekOfYearNumEven = (iWeekOfYearNum % 2 == 0)
-
-    String OrdDay = getOrdinal(iDay)
-    String DayOfMonSuf = OrdDay
-    String DayOfMonOrd = String.valueOf(iDay) + OrdDay
+    def OrdDay = getOrdinal(iDay)
+    def DayOfMonSuf = OrdDay
+    def DayOfMonOrd = "${iDay}${OrdDay}"
 
     sdf.applyPattern("yyyy-MM-dd HH:mm:ss")
     def lastUpdateFormatted = sdf.format(now)
 
-    // Preserved raw String payloads for lead/no-lead formatted values
     def events = [
-        "DayName": DayName,
-        "DayNameText3": DayNameText3,
-        "DayOfMonNum": DayOfMonNum,
-        "DayOfMonNumNoLead": DayOfMonNumNoLead,
-        "DayOfMonOrd": DayOfMonOrd,
-        "DayOfMonSuf": DayOfMonSuf,
-        "DayOfWeekNum": DayOfWeekNum,
-        "DayOfYearNum": DayOfYearNum,
-        "DaysInMonthNum": DaysInMonthNum,
-        "GMTDiffHours": GMTDiffHours,
-        "IsDayOfMonNumEven": DayOfMonNumEven.toString(),
-        "IsDayOfMonNumOdd": (!DayOfMonNumEven).toString(),
-        "IsDayOfYearNumEven": DayOfYearNumEven.toString(),
-        "IsDayOfYearNumOdd": (!DayOfYearNumEven).toString(),
-        "IsDSTActive": DSTActiveBool.toString(),
-        "IsLeapYear": LeapYearBool.toString(),
-        "IsObservesDST": ObservesDST.toString(),
-        "IsWeekOfMonNumEven": WeekOfMonNumEven.toString(),
-        "IsWeekOfMonNumOdd": (!WeekOfMonNumEven).toString(),
-        "IsWeekOfYearNumEven": WeekOfYearNumEven.toString(),
-        "IsWeekOfYearNumOdd": (!WeekOfYearNumEven).toString(),
-        "MonthName": MonthName,
-        "MonthNameText3": MonthNameText3,
-        "MonthNum": MonthNum,
-        "MonthNumNoLead": MonthNumNoLead,
-        "TZID": TZID,
-        "TZIDText3": TZIDText3,
-        "TimeAntePostLower": TimeAntePostLower,
-        "TimeAntePostUpper": TimeAntePostUpper,
-        "TimeHour12Num": TimeHour12Num,
-        "TimeHour12NumNoLead": TimeHour12NumNoLead,
-        "TimeHour24Num": TimeHour24Num,
-        "TimeHour24NumNoLead": TimeHour24NumNoLead,
-        "TimeMinNum": TimeMinNum,
-        "TimeMinNumNoLead": TimeMinNumNoLead,
-        "WeekOfMonNum": WeekOfMonNum,
-        "WeekOfYearNum": WeekOfYearNum,
-        "YearNum2Dig": YearNum2Dig,
-        "YearNum4Dig": YearNum4Dig,
-        "comparisonDate": comparisonDate,
-        "comparisonDateStr": String.valueOf(comparisonDate),
-        "comparisonDateTime": comparisonDateTime,
-        "comparisonDateTimeStr": String.valueOf(comparisonDateTime),
-        "comparisonTime": comparisonTime,
-        "comparisonTimeStr": String.valueOf(comparisonTime),
+        "DayName": DayName, "DayNameText3": DayNameText3, "DayOfMonNum": DayOfMonNum.toInteger(),
+        "DayOfMonNumNoLead": DayOfMonNumNoLead.toInteger(), "DayOfMonOrd": DayOfMonOrd, "DayOfMonSuf": DayOfMonSuf,
+        "DayOfWeekNum": DayOfWeekNum.toInteger(), "DayOfYearNum": DayOfYearNum.toInteger(), "DaysInMonthNum": DaysInMonthNum,
+        "GMTDiffHours": GMTDiffHours, "IsDayOfMonNumEven": DayOfMonNumEven.toString(), "IsDayOfMonNumOdd": (!DayOfMonNumEven).toString(),
+        "IsDayOfYearNumEven": DayOfYearNumEven.toString(), "IsDayOfYearNumOdd": (!DayOfYearNumEven).toString(),
+        "IsDSTActive": DSTActiveBool.toString(), "IsLeapYear": LeapYearBool.toString(), "IsObservesDST": ObservesDST.toString(),
+        "IsWeekOfMonNumEven": WeekOfMonNumEven.toString(), "IsWeekOfMonNumOdd": (!WeekOfMonNumEven).toString(),
+        "IsWeekOfYearNumEven": WeekOfYearNumEven.toString(), "IsWeekOfYearNumOdd": (!WeekOfYearNumEven).toString(),
+        "MonthName": MonthName, "MonthNameText3": MonthNameText3, "MonthNum": MonthNum.toInteger(),
+        "MonthNumNoLead": MonthNumNoLead.toInteger(), "TZID": TZID, "TZIDText3": TZIDText3,
+        "TimeAntePostLower": TimeAntePostLower, "TimeAntePostUpper": TimeAntePostUpper, "TimeHour12Num": TimeHour12Num.toInteger(),
+        "TimeHour12NumNoLead": TimeHour12NumNoLead.toInteger(), "TimeHour24Num": TimeHour24Num.toInteger(),
+        "TimeHour24NumNoLead": TimeHour24NumNoLead.toInteger(), "TimeMinNum": TimeMinNum.toInteger(),
+        "TimeMinNumNoLead": TimeMinNumNoLead.toInteger(), "WeekOfMonNum": WeekOfMonNum.toInteger(),
+        "WeekOfYearNum": WeekOfYearNum.toInteger(), "YearNum2Dig": YearNum2Dig.toInteger(), "YearNum4Dig": YearNum4Dig.toInteger(),
+        "comparisonDate": comparisonDate, "comparisonDateStr": comparisonDate.toString(),
+        "comparisonDateTime": comparisonDateTime, "comparisonDateTimeStr": comparisonDateTime.toString(),
+        "comparisonTime": comparisonTime, "comparisonTimeStr": comparisonTime.toString(),
         "lastUpdate": lastUpdateFormatted
     ]
 

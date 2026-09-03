@@ -29,6 +29,7 @@
  **/
 /**
  * Changelog:
+ * v1.0.11   09/03/26    jshimota    Standardized custom Health Check method naming (executeHealthCheck) and purged remaining internal ping/pong nomenclature to match Plug Driver architecture.
  * v1.0.10   08/31/26    jshimota    Updated Health Check interval option label from 'Once a Day' to 'Every 24 Hours'.
  * v1.0.9    08/31/26    jshimota    Enforced immediate Health Check execution on configure() and guaranteed healthStatus initialization on reset/initialize.
  * v1.0.8    08/31/26    jshimota    Integrated standardized custom Health Check architecture, Notes header block, and consolidated version tracking.
@@ -38,8 +39,8 @@
  **/
 // [KEEP-EXACT] See possible changelog.txt for past changelog history.
 
-static String version() { return '1.0.10' }
-def timeStamp() { return "2026/08/31 08:30 PM" }
+static String version() { return '1.0.11' }
+def timeStamp() { return "2026/09/03 09:00 AM" }
 
 import groovy.transform.Field
 
@@ -63,7 +64,7 @@ metadata {
     }
 
     preferences {
-        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check (Ping/Pong) Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver sends a Health Check Ping to verify device online status.<br><b>Note:</b> This is a custom driver ping/pong routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -122,7 +123,7 @@ def configure() {
     List<String> cmds = []
     
     // Immediately execute a Health Check to establish online healthStatus right away
-    cmds += executePing()
+    cmds += executeHealthCheck()
     
     return cmds
 }
@@ -139,9 +140,9 @@ private void initialize(Boolean isInstall = false) {
     // Centralized Health Check Scheduler
     final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
     if (interval > 0) {
-        scheduleHealthCheck("executePing", interval)
+        scheduleHealthCheck("executeHealthCheckScheduled", interval)
     } else {
-        unschedule("executePing")
+        unschedule("executeHealthCheckScheduled")
     }
 
     if (isInstall) {
@@ -157,7 +158,7 @@ private void initialize(Boolean isInstall = false) {
 }
 
 /* =========================================================================================
-   HEALTH CHECK ROUTINE TEMPLATE (CUSTOM DRIVER PING/PONG ARCHITECTURE)
+   HEALTH CHECK ROUTINE TEMPLATE (CUSTOM HEALTH CHECK ARCHITECTURE)
    ========================================================================================= */
 
 /**
@@ -165,19 +166,29 @@ private void initialize(Boolean isInstall = false) {
  * Single entry point exposed on the Device Detail page to avoid Hubitat UI button duplication.
  **/
 List<String> "Health Check"() {
-    return executePing()
+    return executeHealthCheck()
 }
 
 /**
- * Private Ping Execution Helper.
- * Transmits underlying device ping/read request, registers timeout check,
+ * Public Scheduled Callback Target.
+ * Serves as the public entry point required by Hubitat's scheduler engine,
+ * delegating to the private execution helper.
+ **/
+void executeHealthCheckScheduled() {
+    List<String> cmds = executeHealthCheck()
+    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+/**
+ * Private Health Check Execution Helper.
+ * Transmits underlying device query request, registers timeout check,
  * and remains hidden from the Hubitat GUI command interface.
  **/
-private List<String> executePing() {
-    logDebug "Health Check Ping sent..."
+private List<String> executeHealthCheck() {
+    logDebug "Executing Health Check..."
     scheduleCommandTimeoutCheck()
     
-    // Example: Return device-specific ping/read command list here
+    // Example: Return device-specific read command list here
     return []
 }
 
@@ -230,11 +241,11 @@ private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
 }
 
 private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
-    runIn(delay, "deviceCommandTimeout")
+    runIn(delay, "deviceCommandTimeout", [overwrite: true])
 }
 
 void deviceCommandTimeout() {
-    logWarn "No Health Check Pong received (device offline?)"
+    logWarn "No Health Check response received (device offline?)"
     updateAttribute("healthStatus", "offline")
 }
 
@@ -253,9 +264,17 @@ void disableDebugLogging() {
 // Master Utility Routine for Driver GUI Button
 void resetDriver() {
     logInfo "Starting full driver reset..."
+    
+    Object savedHour = state.healthCheckStartHour
+    Object savedMinute = state.healthCheckStartMinute
+
     clearAllSchedules()
     clearAllAttributes()
     clearAllDriverStates()
+
+    if (savedHour != null) state.healthCheckStartHour = savedHour
+    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
+
     initialize(false)
     logInfo "Driver reset process completed and re-initialized."
 }

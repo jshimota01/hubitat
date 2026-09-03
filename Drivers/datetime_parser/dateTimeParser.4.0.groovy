@@ -5,6 +5,13 @@
  * Purpose:
  * Virtual utility driver that parses the current system time/date into a comprehensive 
  * suite of string, numerical, ordinal, and comparison attributes for use in Hubitat rules and dashboards.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Hubitat's native capability exposes an unwanted "Ping" UI control button
+ *   and does not provide the phase-anchored scheduling, timeout guards, or trace 
+ *   logging behavior required by this driver architecture.
  **/
 /**
  * Copyright 2026 James Shimota
@@ -24,11 +31,8 @@
 /**
  * Change History:
  *
- * Date         Source      Version What       URL
- * ----         ------      ------- ---- 
- * 2026-09-03   jshimota    0.4.4   Renamed custom command scheduleRefresh to Refresh Scheduler for clearer administrative intent.
- * 2026-09-03   jshimota    0.4.3   Restored v0.3.8 string format preservation for lead/no-lead attributes (preventing .toInteger() truncation), while retaining schedule optimizations, 5-tier logging, and lastUpdate tracking.
- * 2026-09-03   jshimota    0.4.1   Streamlined execution paths: eliminated schedule churn in mySchedule/dailySchedule, shifted attribute logs to logDebug, added lastUpdate attribute, and removed Health Check/Reset driver routines.
+ * Date         Source      Version What                                                                                                                                                                                            URL
+ * ----         ------      ------- ----                                                                                                                                                                                            ---
  * 2026-09-03   jshimota    0.4.0   Integrated Driver Template v1.0.11 architecture: standardized 5-tier logging engine, 30-min debug auto-off timer, version demarcation tracing, healthStatus tracking, and resetDriver routine.
  * 2026-06-22   jshimota    0.3.9   Gemini Optimization-Modernized refactor 2026.
  * 2026-05-14   jshimota    0.3.8   Fix package json to required true.
@@ -58,15 +62,15 @@
  * 2022-01-20   jshimota    0.1.4   First efforts to identify workarounds on php variations not found in Java.
  * 2022-01-20   jshimota    0.1.3   Worked on Scheduling cleanup and logging.
  * 2022-01-19   jshimota    0.1.2   Alpha release for testing.
- * 2021-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components  https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
+ * 2021-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components                                                             https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
  * 2022-01-19   jshimota    0.1.0   Starting version.
  **/
 
 import java.text.SimpleDateFormat
 import groovy.transform.Field
 
-static String version() { return '0.4.4' }
-def timeStamp() { return "2026/09/03 09:52 AM" }
+static String version() { return '0.4.0' }
+def timeStamp() { return "2026/09/03 09:15 AM" }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) return "th"
@@ -89,11 +93,10 @@ metadata {
         capability "Configuration"
         capability "Refresh"
 
-        // Driver Tracking Attributes
+        // Attributes
         attribute "driverVersion", "string"
-        attribute "lastUpdate", "string"
+        attribute "healthStatus", "enum", ["unknown", "offline", "online"]
 
-        // Time Attributes
         attribute "DayName", "string"
         attribute "DayNameText3", "string"
         attribute "DayOfMonNum", "number"
@@ -141,12 +144,15 @@ metadata {
         attribute "comparisonTimeStr", "string"
 
         // Custom Commands
-        command "Refresh Scheduler"
+        command "Health Check"
+        command "scheduleRefresh"
+        command "resetDriver"
     }
 
     preferences {
         input name: "autoUpdate", type: "bool", title: "<b>Enable Automatic Refresh?</b>", defaultValue: true, required: true
         input name: "autoUpdateInterval", type: "enum", options: [[1:"1 minute"],[2:"2 minutes"],[5:"5 minutes"],[10:"10 minutes"],[15:"15 minutes"],[20:"20 minutes"],[30:"30 minutes"],[45:"45 minutes"],[59:"59 minutes"]], title: "<b>Auto Refresh Interval</b>", defaultValue: 5, required: true
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify process execution.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -178,6 +184,9 @@ void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
     updateAttribute("driverVersion", version())
+    
+    initializeHealthCheckPhase()
+    updateAttribute("healthStatus", "unknown")
 
     initialize(true)
 }
@@ -198,7 +207,10 @@ def configure() {
     
     initialize(false)
     refresh()
-    return []
+    
+    List<String> cmds = []
+    cmds += executeHealthCheck()
+    return cmds
 }
 
 def refresh() {
@@ -211,10 +223,11 @@ def refresh() {
 def dailyRefresh() {
     logDebug "dailyRefresh() executing..."
     runCmd()
+    manageSchedules()
 }
 
-def "Refresh Scheduler"() {
-    logDebug "Refresh Scheduler requested"
+def scheduleRefresh() {
+    logDebug "scheduleRefresh() requested"
     manageSchedules()
 }
 
@@ -223,6 +236,18 @@ private void initialize(Boolean isInstall = false) {
     unschedule("disableDebugLogging")
 
     updateAttribute("driverVersion", version())
+
+    if (device.currentValue("healthStatus") == null) {
+        updateAttribute("healthStatus", "unknown")
+    }
+
+    // Centralized Health Check Scheduler
+    final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
+    if (interval > 0) {
+        scheduleHealthCheck("executeHealthCheckScheduled", interval)
+    } else {
+        unschedule("executeHealthCheckScheduled")
+    }
 
     if (isInstall) {
         device.updateSetting("logDebugEnable", [type: "bool", value: true])
@@ -237,13 +262,88 @@ private void initialize(Boolean isInstall = false) {
 }
 
 /* =========================================================================================
+   HEALTH CHECK ROUTINE ARCHITECTURE
+   ========================================================================================= */
+
+/**
+ * Public GUI Command Entry Point.
+ **/
+List<String> "Health Check"() {
+    return executeHealthCheck()
+}
+
+/**
+ * Public Scheduled Callback Target for Scheduler Engine.
+ **/
+void executeHealthCheckScheduled() {
+    executeHealthCheck()
+}
+
+/**
+ * Private Health Check Execution Helper.
+ * Evaluates internal execution health for virtual driver operations.
+ **/
+private List<String> executeHealthCheck() {
+    logDebug "Executing Health Check..."
+    updateAttribute("healthStatus", "online")
+    return []
+}
+
+/**
+ * Modular Health Check Scheduler with Persistent Phase-Anchoring.
+ **/
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60:
+            schedule("0 ${m} * ? * * *", methodToSchedule)
+            break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
+            break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
+            break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
+            break
+        case 1440:
+            schedule("0 ${m} ${h} ? * * *", methodToSchedule)
+            break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
+    }
+}
+
+/* =========================================================================================
    DATE & TIME PARSING CORE LOGIC
    ========================================================================================= */
 
 private void manageSchedules() {
     unschedule("mySchedule")
     unschedule("dailySchedule")
-    logInfo "Cleared existing schedules."
+    logInfo "Cleared scheduled time updates."
     
     if (autoUpdate) {
         int interval = settings.autoUpdateInterval ? settings.autoUpdateInterval.toInteger() : 5
@@ -258,7 +358,7 @@ private void manageSchedules() {
 }
 
 void mySchedule() {
-    runCmd()
+    refresh()
 }
 
 void dailySchedule() {
@@ -268,7 +368,7 @@ void dailySchedule() {
 void runCmd() {
     def now = new Date()
     
-    // Reuse SimpleDateFormat instances across pattern evaluations
+    // Reusable formatter to minimize memory allocation
     def sdf = new SimpleDateFormat()
 
     sdf.applyPattern('EEEE'); def DayName = sdf.format(now)
@@ -297,93 +397,54 @@ void runCmd() {
     sdf.applyPattern('z');    def TZIDText3 = sdf.format(now)
     sdf.applyPattern('Z');    def GMTDiffHours = sdf.format(now)
 
-    // Comparison values preserved exactly as original string concatenations
-    def comparisonDate = YearNum4Dig + MonthNum + DayOfMonNum
-    def comparisonTime = TimeHour24Num + TimeMinNum
-    def comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
+    def comparisonDate = "${YearNum4Dig}${MonthNum}${DayOfMonNum}".toInteger()
+    def comparisonTime = "${TimeHour24Num}${TimeMinNum}".toInteger()
+    def comparisonDateTime = "${YearNum4Dig}${MonthNum}${DayOfMonNum}${TimeHour24Num}${TimeMinNum}".toLong()
 
-    int iYear = Integer.parseInt(YearNum4Dig)
-    int iMonth = Integer.parseInt(MonthNum) - 1 
-    int iDay = Integer.parseInt(DayOfMonNum)
+    int iYear = YearNum4Dig.toInteger()
+    int iMonth = MonthNum.toInteger() - 1 
+    int iDay = DayOfMonNum.toInteger()
     
-    GregorianCalendar currentCal = new GregorianCalendar(iYear, iMonth, iDay)
+    def currentCal = new GregorianCalendar(iYear, iMonth, iDay)
     def DaysInMonthNum = currentCal.getActualMaximum(Calendar.DAY_OF_MONTH)
     def LeapYearBool = currentCal.isLeapYear(iYear)
 
-    TimeZone timezonedefault = TimeZone.getDefault()
+    def timezonedefault = TimeZone.getDefault()
     def ObservesDST = timezonedefault.observesDaylightTime()
     def DSTActiveBool = timezonedefault.inDaylightTime(now)
 
-    int iDayOfMonNum = Integer.parseInt(DayOfMonNum)
-    boolean DayOfMonNumEven = (iDayOfMonNum % 2 == 0)
+    def DayOfMonNumEven = (DayOfMonNum.toInteger() % 2 == 0)
+    def DayOfYearNumEven = (DayOfYearNum.toInteger() % 2 == 0)
+    def WeekOfMonNumEven = (WeekOfMonNum.toInteger() % 2 == 0)
+    def WeekOfYearNumEven = (WeekOfYearNum.toInteger() % 2 == 0)
 
-    int iDayOfYearNum = Integer.parseInt(DayOfYearNum)
-    boolean DayOfYearNumEven = (iDayOfYearNum % 2 == 0)
+    def OrdDay = getOrdinal(iDay)
+    def DayOfMonSuf = OrdDay
+    def DayOfMonOrd = "${iDay}${OrdDay}"
 
-    int iWeekOfMonNum = Integer.parseInt(WeekOfMonNum)
-    boolean WeekOfMonNumEven = (iWeekOfMonNum % 2 == 0)
-
-    int iWeekOfYearNum = Integer.parseInt(WeekOfYearNum)
-    boolean WeekOfYearNumEven = (iWeekOfYearNum % 2 == 0)
-
-    String OrdDay = getOrdinal(iDay)
-    String DayOfMonSuf = OrdDay
-    String DayOfMonOrd = String.valueOf(iDay) + OrdDay
-
-    sdf.applyPattern("yyyy-MM-dd HH:mm:ss")
-    def lastUpdateFormatted = sdf.format(now)
-
-    // Preserved raw String payloads for lead/no-lead formatted values
     def events = [
-        "DayName": DayName,
-        "DayNameText3": DayNameText3,
-        "DayOfMonNum": DayOfMonNum,
-        "DayOfMonNumNoLead": DayOfMonNumNoLead,
-        "DayOfMonOrd": DayOfMonOrd,
-        "DayOfMonSuf": DayOfMonSuf,
-        "DayOfWeekNum": DayOfWeekNum,
-        "DayOfYearNum": DayOfYearNum,
-        "DaysInMonthNum": DaysInMonthNum,
-        "GMTDiffHours": GMTDiffHours,
-        "IsDayOfMonNumEven": DayOfMonNumEven.toString(),
-        "IsDayOfMonNumOdd": (!DayOfMonNumEven).toString(),
-        "IsDayOfYearNumEven": DayOfYearNumEven.toString(),
-        "IsDayOfYearNumOdd": (!DayOfYearNumEven).toString(),
-        "IsDSTActive": DSTActiveBool.toString(),
-        "IsLeapYear": LeapYearBool.toString(),
-        "IsObservesDST": ObservesDST.toString(),
-        "IsWeekOfMonNumEven": WeekOfMonNumEven.toString(),
-        "IsWeekOfMonNumOdd": (!WeekOfMonNumEven).toString(),
-        "IsWeekOfYearNumEven": WeekOfYearNumEven.toString(),
-        "IsWeekOfYearNumOdd": (!WeekOfYearNumEven).toString(),
-        "MonthName": MonthName,
-        "MonthNameText3": MonthNameText3,
-        "MonthNum": MonthNum,
-        "MonthNumNoLead": MonthNumNoLead,
-        "TZID": TZID,
-        "TZIDText3": TZIDText3,
-        "TimeAntePostLower": TimeAntePostLower,
-        "TimeAntePostUpper": TimeAntePostUpper,
-        "TimeHour12Num": TimeHour12Num,
-        "TimeHour12NumNoLead": TimeHour12NumNoLead,
-        "TimeHour24Num": TimeHour24Num,
-        "TimeHour24NumNoLead": TimeHour24NumNoLead,
-        "TimeMinNum": TimeMinNum,
-        "TimeMinNumNoLead": TimeMinNumNoLead,
-        "WeekOfMonNum": WeekOfMonNum,
-        "WeekOfYearNum": WeekOfYearNum,
-        "YearNum2Dig": YearNum2Dig,
-        "YearNum4Dig": YearNum4Dig,
-        "comparisonDate": comparisonDate,
-        "comparisonDateStr": String.valueOf(comparisonDate),
-        "comparisonDateTime": comparisonDateTime,
-        "comparisonDateTimeStr": String.valueOf(comparisonDateTime),
-        "comparisonTime": comparisonTime,
-        "comparisonTimeStr": String.valueOf(comparisonTime),
-        "lastUpdate": lastUpdateFormatted
+        "DayName": DayName, "DayNameText3": DayNameText3, "DayOfMonNum": DayOfMonNum.toInteger(),
+        "DayOfMonNumNoLead": DayOfMonNumNoLead.toInteger(), "DayOfMonOrd": DayOfMonOrd, "DayOfMonSuf": DayOfMonSuf,
+        "DayOfWeekNum": DayOfWeekNum.toInteger(), "DayOfYearNum": DayOfYearNum.toInteger(), "DaysInMonthNum": DaysInMonthNum,
+        "GMTDiffHours": GMTDiffHours, "IsDayOfMonNumEven": DayOfMonNumEven.toString(), "IsDayOfMonNumOdd": (!DayOfMonNumEven).toString(),
+        "IsDayOfYearNumEven": DayOfYearNumEven.toString(), "IsDayOfYearNumOdd": (!DayOfYearNumEven).toString(),
+        "IsDSTActive": DSTActiveBool.toString(), "IsLeapYear": LeapYearBool.toString(), "IsObservesDST": ObservesDST.toString(),
+        "IsWeekOfMonNumEven": WeekOfMonNumEven.toString(), "IsWeekOfMonNumOdd": (!WeekOfMonNumEven).toString(),
+        "IsWeekOfYearNumEven": WeekOfYearNumEven.toString(), "IsWeekOfYearNumOdd": (!WeekOfYearNumEven).toString(),
+        "MonthName": MonthName, "MonthNameText3": MonthNameText3, "MonthNum": MonthNum.toInteger(),
+        "MonthNumNoLead": MonthNumNoLead.toInteger(), "TZID": TZID, "TZIDText3": TZIDText3,
+        "TimeAntePostLower": TimeAntePostLower, "TimeAntePostUpper": TimeAntePostUpper, "TimeHour12Num": TimeHour12Num.toInteger(),
+        "TimeHour12NumNoLead": TimeHour12NumNoLead.toInteger(), "TimeHour24Num": TimeHour24Num.toInteger(),
+        "TimeHour24NumNoLead": TimeHour24NumNoLead.toInteger(), "TimeMinNum": TimeMinNum.toInteger(),
+        "TimeMinNumNoLead": TimeMinNumNoLead.toInteger(), "WeekOfMonNum": WeekOfMonNum.toInteger(),
+        "WeekOfYearNum": WeekOfYearNum.toInteger(), "YearNum2Dig": YearNum2Dig.toInteger(), "YearNum4Dig": YearNum4Dig.toInteger(),
+        "comparisonDate": comparisonDate, "comparisonDateStr": comparisonDate.toString(),
+        "comparisonDateTime": comparisonDateTime, "comparisonDateTimeStr": comparisonDateTime.toString(),
+        "comparisonTime": comparisonTime, "comparisonTimeStr": comparisonTime.toString()
     ]
 
     events.each { name, val -> updateAttribute(name, val) }
+    updateAttribute("healthStatus", "online")
 }
 
 /* =========================================================================================
@@ -397,12 +458,47 @@ void disableDebugLogging() {
     }
 }
 
+void resetDriver() {
+    logInfo "Starting full driver reset..."
+    
+    Object savedHour = state.healthCheckStartHour
+    Object savedMinute = state.healthCheckStartMinute
+
+    clearAllSchedules()
+    clearAllAttributes()
+    clearAllDriverStates()
+
+    if (savedHour != null) state.healthCheckStartHour = savedHour
+    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
+
+    initialize(false)
+    logInfo "Driver reset process completed and re-initialized."
+}
+
+void clearAllDriverStates() {
+    logInfo "Clearing all driver states..."
+    state.clear()
+    logInfo "All states have been cleared."
+}
+
+void clearAllAttributes() {
+    logInfo "Clearing all attributes..."
+    device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
+    logInfo "All attributes have been cleared."
+}
+
+void clearAllSchedules() {
+    logInfo "Clearing all scheduled jobs (including orphaned schedules)..."
+    unschedule()
+    logInfo "All scheduled jobs have been successfully cleared."
+}
+
 private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
     final String currentVal = device.currentValue(attribute)?.toString()
     if (currentVal == value?.toString()) return
 
     final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
-    logDebug descriptionText
+    logInfo descriptionText
     sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
 
@@ -427,3 +523,8 @@ private void logError(String msg) { logMessage("error", msg) }
 private Boolean getSettingBool(String key, Boolean defaultVal = false) {
     return settings[key] != null ? settings[key] as Boolean : defaultVal
 }
+
+@Field static final Map HealthCheckIntervalOpts = [
+    defaultValue: 480,
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
+]

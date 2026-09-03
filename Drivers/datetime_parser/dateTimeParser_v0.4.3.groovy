@@ -58,7 +58,7 @@
  * 2022-01-20   jshimota    0.1.4   First efforts to identify workarounds on php variations not found in Java.
  * 2022-01-20   jshimota    0.1.3   Worked on Scheduling cleanup and logging.
  * 2022-01-19   jshimota    0.1.2   Alpha release for testing.
- * 2021-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components  https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
+ * 2021-01-19   Simon Burke 0.1.1   Used 2021-09-30 DateFormat app components    https://raw.githubusercontent.com/sburke781/hubitat/master/UtilityDrivers/DateFormat.groovy
  * 2022-01-19   jshimota    0.1.0   Starting version.
  **/
 
