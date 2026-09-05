@@ -22,11 +22,9 @@
  *  Purpose:
  *  Child application instance managing a single Advanced vThermostat Device (Custom) instance.
  *
- *  Instructions:
- *  1. Created automatically via Advanced vThermostat Manager (Custom).
- *  2. Select temperature sensors, heating outlets, and cooling outlets to pair.
- *  
  *  Changelog:
+ *  v2.4.1    09/05/26    jshimota    Aligned child app initial setpoint limits to support 90 °F (32.0 °C) maximum heating boundary.
+ *  v2.4.0    09/05/26    jshimota    Added event subscriptions for setpoint changes to trigger immediate driver refresh evaluation passes without waiting on full timer intervals.
  *  v2.3.5    08/30/26    jshimota    Converted current temperature check to Double comparison and added [DEVICE CREATION FAILED] badge
  *  v2.3.4    08/30/26    jshimota    Confirmed co-located importUrl paths under Apps directory on GitHub
  *  v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub
@@ -40,8 +38,8 @@
  *  v2.0.0    08/22/26    jshimota    Bumped definition name to v2 and corrected child device creation
  **/
 
-static String version() { return '2.3.5' }
-def timeStamp() { return "2026/08/30 10:28 AM" }
+static String version() { return '2.4.1' }
+def timeStamp() { return "2026/09/05 03:00 PM" }
 
 definition(
     name: "Advanced vThermostat Child (Custom)",
@@ -122,7 +120,6 @@ def pageConfig() {
     }
 }
 
-// Single-Shot Version Demarcation Trace Logging Helper
 private void checkAndLogVersionDemarcation() {
     String currentVer = version()
     if (state.lastLoggedVersion != currentVer) {
@@ -131,7 +128,6 @@ private void checkAndLogVersionDemarcation() {
     }
 }
 
-// Dynamic App Label Badging Helper
 private void updateAppLabel(String statusText = null) {
     Boolean showVersion = getSettingBool("showVersionInLabel", true)
     Boolean showStatus  = getSettingBool("showStatusInLabel", true)
@@ -139,9 +135,7 @@ private void updateAppLabel(String statusText = null) {
     String customLabel = app.getLabel() ?: "Advanced vThermostat Child"
     String baseLabel = customLabel
     
-    // Clean out prior badge appended strings if re-evaluating
     if (baseLabel.contains(" v2.")) baseLabel = baseLabel.substring(0, baseLabel.indexOf(" v2."))
-    
     if (showVersion) baseLabel += " v${version()}"
 
     if (showStatus && statusText) {
@@ -153,7 +147,6 @@ private void updateAppLabel(String statusText = null) {
     }
 }
 
-// Settings Hash Snapshot Helper
 private String captureSettingsSnapshot() {
     Map snapshot = [:]
     List<String> sortedKeys = settings.keySet()
@@ -166,7 +159,6 @@ private String captureSettingsSnapshot() {
     return java.security.MessageDigest.getInstance("MD5").digest(jsonString.bytes).encodeHex().toString()
 }
 
-// Hubitat App Lifecycle Routines
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing child app v${version()} (${timeStamp()})..."
@@ -258,6 +250,8 @@ private void initialize(thermostatInstance = null, Boolean isInstall = false) {
 
     subscribe(sensors, "temperature", temperatureHandler)
     subscribe(thermostatInstance, "thermostatOperatingState", thermostatStateHandler)
+    subscribe(thermostatInstance, "heatingSetpoint", setpointChangeHandler)
+    subscribe(thermostatInstance, "coolingSetpoint", setpointChangeHandler)
 
     updateTemperature()
 
@@ -276,7 +270,6 @@ private void initialize(thermostatInstance = null, Boolean isInstall = false) {
     }
 }
 
-// Auto-Disable Debug Routine
 void disableDebugLogging() {
     if (getSettingBool("logDebugEnable", false)) {
         logWarn "30 minutes have elapsed. Automatically disabling debug logging."
@@ -284,7 +277,6 @@ void disableDebugLogging() {
     }
 }
 
-// Thermostat Child Core Logic Routines
 def getThermostat() {
     if (!state.deviceID) {
         logError "getThermostat cannot access deviceID!"
@@ -296,6 +288,14 @@ def getThermostat() {
 def temperatureHandler(evt) {
     logDebug "Temperature changed to ${evt.value}"
     updateTemperature()
+}
+
+def setpointChangeHandler(evt) {
+    logDebug "Setpoint changed on virtual device (${evt.name} = ${evt.value}). Forcing evaluation pass."
+    def thermostat = getThermostat()
+    if (thermostat) {
+        thermostat.refresh()
+    }
 }
 
 def updateTemperature() {
@@ -320,7 +320,6 @@ def updateTemperature() {
 
     def avgTemp = (validTemps.sum() / validTemps.size()).toDouble().round(1)
     
-    // Convert currentValue to double safely to prevent String vs Double comparison mismatch
     def currentValRaw = thermostat.currentValue("temperature")
     Double currentTemp = (currentValRaw != null && currentValRaw.toString().isNumber()) ? currentValRaw.toString().toDouble() : null
 
@@ -367,7 +366,6 @@ def safelyControlSwitches(devices, String targetState) {
     }
 }
 
-// Centralized Logging Engine
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String appLabel = app.label ?: app.name ?: "App"

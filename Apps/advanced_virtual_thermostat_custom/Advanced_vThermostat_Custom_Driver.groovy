@@ -31,6 +31,8 @@
  **/
 /**
  * Changelog:
+ * v2.5.1    09/05/26    jshimota    Increased maximum heating setpoint limit (maxHeatTemp / maxHeatingSetpoint) from 80 °F to 90 °F (32.0 °C).
+ * v2.5.0    09/05/26    jshimota    Implemented Option C (Hybrid Architecture): Enabled autonomous auto-evaluation in evaluateMode() when physicalThermostatMode is 'auto', promoted physicalThermostatMode to 'auto' on manual dashboard setpoint commands when locked to Auto, and retained explicit 'off' override capabilities for MEM safety routines.
  * v2.4.2    09/03/26    jshimota    Cleaned up UI language by purging leftover 'ping' terminology from preferences/descriptions in favor of Health Check. Hardened setThermostatMode() with strict validation and normalization against unexpected input values.
  * v2.4.1    09/03/26    jshimota    Removed invalid capability 'ThermostatController' to fix platform compilation error while maintaining all custom control commands.
  * v2.4.0    09/03/26    jshimota    Integrated standard driver template architecture (custom Health Check, healthStatus attribute, phase-anchored ping scheduler, command timeout checks, and master maintenance routines). Preserved locked Auto dashboard tile logic and virtual thermostat execution engine.
@@ -41,8 +43,8 @@
 import groovy.json.JsonOutput
 import groovy.transform.Field
 
-static String version() { return '2.4.2' }
-def timeStamp() { return "2026/09/03 08:52 AM" }
+static String version() { return '2.5.1' }
+def timeStamp() { return "2026/09/05 03:00 PM" }
 
 metadata {
     definition (
@@ -104,7 +106,6 @@ metadata {
     }
 }
 
-// Single-Shot Version Demarcation Trace Logging Helper Routine
 private void checkAndLogVersionDemarcation() {
     String currentVer = version()
     if (state.driverVersion != currentVer) {
@@ -185,8 +186,8 @@ private void initialize(Boolean isInstall = false) {
             sendIfChanged([name: "maxCoolingSetpoint", value: 35.0, unit: "C"])
             sendIfChanged([name: "minHeatTemp", value: 1.5, unit: "C"])
             sendIfChanged([name: "minHeatingSetpoint", value: 1.5, unit: "C"])
-            sendIfChanged([name: "maxHeatTemp", value: 26.5, unit: "C"])
-            sendIfChanged([name: "maxHeatingSetpoint", value: 26.5, unit: "C"])
+            sendIfChanged([name: "maxHeatTemp", value: 32.0, unit: "C"])
+            sendIfChanged([name: "maxHeatingSetpoint", value: 32.0, unit: "C"])
             sendIfChanged([name: "thermostatThreshold", value: 0.5, unit: "C"])
             sendIfChanged([name: "temperature", value: 22.0, unit: "C"])
             sendIfChanged([name: "heatingSetpoint", value: 21.0, unit: "C"])
@@ -198,8 +199,8 @@ private void initialize(Boolean isInstall = false) {
             sendIfChanged([name: "maxCoolingSetpoint", value: 95, unit: "F"])
             sendIfChanged([name: "minHeatTemp", value: 35, unit: "F"])
             sendIfChanged([name: "minHeatingSetpoint", value: 35, unit: "F"])
-            sendIfChanged([name: "maxHeatTemp", value: 80, unit: "F"])
-            sendIfChanged([name: "maxHeatingSetpoint", value: 80, unit: "F"])
+            sendIfChanged([name: "maxHeatTemp", value: 90, unit: "F"])
+            sendIfChanged([name: "maxHeatingSetpoint", value: 90, unit: "F"])
             sendIfChanged([name: "thermostatThreshold", value: 1.0, unit: "F"])
             sendIfChanged([name: "temperature", value: 72, unit: "F"])
             sendIfChanged([name: "heatingSetpoint", value: 70, unit: "F"])
@@ -208,11 +209,12 @@ private void initialize(Boolean isInstall = false) {
         
         updateThermostatSetpoint(hubScale)
         state.lastTempUpdate = now()
-        sendIfChanged([name: "physicalThermostatMode", value: "off"])
-        
+
         if (getSettingBool("lockDashboardToAuto", true)) {
+            sendIfChanged([name: "physicalThermostatMode", value: "auto"])
             sendIfChanged([name: "thermostatMode", value: "auto"])
         } else {
+            sendIfChanged([name: "physicalThermostatMode", value: "off"])
             sendIfChanged([name: "thermostatMode", value: "off"])
         }
 
@@ -221,9 +223,17 @@ private void initialize(Boolean isInstall = false) {
         sendIfChanged([name: "maxUpdateInterval", value: 65])
         sendIfChanged([name: "preEmergencyMode", value: "none"])
         sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"])])
+    } else {
+        // Enforce updated 90 degree boundary on existing device installations
+        if (hubScale == "C") {
+            sendIfChanged([name: "maxHeatTemp", value: 32.0, unit: "C"])
+            sendIfChanged([name: "maxHeatingSetpoint", value: 32.0, unit: "C"])
+        } else {
+            sendIfChanged([name: "maxHeatTemp", value: 90, unit: "F"])
+            sendIfChanged([name: "maxHeatingSetpoint", value: 90, unit: "F"])
+        }
     }
 
-    // Centralized Health Check Scheduler
     final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
     if (interval > 0) {
         scheduleHealthCheck("executePing", interval)
@@ -247,24 +257,14 @@ private void initialize(Boolean isInstall = false) {
    HEALTH CHECK ROUTINE ARCHITECTURE (CUSTOM DRIVER HEALTH CHECK)
    ========================================================================================= */
 
-/**
- * Public GUI Command Entry Point.
- * Single entry point exposed on the Device Detail page to avoid Hubitat UI button duplication.
- **/
 List<String> "Health Check"() {
     return executePing()
 }
 
-/**
- * Private Health Check Execution Helper.
- * Evaluates temperature sensor freshness, registers timeout check,
- * and remains hidden from the Hubitat GUI command interface.
- **/
 private List<String> executePing() {
     logDebug "Executing Health Check..."
     scheduleCommandTimeoutCheck()
     
-    // Virtual thermostat validates live temperature sensor updates for online evaluation
     def nowMs = now()
     def lastUpdate = state.lastTempUpdate ?: nowMs
     def maxInterval = (device.currentValue("maxUpdateInterval") ?: 180) as Long
@@ -280,10 +280,6 @@ private List<String> executePing() {
     return []
 }
 
-/**
- * Modular Health Check Scheduler with Persistent Phase-Anchoring.
- * Anchors check schedules to a persistent random daily time offset to stagger hub network traffic.
- **/
 private void initializeHealthCheckPhase() {
     if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
     if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
@@ -351,7 +347,6 @@ def setLogLevel(level) {
     logWarn "Logging levels updated via app request -> Debug: ${dbg}, Trace: ${trc}"
 }
 
-// Controller Specific Commands
 def controlHeat(String action) {
     logInfo "Thermostat Controller driving Heating: ${action}"
     if (action?.toLowerCase() == "on") {
@@ -445,12 +440,11 @@ def evaluateMode() {
             updateThermostatSetpoint(units)
             if ((temp - coolingSetpoint) >= threshold) callFor = "cooling"
         } else if (mode == "auto") {
-            if (temp > coolingSetpoint) {
-                updateThermostatSetpoint(units)
-                if ((temp - coolingSetpoint) >= threshold) callFor = "cooling"
-            } else {
-                updateThermostatSetpoint(units)
-                if ((heatingSetpoint - temp) >= threshold) callFor = "heating"
+            updateThermostatSetpoint(units)
+            if ((current == "idle" && (heatingSetpoint - temp) > threshold) || (current == "heating" && (temp - heatingSetpoint) < threshold)) {
+                callFor = "heating"
+            } else if ((current == "idle" && (temp - coolingSetpoint) >= threshold) || (current == "cooling" && (coolingSetpoint - temp) < threshold)) {
+                callFor = "cooling"
             }
         }
     }
@@ -476,12 +470,20 @@ def setHeatingSetpoint(Object value) {
     Double dVal = value.toString().toDouble()
     Double newHeatingSetpoint = roundDegrees(dVal)
 
-    if (newHeatingSetpoint == device.currentValue("heatingSetpoint")) return
+    if (getSettingBool("lockDashboardToAuto", true) && device.currentValue("physicalThermostatMode") == "off") {
+        logInfo "Dashboard setpoint command received while physical mode was OFF. Promoting physicalThermostatMode to 'auto'."
+        sendIfChanged([name: "physicalThermostatMode", value: "auto"])
+    }
+
+    if (newHeatingSetpoint == device.currentValue("heatingSetpoint")) {
+        runIn(1, 'evaluateMode')
+        return
+    }
 
     def setpointDistance = (getTemperatureScale() == "C") ? 3.0 : 5.0
     def coolmax = device.currentValue("maxCoolTemp") ?: 95.0
     def heatmin = device.currentValue("minHeatTemp") ?: 35.0
-    def heatmax = device.currentValue("maxHeatTemp") ?: 80.0
+    def heatmax = device.currentValue("maxHeatTemp") ?: (getTemperatureScale() == "C" ? 32.0 : 90.0)
     def coolingSetpoint = device.currentValue("coolingSetpoint") ?: 76.0
 
     if (newHeatingSetpoint > (coolmax - setpointDistance)) {
@@ -506,7 +508,7 @@ def setHeatingSetpoint(Object value) {
         sendIfChanged([name: "coolingSetpoint", value: newCoolingSetpoint, unit: units])
     }
     updateThermostatSetpoint(units)
-    runIn(2, 'evaluateMode')
+    runIn(1, 'evaluateMode')
 }
 
 def setCoolingSetpoint(Object value) {
@@ -514,7 +516,15 @@ def setCoolingSetpoint(Object value) {
     Double dVal = value.toString().toDouble()
     Double newCoolingSetpoint = roundDegrees(dVal)
 
-    if (newCoolingSetpoint == device.currentValue("coolingSetpoint")) return
+    if (getSettingBool("lockDashboardToAuto", true) && device.currentValue("physicalThermostatMode") == "off") {
+        logInfo "Dashboard setpoint command received while physical mode was OFF. Promoting physicalThermostatMode to 'auto'."
+        sendIfChanged([name: "physicalThermostatMode", value: "auto"])
+    }
+
+    if (newCoolingSetpoint == device.currentValue("coolingSetpoint")) {
+        runIn(1, 'evaluateMode')
+        return
+    }
 
     def setpointDistance = (getTemperatureScale() == "C") ? 3.0 : 5.0
     def coolmin = device.currentValue("minCoolTemp") ?: 60.0
@@ -543,7 +553,7 @@ def setCoolingSetpoint(Object value) {
         sendIfChanged([name: "heatingSetpoint", value: newHeatingSetpoint, unit: units])
     }
     updateThermostatSetpoint(units)
-    runIn(2, 'evaluateMode')
+    runIn(1, 'evaluateMode')
 }
 
 def setThermostatThreshold(Object value) {
@@ -555,7 +565,7 @@ def setThermostatThreshold(Object value) {
     }
     if (dVal != device.currentValue("thermostatThreshold")) {
         sendIfChanged([name: "thermostatThreshold", value: dVal, unit: getTemperatureScale()])
-        runIn(2, 'evaluateMode')
+        runIn(1, 'evaluateMode')
     }
 }
 
@@ -567,14 +577,13 @@ def setMaxUpdateInterval(BigDecimal minutes) {
 
     if (clampedMins != device.currentValue("maxUpdateInterval")) {
         sendIfChanged([name: "maxUpdateInterval", value: clampedMins])
-        runIn(2, 'evaluateMode')
+        runIn(1, 'evaluateMode')
     }
 }
 
 def setThermostatMode(String value) {
     if (value == null) return
     
-    // Normalize string input
     String normMode = value.toString().trim()
     if (normMode == "emergency heat") normMode = "emergencyHeat"
     
@@ -598,7 +607,7 @@ def setThermostatMode(String value) {
     }
     
     updateThermostatSetpoint()
-    runIn(2, 'evaluateMode')
+    runIn(1, 'evaluateMode')
 }
 
 def off()  { setThermostatMode("off") }
@@ -626,7 +635,7 @@ def setTemperature(value) {
     sendIfChanged([name: "temperature", value: dVal, unit: units])
     state.lastTempUpdate = now()
     updateAttribute("healthStatus", "online")
-    runIn(2, 'evaluateMode')
+    runIn(1, 'evaluateMode')
 }
 
 def heatUp() {

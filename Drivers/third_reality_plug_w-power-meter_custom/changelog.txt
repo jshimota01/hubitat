@@ -1,3 +1,23 @@
+ * v1.49    09/01/26    jshimota    Architectural Refinements: Added public scheduled callback wrapper for Health Check, enforced runIn overwrite guard, preserved persistent phase anchors across state clear, eliminated redundant initialize calls during configure(), and renamed PING_ATTR_ID constant.
+ * v1.48    09/01/26    jshimota    Standardized all health tracking routine names, log output strings, and scheduler targets to 'Health Check' (eliminating all 'Ping' nomenclature).
+ * v1.47    09/01/26    jshimota    Enforced aggressive unschedule() during initialize/updated lifecycle to purge legacy/orphaned scheduled jobs.
+ * v1.46    09/01/26    jshimota    Added public ping() delegate method to catch external/scheduled ping calls and resolve MissingMethodException.
+ * v1.45    08/31/26    jshimota    Redirected Voltage attribute updates to output as logDebug rather than logInfo to suppress unnecessary log chatter.
+ * v1.44    08/31/26    jshimota    Silenced unhandled Electrical Measurement attribute 0x0510 (Overload/Status Flag) to logDebug.
+ * v1.43    08/31/26    jshimota    Updated Health Check interval preference label from 'Once a Day' to 'Every 24 Hours'.
+ * v1.42    08/31/26    jshimota    Enforced immediate Health Check execution on configure() and guaranteed healthStatus state initialization during resetDriver() / initialize().
+ * v1.41    08/31/26    jshimota    Added Notes block to header documenting custom Health Check rationale and standardized internal Health Check template routines.
+ * v1.40    08/31/26    jshimota    Added clarifying note in HealthCheckInterval preference indicating custom driver implementation vs native Hubitat Health Check capability.
+ * v1.39    08/31/26    jshimota    Removed capability "Health Check" to suppress Hubitat's built-in ping button in favor of custom Health Check command.
+ * v1.38    08/31/26    jshimota    Isolated ping routine to private helper to prevent Hubitat UI command duplication.
+ * v1.37    08/31/26    jshimota    Fixed parseWriteAttributeResponse self-reference bug, added attrInt NPE guards, cleaned state removals, documented calculated PF rationale.
+ * v1.36    08/31/26    jshimota    Updated GUI command button to "Health Check" for a cleaner interface.
+ * v1.35    08/31/26    jshimota    Fixed Hubitat IDE compilation hang by stripping parentheses from command declaration string.
+ * v1.34    08/31/26    jshimota    Renamed Ping GUI command button to "Health Check (Initiate Ping/Pong)".
+ * v1.33    08/31/26    jshimota    Consolidated version state variables (lastLoggedVersion / lastInitializedVersion) into a single state.driverVersion.
+ * v1.32    08/31/26    jshimota    Removed legacy 'disableOnOff' preference and simplified switch execution paths.
+ * v1.31    08/31/26    jshimota    Restored powerMeterCapable attribute for GUI visibility while keeping internal multipliers isolated to state memory.
+ * v1.30    08/31/26    jshimota    Architectural overhaul: Removed unnecessary attributes/states, flattened multiplier state variables, and introduced persistent randomized phase-anchor health check scheduling.
  * v1.25    08/31/26    jshimota    Unified health check scheduling inside initialize() and bound parseReadReportingConfigResponse byte-slicing to explicit DataType length.
  * v1.24    08/31/26    jshimota    Aligned updated() fallback interval to 480 (8 Hours) to prevent orphaned 10-minute schedules.
  * v1.23    08/31/26    jshimota    Updated Health Check Interval options (1h, 4h, 8h, 12h, 24h), set default to 8h (480 mins), and updated scheduler cases.
