@@ -1,0 +1,54 @@
+{
+  "packageName": "Third Reality Custom Drivers",
+  "author": "James Shimota",
+  "version": "1.0.0",
+  "minimumHEVersion": "2.4.4.156",
+  "dateReleased": "2026-09-06",
+  "documentationLink": "https://github.com/jshimota01/hubitat",
+  "communityLink": "https://community.hubitat.com/",
+  "releaseNotes": "0.2.0 - Numerous improvements\nFirst official release\n0.2.1-0.2.7 maintenance\n02.8-.3.8 AI enhancements and bug fixes",
+  "drivers": [
+    {
+      "id": "e8a933f1-4b12-4c28-98e1-111111111101",
+      "name": "Third Reality Contact Sensor Custom",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_contact_sensor_custom/third_reality_contact_sensor_custom.groovy",
+      "required": false
+    },
+    {
+      "id": "e8a933f1-4b12-4c28-98e1-111111111102",
+      "name": "Third Reality Motion Sensor Custom",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_motion_sensor_custom/third_reality_motion_driver-custom.groovy",
+      "required": false
+    },
+    {
+      "id": "e8a933f1-4b12-4c28-98e1-111111111103",
+      "name": "Third Reality Multifunction Night Light Custom",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_multifunction_night_light_custom/third_reality_multifunction_night_light_custom.groovy",
+      "required": false
+    },
+    {
+      "id": "e8a933f1-4b12-4c28-98e1-111111111104",
+      "name": "Third Reality Plug w/ Power Meter Custom",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_plug_w-power-meter_custom/third_reality_plug_w-power-meter_custom.groovy",
+      "required": false
+    },
+    {
+      "id": "e8a933f1-4b12-4c28-98e1-111111111105",
+      "name": "Third Reality Temp & Humidity Sensor w/ Display Custom",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_temp-humidity_sensor_w-display_custom/third_reality_temp-humidity_sensor_w-display_custom.groovy",
+      "required": false
+    },
+    {
+      "id": "e8a933f1-4b12-4c28-98e1-111111111106",
+      "name": "Third Reality Temp & Humidity Sensor w/o Display Custom",
+      "namespace": "jshimota",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_temp-humidity_sensor_wo-display_custom/third_reality_temp-humidity_sensor_wo-display_custom.groovy",
+      "required": false
+    }
+  ]
+}

@@ -71,7 +71,13 @@
 			"tags": [ "Weather", "Virtual", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/packageManifest.json",
 			"description": "A virtual device driver for weather. Includes multiple tiles, including Alerts and Moon Phase.  Has detailed Sun Altitude and Azimuth and Illuminance for use with blinds. High precision temp, barometer, rainfall and UVI. Forecasted weather data included for next 3 days"
+		  },
+		  {
+			"name": "Third Reality Custom Drivers",
+			"category": "Control",
+			"tags": [ "Zigbee", "Driver", "Sensors", "Lights & Switches", "Temperature & Humidity" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_custom_drivers_packaging/packageManifest.json",
+			"description": "A collection of production-grade custom drivers for Third Reality Zigbee devices. Select and install only the drivers you need (Contact, Motion, Night Light, Power Plug, and Temp/Humidity sensors)."
 		  }
 	]
-	
 }
