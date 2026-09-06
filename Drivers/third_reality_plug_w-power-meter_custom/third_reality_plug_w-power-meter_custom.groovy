@@ -8,6 +8,13 @@
  * model ID to adapt configuration parameters, attribute reads, reporting verification, and 
  * capability event emissions—ensuring non-power plugs operate cleanly without sending 
  * unsupported cluster commands.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Hubitat's native capability exposes a redundant "Ping" UI control button
+ *   and does not provide the phase-anchored scheduling, timeout guards, or trace 
+ *   logging behavior required by this driver architecture.
  **/
 /**
  * Copyright 2026 James Shimota
@@ -26,20 +33,17 @@
  **/
 /**
  * Changelog:
- * v1.37    08/31/26    jshimota    Fixed parseWriteAttributeResponse self-reference bug, added attrInt NPE guards, cleaned state removals, documented calculated PF rationale.
- * v1.36    08/31/26    jshimota    Updated GUI command button to "Health Check" for a cleaner interface.
- * v1.35    08/31/26    jshimota    Fixed Hubitat IDE compilation hang by stripping parentheses from command declaration string.
- * v1.34    08/31/26    jshimota    Renamed Ping GUI command button to "Health Check (Initiate Ping/Pong)".
- * v1.33    08/31/26    jshimota    Consolidated version state variables (lastLoggedVersion / lastInitializedVersion) into a single state.driverVersion.
- * v1.32    08/31/26    jshimota    Removed legacy 'disableOnOff' preference and simplified switch execution paths.
- * v1.31    08/31/26    jshimota    Restored powerMeterCapable attribute for GUI visibility while keeping internal multipliers isolated to state memory.
- * v1.30    08/31/26    jshimota    Architectural overhaul: Removed unnecessary attributes/states, flattened multiplier state variables, and introduced persistent randomized phase-anchor health check scheduling.
+ * v1.55    09/05/26    jshimota    Added 1s windowed clearDigitalFlag helper and explicit isStateChange event parameters to eliminate duplicate GUI On/Off event logs.
+ * v1.54    09/05/26    jshimota    Fixed clearAllSchedules() syntax compilation error by adding missing void return type keyword.
+ * v1.53    09/05/26    jshimota    Migrated powerMeterCapable capability attribute into state.isPowerCapable driver state memory.
+ * v1.52    09/05/26    jshimota    Added voltageText ("X V") custom attribute, updated handleRmsVoltageValue(), and expanded meteringInfoNote preference description to include Voltage tracking.
+ * v1.51    09/05/26    jshimota    Added amperageText ("X A") custom attribute, fixed energyText initialization, and expanded meteringInfoNote preference description to include Current/Amperage tracking.
+ * v1.50    09/05/26    jshimota    Added powerText ("X Watts") and energyText ("X kWh") custom attributes for dashboard tile visualization, added driver informational preference block for metering explanation, and implemented 500ms in-memory updateAttribute debounce guard.
 **/
-// [KEEP-EXACT] See possible changelog.txt for past changelog history versions v0 - v1.29
+// [KEEP-EXACT] See possible changelog.txt for past changelog history versions v0 - v1.49
 
-
-static String version() { return '1.37' }
-def timeStamp() { return "2026/08/31 06:15 PM" }
+static String version() { return '1.55' }
+def timeStamp() { return "2026/09/05 09:15 AM" }
 
 import groovy.transform.Field
 import hubitat.zigbee.zcl.DataType
@@ -50,13 +54,12 @@ metadata {
         name: "Third Reality Plug w/Power Meter Support (Custom)",
         namespace: "jshimota", 
         author: "James Shimota",
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_outlet_custom/third_reality_w-power-meter_custom.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_outlet_custom/third_reality_plug_w-power-meter_custom.groovy"
     ) {
         capability "Actuator"
         capability "Configuration"
         capability "Current Meter"
         capability "Energy Meter"
-        capability "Health Check"
         capability "Outlet"
         capability "Power Meter"
         capability "Refresh"
@@ -71,15 +74,21 @@ metadata {
 
         attribute "healthStatus", "enum", ["unknown", "offline", "online"]
         attribute "powerFactor", "number"
-        attribute "powerMeterCapable", "enum", ["Yes", "No"]
+        attribute "amperageText", "string"
+        attribute "energyText", "string"
+        attribute "powerText", "string"
+        attribute "voltageText", "string"
 
         fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,FF03,0003,0004,0005,0006", outClusters: "0019", model: "3RSP019BZ", manufacturer: "Third Reality, Inc", controllerType: "ZGB"
         fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,FF03,0003,0004,0005,0006,0B04,0702", outClusters: "0019", model: "3RSP02028BZ", manufacturer: "Third Reality, Inc", controllerType: "ZGB"
     }
 
     preferences {
+        // Driver Informational Preference Blocks
+        input name: "meteringInfoNote", type: "hidden", title: "<b>Power, Energy, Amperage & Voltage Metering Explanation</b>", description: "<i><b>Power (`power` in Watts):</b> Instantaneous real-time electrical draw currently consumed by the connected load.<br><b>Energy (`energy` in kWh):</b> Total cumulative electrical usage accrued by the plug over time.<br><b>Current (`amperage` in Amps):</b> Instantaneous electrical current drawn by the connected load.<br><b>Voltage (`voltage` in Volts):</b> Instantaneous line voltage supplied to the plug.<br><b>Formatted Attributes:</b> `powerText` (\"X Watts\"), `energyText` (\"X kWh\"), `amperageText` (\"X A\"), and `voltageText` (\"X V\") are available for tile visualization.</i>"
+
         input name: "powerRestore", type: "enum", title: "<b>Power Restore Mode</b>", options: PowerRestoreOpts.options, defaultValue: PowerRestoreOpts.defaultValue, description: "<i>Changes what happens when power is restored to outlet.</i>"
-        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check (Ping/Pong) Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the hub sends a Health Check Ping to verify device status.</i>"
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver sends a Health Check request to verify device online status.<br><b>Note:</b> This is a custom driver implementation and is NOT the native Hubitat Elevation platform Health Check service.</i>"
 
         input name: "powerDelta", type: "number", title: "<b>Power Minimum Change </b><i>(Power Meter Capable Models Only)</i>", description: "<i>The minimum Power (watts) change that will be recorded (3RSP02028BZ model only).</i>", range: "0.1..1500"
         input name: "energyDelta", type: "number", title: "<b>Energy Minimum Change </b><i>(Power Meter Capable Models Only)</i>", description: "<i>The minimum energy kWh change that will be recorded (3RSP02028BZ model only).</i>", range: "0.1..100"
@@ -95,12 +104,12 @@ metadata {
     }
 }
 
-// Model Detection Helper Routine (Direct Model Matching + Attribute Emitter)
+// Model Detection Helper Routine (Direct Model Matching + State Persistence)
 private boolean supportsPowerMeter() {
     String devModel = device.getDataValue("model")?.trim()
     Boolean isPowerCapable = POWER_METER_MODEL.equalsIgnoreCase(devModel)
     
-    updateAttribute("powerMeterCapable", isPowerCapable ? "Yes" : "No", null, "digital")
+    state.isPowerCapable = isPowerCapable
     return isPowerCapable
 }
 
@@ -141,10 +150,14 @@ void installed() {
     if (supportsPowerMeter()) {
         logInfo "Device model [${POWER_METER_MODEL}] detected: Power metering capabilities enabled."
         sendEvent(name: "amperage", value: 0, unit: "A")
+        sendEvent(name: "amperageText", value: "0 A")
         sendEvent(name: "energy", value: 0, unit: "kWh")
+        sendEvent(name: "energyText", value: "0 kWh")
         sendEvent(name: "frequency", value: 0, unit: "Hz")
         sendEvent(name: "power", value: 0, unit: "W")
+        sendEvent(name: "powerText", value: "0 Watts")
         sendEvent(name: "voltage", value: 0, unit: "V")
+        sendEvent(name: "voltageText", value: "0 V")
         sendEvent(name: "powerFactor", value: 0)
     } else {
         logInfo "Device model [${device.getDataValue('model') ?: 'Standard'}] detected: Operating in standard plug mode (no power metering)."
@@ -171,7 +184,6 @@ void updated() {
 List<String> configure() {
     checkAndLogVersionDemarcation()
     logInfo "Configuring device (Power Meter Capable: ${supportsPowerMeter()})..."
-    initialize(false)
 
     List<String> cmds = []
 
@@ -192,20 +204,28 @@ List<String> configure() {
         cmds += zigbee.configureReporting(zigbee.METERING_CLUSTER, ATTRIBUTE_READING_INFO_SET, DataType.UINT48, 10, 300, 1, [:], DELAY_MS)
     }
 
+    // Immediately execute a Health Check to establish online healthStatus right away
+    cmds += executeHealthCheck()
+
     runIn(5, "refresh")
     return cmds
 }
 
 private void initialize(Boolean isInstall = false) {
     checkAndLogVersionDemarcation()
-    unschedule("disableDebugLogging")
+    
+    // Clear all existing scheduled jobs
+    unschedule()
 
-    // Centralized Health Check Scheduler
+    // Ensure healthStatus attribute exists on initialize/reset
+    if (device.currentValue("healthStatus") == null) {
+        sendEvent(name: "healthStatus", value: "unknown")
+    }
+
+    // Centralized Health Check Scheduler targeting the public callback
     final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
     if (interval > 0) {
-        scheduleHealthCheck("ping", interval)
-    } else {
-        unschedule("ping")
+        scheduleHealthCheck("executeHealthCheckScheduled", interval)
     }
 
     if (isInstall) {
@@ -215,8 +235,6 @@ private void initialize(Boolean isInstall = false) {
     } else if (getSettingBool("logDebugEnable", false)) {
         logInfo "Debug logging active. Automatic turn-off scheduled."
         runIn(1800, "disableDebugLogging", [overwrite: false])
-    } else {
-        unschedule("disableDebugLogging")
     }
 }
 
@@ -242,15 +260,102 @@ List<String> toggle() {
     return zigbee.command(zigbee.ON_OFF_CLUSTER, 0x02, [:], 0)
 }
 
-List<String> "Health Check"() {
-    return ping()
+void clearDigitalFlag() {
+    state.remove("isDigital")
 }
 
-List<String> ping() {
-    logDebug "Health Check Ping sent..."
-    scheduleCommandTimeoutCheck()
-    return zigbee.readAttribute(zigbee.BASIC_CLUSTER, PING_ATTR_ID, [:], 0)
+/* =========================================================================================
+   HEALTH CHECK ROUTINE TEMPLATE
+   ========================================================================================= */
+
+/**
+ * Public GUI Command Entry Point.
+ **/
+List<String> "Health Check"() {
+    return executeHealthCheck()
 }
+
+/**
+ * Public Scheduled Callback Target.
+ * Serves as the public entry point required by Hubitat's scheduler engine,
+ * delegating to the private execution helper.
+ **/
+void executeHealthCheckScheduled() {
+    List<String> cmds = executeHealthCheck()
+    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+/**
+ * Private Health Check Execution Helper.
+ * Transmits the underlying Zigbee Basic Cluster attribute request, registers a timeout check,
+ * and remains hidden from the Hubitat GUI command interface.
+ **/
+private List<String> executeHealthCheck() {
+    logDebug "Executing Health Check..."
+    scheduleCommandTimeoutCheck()
+    return zigbee.readAttribute(zigbee.BASIC_CLUSTER, HEALTH_CHECK_ATTR_ID, [:], 0)
+}
+
+/**
+ * Modular Health Check Scheduler with Persistent Phase-Anchoring.
+ * Anchors check schedules to a persistent random daily time offset to stagger hub network traffic.
+ **/
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60:
+            schedule("0 ${m} * ? * * *", methodToSchedule)
+            break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
+            break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
+            break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
+            break
+        case 1440:
+            schedule("0 ${m} ${h} ? * * *", methodToSchedule)
+            break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
+    }
+}
+
+private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
+    runIn(delay, "deviceCommandTimeout", [overwrite: true])
+}
+
+void deviceCommandTimeout() {
+    logWarn "No Health Check response received (device offline?)"
+    updateAttribute("healthStatus", "offline")
+}
+
+/* =========================================================================================
+   ZIGBEE MESSAGE PARSING
+   ========================================================================================= */
 
 List<String> refresh() {
     logDebug "Executing refresh()..."
@@ -301,10 +406,6 @@ List<String> updateFirmware() {
     logInfo "Checking for firmware updates..."
     return zigbee.updateFirmware()
 }
-
-/* =========================================================================================
-   ZIGBEE MESSAGE PARSING
-   ========================================================================================= */
 
 void parse(final String description) {
     logDebug "Raw description -> ${description}"
@@ -358,9 +459,9 @@ void parse(final String description) {
 void parseBasicCluster(final Map descMap) {
     if (descMap.attrInt == null) return
     switch (descMap.attrInt as Integer) {
-        case PING_ATTR_ID:
-            unschedule("deviceCommandTimeout") // Cancel health check timeout ONLY upon verified Pong response
-            logDebug "Health Check Pong received..."
+        case HEALTH_CHECK_ATTR_ID:
+            unschedule("deviceCommandTimeout") // Cancel health check timeout ONLY upon verified response
+            logDebug "Health Check response received..."
             sendEvent(name: "healthStatus", value: "online", isStateChange: true, descriptionText: "${device.displayName} is online")
             break
         case FIRMWARE_VERSION_ID:
@@ -396,6 +497,9 @@ void parseElectricalMeasureCluster(final Map descMap) {
         case RMS_VOLTAGE_ID:
             handleRmsVoltageValue(value)
             break
+        case POWER_OVERLOAD_STATUS_ID:
+            logDebug "Electrical Measurement status flag (0x0510) received: ${descMap.value}"
+            break
         default:
             logWarn "Unknown Electrical Measurement cluster attribute 0x${descMap.attrId} (val ${descMap.value})"
             break
@@ -414,6 +518,7 @@ void handleRmsCurrentValue(final long value) {
         final BigDecimal inputDelta = getSettingBigDecimal("amperageDelta")
         if (isDelta(result, currentValue, inputDelta)) {
             updateAttribute("amperage", result, "A", "physical")
+            updateAttribute("amperageText", "${result} A", null, "physical", "info", "Instantaneous Current Text")
             updatePowerFactor() 
         }
     }
@@ -431,6 +536,7 @@ void handleActivePowerValue(final long value) {
         final BigDecimal inputDelta = getSettingBigDecimal("powerDelta")
         if (isDelta(result, currentValue, inputDelta)) {
             updateAttribute("power", result, "W", "physical")
+            updateAttribute("powerText", "${result} Watts", null, "physical", "info", "Instantaneous Power Text")
             updatePowerFactor()
         }
     }
@@ -447,7 +553,8 @@ void handleRmsVoltageValue(final long value) {
         
         final BigDecimal inputDelta = getSettingBigDecimal("voltageDelta")
         if (isDelta(result, currentValue, inputDelta)) {
-            updateAttribute("voltage", result, "V", "physical")
+            updateAttribute("voltage", result, "V", "physical", "debug")
+            updateAttribute("voltageText", "${result} V", null, "physical", "debug", "Instantaneous Voltage Text")
             updatePowerFactor()
         }
     }
@@ -505,6 +612,7 @@ void parseMeteringCluster(final Map descMap) {
                 final BigDecimal inputDelta = getSettingBigDecimal("energyDelta")
                 if (isDelta(result, currentValue, inputDelta)) {
                     updateAttribute("energy", result, unit, "physical")
+                    updateAttribute("energyText", "${result}${unit ? ' ' + unit : ''}", null, "physical", "info", "Cumulative Energy Text")
                 }
             }
             break
@@ -569,8 +677,10 @@ void parseOnOffCluster(final Map descMap) {
     if (descMap.attrInt == null) return
     switch (descMap.attrInt as Integer) {
         case POWER_ON_OFF_ID:
-            final String type = state.isDigital == true ? "digital" : "physical"
-            state.remove("isDigital")
+            final String type = (state.isDigital == true) ? "digital" : "physical"
+            if (state.isDigital == true) {
+                runIn(1, "clearDigitalFlag", [overwrite: true])
+            }
             updateAttribute("switch", descMap.value == "01" ? "on" : "off", null, type)
             break
         case POWER_RESTORE_ID:
@@ -597,71 +707,23 @@ void parseZdoClusters(final Map descMap) {
 }
 
 /* =========================================================================================
-   MODULAR HEALTH CHECK & PERSISTENT PHASE-ANCHOR SCHEDULER
-   ========================================================================================= */
-
-private void initializeHealthCheckPhase() {
-    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
-    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
-}
-
-private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
-    unschedule(methodToSchedule)
-    initializeHealthCheckPhase()
-
-    final int h = state.healthCheckStartHour as Integer
-    final int m = state.healthCheckStartMinute as Integer
-
-    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
-
-    switch (intervalMin) {
-        case 60:
-            schedule("0 ${m} * ? * * *", methodToSchedule)
-            break
-        case 240:
-            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
-            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
-            break
-        case 480:
-            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
-            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
-            break
-        case 720:
-            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
-            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
-            break
-        case 1440:
-            schedule("0 ${m} ${h} ? * * *", methodToSchedule)
-            break
-        default:
-            if (intervalMin >= 60) {
-                int hours = intervalMin / 60
-                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
-            } else {
-                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
-            }
-            break
-    }
-}
-
-private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
-    runIn(delay, "deviceCommandTimeout")
-}
-
-void deviceCommandTimeout() {
-    logWarn "No Health Check Pong received (device offline?)"
-    updateAttribute("healthStatus", "offline")
-}
-
-/* =========================================================================================
    MASTER UTILITY ROUTINES & LOGGING ENGINE
    ========================================================================================= */
 
 void resetDriver() {
     logInfo "Starting full driver reset..."
+    
+    // Explicitly preserve phase-anchoring state variables across full state clear
+    Object savedHour = state.healthCheckStartHour
+    Object savedMinute = state.healthCheckStartMinute
+
     clearAllSchedules()
     clearAllAttributes()
     clearAllDriverStates()
+
+    if (savedHour != null) state.healthCheckStartHour = savedHour
+    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
+
     initialize(false)
     logInfo "Driver reset process completed and re-initialized."
 }
@@ -684,13 +746,29 @@ void clearAllSchedules() {
     logInfo "All scheduled jobs have been successfully cleared."
 }
 
-private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
+private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null, final String logLevel = "info", final String customLabel = null) {
+    final String valStr = value?.toString()
     final String currentVal = device.currentValue(attribute)?.toString()
-    if (currentVal == value?.toString()) return
 
-    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
-    logInfo descriptionText
-    sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
+    if (currentVal == valStr) return
+
+    // High-resolution in-memory duplicate debounce guard (< 500ms)
+    final String lastVal = state["last_${attribute}"]?.toString()
+    final Long lastTime = state["lastTime_${attribute}"] as Long ?: 0L
+    final Long now = now()
+
+    if (lastVal == valStr && (now - lastTime) < 500) {
+        logDebug "updateAttribute(): Suppressed rapid-fire duplicate ${attribute} event (${valStr}) received within ${now - lastTime}ms"
+        return
+    }
+
+    state["last_${attribute}"] = valStr
+    state["lastTime_${attribute}"] = now
+
+    final String label = customLabel ?: attribute
+    final String descriptionText = "${device.displayName} - ${label} was set to ${value}${unit ? ' ' + unit : ''}"
+    logMessage(logLevel, descriptionText)
+    sendEvent(name: attribute, value: value, unit: unit, type: type, isStateChange: true, descriptionText: descriptionText)
 }
 
 /**
@@ -775,8 +853,9 @@ private Boolean getSettingBool(String key, Boolean defaultVal = false) {
 @Field static final int ACTIVE_POWER_ID = 0x050B
 @Field static final int ATTRIBUTE_READING_INFO_SET = 0x0000
 @Field static final int FIRMWARE_VERSION_ID = 0x4000
-@Field static final int PING_ATTR_ID = 0x01
+@Field static final int HEALTH_CHECK_ATTR_ID = 0x01
 @Field static final int POWER_ON_OFF_ID = 0x0000
+@Field static final int POWER_OVERLOAD_STATUS_ID = 0x0510
 @Field static final int POWER_RESTORE_ID = 0x4003
 @Field static final int RMS_CURRENT_ID = 0x0508
 @Field static final int RMS_VOLTAGE_ID = 0x0505
@@ -791,7 +870,7 @@ private Boolean getSettingBool(String key, Boolean defaultVal = false) {
 
 @Field static final Map HealthCheckIntervalOpts = [
     defaultValue: 480,
-    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Once a Day", 0: "Disabled" ]
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
 ]
 
 @Field static final int COMMAND_TIMEOUT = 10
