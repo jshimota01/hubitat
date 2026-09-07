@@ -1,12 +1,12 @@
 {
   "packageName": "Third Reality Custom Drivers",
   "author": "James Shimota",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "minimumHEVersion": "2.4.4.156",
   "dateReleased": "2026-09-06",
   "documentationLink": "https://github.com/jshimota01/hubitat",
   "communityLink": "https://community.hubitat.com/",
-  "releaseNotes": "1.0.2 - Updated Plug w/ Power Meter driver (v1.57) with BigDecimal zero scaling (0.0G) to eliminate state toggling, hybrid power/amperage zeroing on switch off, and attribute map bug fixes.\n\n1.0.0 - Initial release",
+  "releaseNotes": "1.0.3 - Updated Plug w/ Power Meter driver (v1.58) to standardize amperageText zero formatting ('0.0 A') across all methods, eliminating string state toggling in Hubitat.\n\n1.0.2 - Maintenance update\n\n1.0.1 - Updated Plug w/ Power Meter driver (v1.57) with BigDecimal zero scaling (0.0G) and hybrid power/amperage zeroing on switch off.\n\n1.0.0 - Initial release",
   "drivers": [
     {
       "id": "e8a933f1-4b12-4c28-98e1-111111111101",
