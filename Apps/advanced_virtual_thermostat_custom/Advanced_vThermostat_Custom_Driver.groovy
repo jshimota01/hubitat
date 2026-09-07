@@ -31,6 +31,7 @@
  **/
 /**
  * Changelog:
+ * v2.5.2    09/06/26    jshimota    Promoted physicalThermostatMode to 'heat' inside setHeatingSetpoint when mode is OFF to ensure manual setpoint changes drive outlets correctly.
  * v2.5.1    09/05/26    jshimota    Increased maximum heating setpoint limit (maxHeatTemp / maxHeatingSetpoint) from 80 °F to 90 °F (32.0 °C).
  * v2.5.0    09/05/26    jshimota    Implemented Option C (Hybrid Architecture): Enabled autonomous auto-evaluation in evaluateMode() when physicalThermostatMode is 'auto', promoted physicalThermostatMode to 'auto' on manual dashboard setpoint commands when locked to Auto, and retained explicit 'off' override capabilities for MEM safety routines.
  * v2.4.2    09/03/26    jshimota    Cleaned up UI language by purging leftover 'ping' terminology from preferences/descriptions in favor of Health Check. Hardened setThermostatMode() with strict validation and normalization against unexpected input values.
@@ -43,8 +44,8 @@
 import groovy.json.JsonOutput
 import groovy.transform.Field
 
-static String version() { return '2.5.1' }
-def timeStamp() { return "2026/09/05 03:00 PM" }
+static String version() { return '2.5.2' }
+def timeStamp() { return "2026/09/06 01:00 PM" }
 
 metadata {
     definition (
@@ -224,7 +225,6 @@ private void initialize(Boolean isInstall = false) {
         sendIfChanged([name: "preEmergencyMode", value: "none"])
         sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"])])
     } else {
-        // Enforce updated 90 degree boundary on existing device installations
         if (hubScale == "C") {
             sendIfChanged([name: "maxHeatTemp", value: 32.0, unit: "C"])
             sendIfChanged([name: "maxHeatingSetpoint", value: 32.0, unit: "C"])
@@ -470,9 +470,10 @@ def setHeatingSetpoint(Object value) {
     Double dVal = value.toString().toDouble()
     Double newHeatingSetpoint = roundDegrees(dVal)
 
-    if (getSettingBool("lockDashboardToAuto", true) && device.currentValue("physicalThermostatMode") == "off") {
-        logInfo "Dashboard setpoint command received while physical mode was OFF. Promoting physicalThermostatMode to 'auto'."
-        sendIfChanged([name: "physicalThermostatMode", value: "auto"])
+    // Promote physical mode to 'heat' if dashboard setpoint command is received while physical mode was OFF
+    if (device.currentValue("physicalThermostatMode") == "off") {
+        logInfo "Dashboard setpoint command received while physical mode was OFF. Promoting physicalThermostatMode to 'heat'."
+        sendIfChanged([name: "physicalThermostatMode", value: "heat"])
     }
 
     if (newHeatingSetpoint == device.currentValue("heatingSetpoint")) {

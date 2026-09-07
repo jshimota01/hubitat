@@ -23,6 +23,7 @@
  *  Child application instance managing a single Advanced vThermostat Device (Custom) instance.
  *
  *  Changelog:
+ *  v2.4.2    09/06/26    jshimota    Enforced explicit off command execution across setOutletsState when state is idle to ensure floor heaters shut off immediately on setpoint drop.
  *  v2.4.1    09/05/26    jshimota    Aligned child app initial setpoint limits to support 90 °F (32.0 °C) maximum heating boundary.
  *  v2.4.0    09/05/26    jshimota    Added event subscriptions for setpoint changes to trigger immediate driver refresh evaluation passes without waiting on full timer intervals.
  *  v2.3.5    08/30/26    jshimota    Converted current temperature check to Double comparison and added [DEVICE CREATION FAILED] badge
@@ -38,8 +39,8 @@
  *  v2.0.0    08/22/26    jshimota    Bumped definition name to v2 and corrected child device creation
  **/
 
-static String version() { return '2.4.1' }
-def timeStamp() { return "2026/09/05 03:00 PM" }
+static String version() { return '2.4.2' }
+def timeStamp() { return "2026/09/06 01:00 PM" }
 
 definition(
     name: "Advanced vThermostat Child (Custom)",
