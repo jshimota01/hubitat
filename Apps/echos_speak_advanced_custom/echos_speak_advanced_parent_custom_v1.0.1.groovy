@@ -23,11 +23,12 @@
  **/
 /**
  * Changelog:
- * v1.0.0    09/08/26    jshimota    Initial release of Echos Speak Advanced (Custom) parent application.
+  * v1.0.0    09/08/26    jshimota    Initial release of Echos Speak Advanced (Custom) parent application.
+  * v1.0.1	  09/08/26	  jshimota	  FIx of iconX URLS for now.
  **/
 // [KEEP-EXACT] See possible changelog.txt for past changelog history.
 
-static String version() { return '1.0.0' }
+static String version() { return '1.0.1' }
 def timeStamp() { return "2026/09/08 09:30 AM" }
 
 import groovy.transform.Field

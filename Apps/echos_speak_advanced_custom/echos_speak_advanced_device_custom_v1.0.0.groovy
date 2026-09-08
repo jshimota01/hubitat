@@ -44,8 +44,8 @@ metadata {
     definition (
         name: "Echos Speak Advanced Device (Custom)", 
         namespace: "jshimota", 
-        author: "James Shimota", 
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/echos-speak-advanced-device/echos-speak-advanced-device.groovy"
+        author: "James Shimota",
+		importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/echos-speak-advanced/echos-speak-advanced_custom.groovy"
     ) {
         capability "Actuator"
         capability "AudioNotification"
