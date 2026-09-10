@@ -1,13 +1,12 @@
 /**
- * Third Reality Night Light (Custom)
+ * Third Reality RGBW Bulb (Custom)
  * Device Driver for Hubitat Elevation
- * Third Reality Multifunction Night Light - model 3RSNL02043Z
+ * Third Reality Smart Color Bulb - model 3RCB01057Z
  *
  * Purpose:
- * Custom multi-function driver for Third Reality 3RSNL02043Z Zigbee RGB Night Light, 
- * Motion Sensor, and Illuminance/Lux Sensor. Features standardized phase-anchored 
- * health tracking, color/level control, motion parsing via private cluster 0xFC00, 
- * illuminance measurement with configurable report sensitivity, and human-readable colorName tracking.
+ * Custom purpose-built driver for Third Reality 3RCB01057Z Zigbee RGBW Smart Color Bulb. 
+ * Features standardized phase-anchored health tracking, full RGB color control, color temperature 
+ * adjustments (2000K - 6500K), level transitions, and human-readable colorName tracking.
  *
  * Notes:
  * Custom Health Check Implementation
@@ -32,39 +31,29 @@
  **/
 /**
  * Changelog:
- * v1.0.10   09/10/26    jshimota    Promoted Health Check execution/response outputs to logInfo, updated timeout warning, and validated cluster 0x0000 ZCL read target.
- * v1.0.9    09/05/26    jshimota    Added driver-level software Lux delta guard to enforce sensitivity preferences independent of hardware report chattiness, and implemented 500ms in-memory event debounce buffer in updateAttribute().
- * v1.0.8    09/04/26    jshimota    Added explicit logInfo output when debug or trace logging switches are disabled during preference updates.
- * v1.0.7    09/04/26    jshimota    Added Lux Reporting Sensitivity preference to control device reporting chattiness, updated configureReporting with 30s minimum interval, and aligned Trace vs Debug log tiering.
- * v1.0.6    09/04/26    jshimota    Purged redundant IAS enrollResponse() from configure() to match private cluster 0xFC00 motion architecture.
- * v1.0.5    09/04/26    jshimota    Removed FC00 motion read from refresh() (report-only attribute), refactored setLevel() to native zigbee.setLevel(), and added general ZCL catchall status parsing.
- * v1.0.4    09/04/26    jshimota    Replaced IAS 0x0500 read in refresh() with private cluster 0xFC00 read, constrained Health Check timeout cancellation to verified packet handlers, and isolated 0xFC00 as primary motion path.
- * v1.0.3    09/04/26    jshimota    Refined Cluster 0x0400 illuminance parsing calculation to properly handle endianness conversion against firmware v1.00.86 raw reports.
- * v1.0.2    09/04/26    jshimota    Added colorName and colorMode attributes, along with automatic hue/saturation-to-colorName calculation engine.
- * v1.0.1    09/04/26    jshimota    Implemented private cluster 0xFC00 motion parsing, illuminance conversion, ColorControl, and standardized active Health Check architecture.
- * v1.0.0    09/04/26    jshimota    Initial baseline release for Third Reality 3RSNL02043Z night light driver development.
+ * v1.0.1    09/10/26    jshimota    Bug Review Fixes: Aligned logMessage setting keys, hardened CT/mireds range conversion, and updated cluster 0x0300 color mode 0x0008 attribute router.
+ * v1.0.0    09/10/26    jshimota    Initial release for Third Reality 3RCB01057Z smart color bulb supporting RGB, Color Temperature (2000K-6500K), and active Basic Cluster Health Checks.
  **/
 
-static String version() { return '1.0.10' }
-def timeStamp() { return "2026/09/10 08:00 AM" }
+static String version() { return '1.0.1' }
+def timeStamp() { return "2026/09/10 08:35 AM" }
 
 import groovy.transform.Field
-import hubitat.zigbee.clusters.iaszone.ZoneStatus
 import hubitat.zigbee.zcl.DataType
 
 metadata {
     definition (
-        name: "Third Reality Night Light (Custom)", 
+        name: "Third Reality RGBW Bulb (Custom)", 
         namespace: "jshimota", 
         author: "James Shimota", 
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_night_light/third_reality_night_light.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_rgbw_bulb_custom/third_reality_rgbw_bulb_custom.groovy"
     ) {
         capability "Actuator"
+        capability "ChangeLevel"
         capability "ColorControl"
+        capability "ColorTemperature"
         capability "Configuration"
-        capability "IlluminanceMeasurement"
         capability "Light"
-        capability "MotionSensor"
         capability "Refresh"
         capability "Sensor"
         capability "Switch"
@@ -79,15 +68,14 @@ metadata {
         command "Health Check"
         command "resetDriver"
         command "toggle"
+        command "updateFirmware"
 
-        // Device Fingerprints for 3RSNL02043Z
-        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0003,0004,0005,0006,0008,0012,0300,0400,1000,FC00", outClusters: "0019", model: "3RSNL02043Z", manufacturer: "Third Reality, Inc", controllerType: "ZGB"
-        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0003,0004,0005,0006,0008,0012,0300,0400,1000,FC00", outClusters: "0019", model: "3Reality", controllerType: "ZGB"
+        // Device Fingerprints for 3RCB01057Z
+        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0003,0004,0005,0006,0008,0300,1000", outClusters: "0019", model: "3RCB01057Z", manufacturer: "Third Reality, Inc", controllerType: "ZGB"
+        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0003,0004,0005,0006,0008,0300,1000", outClusters: "0019", model: "3Reality", controllerType: "ZGB"
     }
 
     preferences {
-        input name: "luxDelta", type: "enum", title: "<b>Lux Reporting Sensitivity</b>", options: LuxSensitivityOpts.options, defaultValue: LuxSensitivityOpts.defaultValue, description: "<i>Sets the minimum Lux change required before the driver commits an illuminance event.<br><b>Higher values = less chattiness / lower log volume.</b></i>"
-        input name: "luxOffset", type: "number", title: "<b>Lux Calibration Offset</b>", description: "<i>Adjust reported lux value by adding (+) or subtracting (-) a fixed integer.</i>", defaultValue: 0
         input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
 
         // Independent Logging Switches
@@ -119,9 +107,9 @@ void installed() {
     initializeHealthCheckPhase()
     sendEvent(name: "healthStatus", value: "unknown")
     sendEvent(name: "switch", value: "off")
-    sendEvent(name: "motion", value: "inactive")
-    sendEvent(name: "illuminance", value: 0, unit: "lx")
+    sendEvent(name: "level", value: 100, unit: "%")
     sendEvent(name: "colorMode", value: "RGB")
+    sendEvent(name: "colorTemperature", value: 2700, unit: "K")
 
     initialize(true)
 }
@@ -130,7 +118,6 @@ void updated() {
     checkAndLogVersionDemarcation()
     logInfo "Preferences updated"
     
-    // Explicit logging state feedback
     if (!getSettingBool("logDebugEnable", false) && state.lastDebugEnabled == true) {
         logInfo "Debug logging disabled"
     }
@@ -151,9 +138,6 @@ List<String> configure() {
     
     initialize(false)
     List<String> cmds = []
-    
-    int reportableLuxDelta = settings.luxDelta != null ? settings.luxDelta.toInteger() : 50
-    logDebug "configure(): Setting Illuminance reporting (Min: 30s, Max: 3600s, Delta: ${reportableLuxDelta} raw units)"
 
     // On/Off Cluster (0x0006)
     cmds += zigbee.configureReporting(0x0006, 0x0000, DataType.BOOLEAN, 0, 3600, null)
@@ -161,9 +145,9 @@ List<String> configure() {
     // Level Control Cluster (0x0008)
     cmds += zigbee.configureReporting(0x0008, 0x0000, DataType.UINT8, 1, 3600, 1)
     
-    // Illuminance Measurement Cluster (0x0400) - Controlled via Lux Sensitivity preference
-    cmds += zigbee.configureReporting(0x0400, 0x0000, DataType.UINT16, 30, 3600, reportableLuxDelta)
-    
+    // Color Control Cluster (0x0300) - Color Temp (Attr 0x0007)
+    cmds += zigbee.configureReporting(0x0300, 0x0007, DataType.UINT16, 1, 3600, 1)
+
     // Immediately execute Health Check to verify online state
     cmds += executeHealthCheck()
     
@@ -206,19 +190,19 @@ private void initialize(Boolean isInstall = false) {
    ========================================================================================= */
 
 List<String> on() {
-    logTrace "on(): Turning light on..."
+    logTrace "on(): Turning bulb on..."
     state.isDigital = true
     return zigbee.on()
 }
 
 List<String> off() {
-    logTrace "off(): Turning light off..."
+    logTrace "off(): Turning bulb off..."
     state.isDigital = true
     return zigbee.off()
 }
 
 List<String> toggle() {
-    logTrace "toggle(): Toggling light state..."
+    logTrace "toggle(): Toggling bulb state..."
     state.isDigital = true
     return zigbee.command(0x0006, 0x02)
 }
@@ -229,6 +213,19 @@ List<String> setLevel(value, rate = null) {
     int levelVal = Math.max(1, Math.min(100, value as int))
     int durationSec = rate != null ? (rate as int) : 1
     return zigbee.setLevel(levelVal, durationSec)
+}
+
+List<String> startLevelChange(direction) {
+    logTrace "startLevelChange(): Starting level change (${direction})..."
+    state.isDigital = true
+    int upDown = (direction == "down") ? 1 : 0
+    return zigbee.command(0x0008, 0x05, zigbee.convertToHexString(upDown, 2), "32")
+}
+
+List<String> stopLevelChange() {
+    logTrace "stopLevelChange(): Stopping level change..."
+    state.isDigital = true
+    return zigbee.command(0x0008, 0x07)
 }
 
 List<String> setColor(Map colorMap) {
@@ -274,6 +271,27 @@ List<String> setSaturation(saturation) {
     return zigbee.command(0x0300, 0x06, zigbee.convertToHexString(scaledHue, 2), zigbee.convertToHexString(scaledSat, 2), "0A00")
 }
 
+List<String> setColorTemperature(colortemperature, level = null, transitionTime = null) {
+    logTrace "setColorTemperature(): Setting color temp to ${colortemperature}K (level: ${level})"
+    state.isDigital = true
+    List<String> cmds = []
+    
+    int ctVal = Math.max(2000, Math.min(6500, colortemperature as int))
+    int mireds = Math.round(1000000 / ctVal)
+    int duration = transitionTime != null ? ((transitionTime as int) * 10) : 10
+    
+    cmds += zigbee.command(0x0300, 0x0A, zigbee.convertToHexString(mireds, 4), zigbee.convertToHexString(duration, 4))
+    
+    updateAttribute("colorTemperature", ctVal, "K")
+    updateAttribute("colorMode", "CT")
+    updateAttribute("colorName", "White")
+
+    if (level != null) {
+        cmds += setLevel(level, transitionTime)
+    }
+    return cmds
+}
+
 List<String> refresh() {
     logTrace "refresh(): Requesting attribute reads..."
     List<String> cmds = []
@@ -281,8 +299,14 @@ List<String> refresh() {
     cmds += zigbee.readAttribute(0x0008, 0x0000) // Level
     cmds += zigbee.readAttribute(0x0300, 0x0000) // Hue
     cmds += zigbee.readAttribute(0x0300, 0x0001) // Saturation
-    cmds += zigbee.readAttribute(0x0400, 0x0000) // Lux
+    cmds += zigbee.readAttribute(0x0300, 0x0007) // Color Temperature
+    cmds += zigbee.readAttribute(0x0300, 0x0008) // Color Mode
     return cmds
+}
+
+List<String> updateFirmware() {
+    logInfo "Checking for firmware updates..."
+    return zigbee.updateFirmware()
 }
 
 /* =========================================================================================
@@ -311,7 +335,6 @@ private void updateColorName(int hue, int saturation) {
             default:       name = "Custom"; break
         }
     }
-    updateAttribute("colorMode", "RGB")
     updateAttribute("colorName", name)
 }
 
@@ -380,19 +403,6 @@ void parse(String description) {
     logDebug "parse(): Raw description -> ${description}"
     if (!description) return
 
-    if (description.startsWith("zone status")) {
-        markDeviceOnline("0x0500")
-        parseIasZoneStatus(description)
-        return
-    }
-
-    if (description.startsWith("enroll request")) {
-        markDeviceOnline("0x0500")
-        logDebug "parse(): Handling IAS zone enrollment request"
-        sendHubCommand(new hubitat.device.HubMultiAction(zigbee.enrollResponse(), hubitat.device.Protocol.ZIGBEE))
-        return
-    }
-
     Map descMap = zigbee.parseDescriptionAsMap(description)
     if (!descMap) return
     logDebug "parse(): Parsed description map -> ${descMap}"
@@ -443,51 +453,16 @@ void parse(String description) {
                 updateAttribute("saturation", satVal, null, "physical")
                 int currentHue = (device.currentValue("hue") ?: 0) as int
                 updateColorName(currentHue, satVal)
-            }
-            break
-
-        case 0x0400: // Illuminance Measurement Cluster
-            markDeviceOnline(clusterHex)
-            if (descMap.attrInt == 0x0000 && descMap.value != null) {
-                int rawValue = Integer.parseInt(descMap.value, 16)
-                if (rawValue > 0x3FFF && descMap.value.length() == 4) {
-                    String swapped = descMap.value.substring(2, 4) + descMap.value.substring(0, 2)
-                    rawValue = Integer.parseInt(swapped, 16)
+            } else if (descMap.attrInt == 0x0007 && descMap.value != null) { // Color Temperature
+                int mireds = Integer.parseInt(descMap.value, 16)
+                if (mireds > 0) {
+                    int ctVal = Math.round(1000000 / mireds)
+                    updateAttribute("colorTemperature", ctVal, "K", "physical")
                 }
-                int calculatedLux = (rawValue > 0) ? Math.round(Math.pow(10, (rawValue - 1) / 10000.0)) : 0
-                int finalLux = Math.max(0, calculatedLux + (settings.luxOffset ?: 0))
-
-                // Software-Enforced Driver Lux Delta Guard
-                int currentLux = (device.currentValue("illuminance") ?: 0) as int
-                int minLuxDelta = settings.luxDelta != null ? settings.luxDelta.toInteger() : 50
-                int luxChange = Math.abs(finalLux - currentLux)
-
-                if (state.lastReportedLuxRaw != null && luxChange < minLuxDelta) {
-                    logTrace "parse(): Lux update suppressed (${finalLux} lx vs current ${currentLux} lx | Delta ${luxChange} < threshold ${minLuxDelta})"
-                    return
-                }
-
-                state.lastReportedLuxRaw = rawValue
-                logDebug "parse(): Lux report accepted -> Raw Hex=${descMap.value}, Computed=${calculatedLux} lx, Final=${finalLux} lx"
-                updateAttribute("illuminance", finalLux, "lx", "physical")
-            }
-            break
-
-        case 0x0500: // IAS Zone Cluster (Legacy/Fallback Path)
-            markDeviceOnline(clusterHex)
-            if (descMap.attrInt == 0x0002 && descMap.value != null) {
-                int val = Integer.parseInt(descMap.value, 16)
-                updateAttribute("motion", (val & 0x01) != 0 ? "active" : "inactive", null, "physical")
-            }
-            break
-
-        case 0xFC00: // Third Reality Private Cluster (Primary Motion Path)
-            markDeviceOnline(clusterHex)
-            if (descMap.attrInt == 0x0002 && descMap.value != null) {
-                String motionState = (descMap.value == "0001" || descMap.value == "01") ? "active" : "inactive"
-                updateAttribute("motion", motionState, null, "physical")
-            } else {
-                logDebug "parse(): Private Cluster 0xFC00 attr 0x${descMap.attrId} payload -> ${descMap.value}"
+            } else if (descMap.attrInt == 0x0008 && descMap.value != null) { // Color Mode
+                String modeHex = descMap.value
+                String modeStr = (modeHex == "02") ? "CT" : "RGB"
+                updateAttribute("colorMode", modeStr)
             }
             break
 
@@ -505,15 +480,6 @@ private void markDeviceOnline(String clusterHex = "unknown") {
     }
     if (device.currentValue("healthStatus") != "online") {
         updateAttribute("healthStatus", "online")
-    }
-}
-
-private void parseIasZoneStatus(String description) {
-    logDebug "parseIasZoneStatus(): Processing Zone Status -> ${description}"
-    ZoneStatus zoneStatus = zigbee.parseZoneStatus(description)
-    if (zoneStatus != null) {
-        boolean isActive = zoneStatus.isAlarm1Set() || zoneStatus.isAlarm2Set()
-        updateAttribute("motion", isActive ? "active" : "inactive", null, "physical")
     }
 }
 
@@ -592,7 +558,17 @@ void disableDebugLogging() {
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String devName = device.displayName ?: "Device Driver"
-    String settingKey = "log${lowerLevel.capitalize()}Enable"
+    
+    String settingKey
+    switch (lowerLevel) {
+        case "info":  settingKey = "logInfoEnable"; break
+        case "error": settingKey = "logErrorEnable"; break
+        case "warn":  settingKey = "logWarnEnable"; break
+        case "debug": settingKey = "logDebugEnable"; break
+        case "trace": settingKey = "logTraceEnable"; break
+        default:      settingKey = "logInfoEnable"; break
+    }
+
     Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
 
     if (getSettingBool(settingKey, defaultEnabled)) {
@@ -609,11 +585,6 @@ private void logError(String msg) { logMessage("error", msg) }
 private Boolean getSettingBool(String key, Boolean defaultVal = false) {
     return settings[key] != null ? settings[key] as Boolean : defaultVal
 }
-
-@Field static final Map LuxSensitivityOpts = [
-    defaultValue: 50,
-    options: [ 5: "Very High (5 units - Sensitive)", 15: "High (15 units)", 30: "Medium-High (30 units)", 50: "Medium (50 units - Default)", 100: "Low (100 units)", 200: "Very Low (200 units)", 500: "Minimal (500 units)" ]
-]
 
 @Field static final Map HealthCheckIntervalOpts = [
     defaultValue: 480,
