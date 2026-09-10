@@ -1,12 +1,12 @@
 {
   "packageName": "Third Reality Custom Drivers",
   "author": "James Shimota",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "minimumHEVersion": "2.4.4.156",
   "dateReleased": "2026-09-10",
   "documentationLink": "https://github.com/jshimota01/hubitat",
   "communityLink": "https://community.hubitat.com/",
-  "releaseNotes": "1.0.6 - Added new Third Reality RGBW Bulb Custom driver (v1.0.1) supporting model 3RCB01057Z with full RGB, CT (2000K-6500K), and active Health Checks.",
+  "releaseNotes": "1.0.7 - Improved Health Check routine in RGBW Bulb and Multifunction Night Light drivers to force platform lastActivity timestamp refreshes.",
   "drivers": [
     {
       "id": "e8a933f1-4b12-4c28-98e1-111111111101",

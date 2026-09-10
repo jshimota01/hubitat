@@ -77,7 +77,7 @@
 			"category": "Control",
 			"tags": [ "Zigbee", "Driver", "Sensors", "Lights & Switches", "Temperature & Humidity", "Motion", "Presence", "Open/Closed", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_custom_drivers_packaging/packageManifest.json",
-			"description": "A collection of production-grade custom drivers for Third Reality Zigbee devices. Select and install only the drivers you need (Contact, Motion, Night Light, Power Plug with Metering, and Temp/Humidity Display/Non-Display sensors)."
+			"description": "A collection of production-grade custom drivers for Third Reality Zigbee devices. Select and install only the drivers you need (Contact, Motion, Night Light, Power Plug with Metering, and Temp/Humidity Display/Non-Display sensors, RGBW bulb)."
 		  }
 	]
 }
