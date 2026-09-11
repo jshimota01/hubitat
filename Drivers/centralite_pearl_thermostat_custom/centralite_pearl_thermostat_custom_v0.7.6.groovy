@@ -40,7 +40,6 @@
  **/
 /**
  * Changelog:
- * v0.7.7    09/11/26    jshimota    Hardened Health Check state engine: isolated health validation to cluster 0x0000:0x0007, unscheduled stale command timeouts on initialize/execute, and updated getTemperature BigDecimal initialization.
  * v0.7.6    09/11/26    jshimota    Purged all internal ping nomenclature and fully synchronized Health Check architecture with Driver Template v1.0.11 / RGB Bulb driver standards.
  * v0.7.5    09/11/26    jshimota    Forced healthStatus sendEvent with isStateChange: true in parse() to ensure Hubitat updates platform lastActivity timestamp.
  * v0.7.4    09/08/26    jshimota    Refined lockDashboardToAuto execution path and updated attribute mapping for dual-setpoint MEM controller support.
@@ -61,8 +60,8 @@
  * v0.5.0    08/31/26    jshimota    Applied Driver Template v1.0.10: Standardized logging engine, phase-anchored custom Health Check, single-shot version demarcation, master utility routines, and updated GUI controls.
  **/
  
-static String version() { return '0.7.7' }
-def timeStamp() { return "2026/09/11 10:15 AM" }
+static String version() { return '0.7.6' }
+def timeStamp() { return "2026/09/11 09:55 AM" }
 
 import hubitat.zigbee.zcl.DataType
 import groovy.transform.Field
@@ -158,7 +157,6 @@ void updated() {
 void initialize(Boolean isInstall = false) {
     checkAndLogVersionDemarcation()
     unschedule("disableDebugLogging")
-    unschedule("deviceCommandTimeout")
 
     state.healthCheckPending = false
 
@@ -478,7 +476,6 @@ void executeHealthCheckScheduled() {
 
 private List<String> executeHealthCheck() {
     logInfo "Executing Health Check..."
-    unschedule("deviceCommandTimeout")
     state.healthCheckPending = true
     scheduleCommandTimeoutCheck()
     return zigbee.readAttribute(0x0000, 0x0007)
@@ -535,7 +532,7 @@ void parse(String description) {
             Integer attrInt = descMap.attrId ? Integer.parseInt(descMap.attrId, 16) : descMap.attrInt
             String clusterHex = descMap.cluster ?: (clusterInt != null ? zigbee.convertToHexString(clusterInt, 4) : "unknown")
 
-            markDeviceActivity()
+            markDeviceOnline(clusterHex)
 
             switch(clusterInt) {
                 case 0x0201: // Thermostat Cluster
@@ -588,7 +585,6 @@ void parse(String description) {
                     
                 case 0x0000: // Basic Cluster
                     if (attrInt == 0x0007) {
-                        markHealthCheckSuccess(clusterHex)
                         String source = getPowerSource()[descMap.value] ?: "unknown"
                         updateAttribute("powerSource", source, null, "physical")
                     }
@@ -600,30 +596,20 @@ void parse(String description) {
     }
 }
 
-private void markHealthCheckSuccess(String clusterHex = "0000") {
+private void markDeviceOnline(String clusterHex = "unknown") {
     if (state.healthCheckPending == true) {
         logInfo "Valid Health Check response verified on cluster 0x${clusterHex}"
         state.healthCheckPending = false
         unschedule("deviceCommandTimeout")
     }
     
+    // Always emit a healthStatus event with isStateChange: true to force Hubitat to update 'lastActivity'
     sendEvent(
         name: "healthStatus", 
         value: "online", 
         isStateChange: true, 
         descriptionText: "${device.displayName} health check verified online"
     )
-}
-
-private void markDeviceActivity() {
-    if (device.currentValue("healthStatus") == "offline") {
-        sendEvent(
-            name: "healthStatus", 
-            value: "online", 
-            isStateChange: true, 
-            descriptionText: "${device.displayName} healthStatus restored to online via active traffic"
-        )
-    }
 }
 
 private Map getModeMap() { ["00":"off", "01":"auto", "03":"cool", "04":"heat", "05":"emergencyHeat", "06":"precooling", "07":"fan only", "08":"dry", "09":"sleep"] }
@@ -642,7 +628,7 @@ private BigDecimal getTemperature(String value) {
     double tempVal = (getTemperatureScale() == "C") ? celsius : celsiusToFahrenheit(celsius)
     
     int precision = settings?.tempPrecision != null ? settings.tempPrecision.toInteger() : 1
-    return BigDecimal.valueOf(tempVal).setScale(precision, RoundingMode.HALF_UP)
+    return new BigDecimal(tempVal).setScale(precision, RoundingMode.HALF_UP)
 }
 
 private Integer getBatteryLevel(String rawValue) {

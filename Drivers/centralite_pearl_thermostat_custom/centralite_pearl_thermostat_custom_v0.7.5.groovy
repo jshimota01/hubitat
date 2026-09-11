@@ -17,11 +17,6 @@
  * - Temperature offset adjustments are applied strictly at the driver layer via hardware calibration
  *   attribute 0x0201:0x0010. Downstream applications (such as MEM) consume the calibrated 'temperature' 
  *   attribute directly without applying secondary offsets.
- *
- * Notes:
- * Custom Health Check Implementation
- * - Intentionally NOT using Hubitat's native 'Health Check' capability.
- * - Uses active ZCL attribute reading to verify online presence with phase-anchored scheduling.
  **/
 /**
  * Copyright 2026 James Shimota
@@ -40,8 +35,6 @@
  **/
 /**
  * Changelog:
- * v0.7.7    09/11/26    jshimota    Hardened Health Check state engine: isolated health validation to cluster 0x0000:0x0007, unscheduled stale command timeouts on initialize/execute, and updated getTemperature BigDecimal initialization.
- * v0.7.6    09/11/26    jshimota    Purged all internal ping nomenclature and fully synchronized Health Check architecture with Driver Template v1.0.11 / RGB Bulb driver standards.
  * v0.7.5    09/11/26    jshimota    Forced healthStatus sendEvent with isStateChange: true in parse() to ensure Hubitat updates platform lastActivity timestamp.
  * v0.7.4    09/08/26    jshimota    Refined lockDashboardToAuto execution path and updated attribute mapping for dual-setpoint MEM controller support.
  * v0.7.3    09/08/26    jshimota    Restructured setThermostatMode and auto() fallback handling to align with physicalThermostatMode tracking.
@@ -61,8 +54,8 @@
  * v0.5.0    08/31/26    jshimota    Applied Driver Template v1.0.10: Standardized logging engine, phase-anchored custom Health Check, single-shot version demarcation, master utility routines, and updated GUI controls.
  **/
  
-static String version() { return '0.7.7' }
-def timeStamp() { return "2026/09/11 10:15 AM" }
+static String version() { return '0.7.5' }
+def timeStamp() { return "2026/09/11 09:43 AM" }
 
 import hubitat.zigbee.zcl.DataType
 import groovy.transform.Field
@@ -117,7 +110,7 @@ metadata {
         input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i><b>Note:</b> This setting strictly forces the 'thermostatMode' attribute to stay in 'auto' so Hubitat Dashboard tiles preserve the dual-setpoint view. Physical mode commands (heat, cool, off) are tracked independently via 'physicalThermostatMode'.</i>", defaultValue: true, required: true
         input name: "tempOffset", type: "decimal", title: "<b>Temperature Offset</b>", description: "<i>Adjust temperature readings by -4.5 to +4.5 degrees. (Applied at driver layer).</i>", defaultValue: 0.0, range: "-4.5..4.5"
         input name: "tempPrecision", type: "enum", title: "<b>Device Temperature Display Precision</b>", options: ["0": "0 Decimals (Whole Number - e.g., 72)", "1": "1 Decimal (e.g., 71.8)", "2": "2 Decimals (e.g., 71.82)"], defaultValue: "1", description: "<i>Controls decimal precision for reported device ambient temperature attribute only.</i>"
-        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver sends a Health Check ping to verify device online status.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
@@ -135,10 +128,6 @@ private void checkAndLogVersionDemarcation() {
         state.driverVersion = currentVer
     }
 }
-
-/* =========================================================================================
-   HUBITAT LIFECYCLE ROUTINES
-   ========================================================================================= */
 
 void installed() {
     checkAndLogVersionDemarcation()
@@ -158,9 +147,6 @@ void updated() {
 void initialize(Boolean isInstall = false) {
     checkAndLogVersionDemarcation()
     unschedule("disableDebugLogging")
-    unschedule("deviceCommandTimeout")
-
-    state.healthCheckPending = false
 
     if (device.currentValue("healthStatus") == null) sendEvent(name: "healthStatus", value: "unknown")
 
@@ -187,7 +173,7 @@ void initialize(Boolean isInstall = false) {
     }
 
     final int interval = settings?.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
-    if (interval > 0) scheduleHealthCheck("executeHealthCheckScheduled", interval) else unschedule("executeHealthCheckScheduled")
+    if (interval > 0) scheduleHealthCheck("executePing", interval) else unschedule("executePing")
 
     if (isInstall) {
         device.updateSetting("logDebugEnable", [type: "bool", value: true])
@@ -223,7 +209,7 @@ List<String> configure() {
         cmds += zigbee.writeAttribute(0x0201, 0x0010, DataType.INT8, rawOffset)
     }
 
-    cmds += executeHealthCheck()
+    cmds += executePing()
     return cmds
 }
 
@@ -241,10 +227,6 @@ List<String> refresh() {
            zigbee.readAttribute(0x0001, 0x0020) + 
            zigbee.readAttribute(0x0202, 0x0000)   
 }
-
-/* =========================================================================================
-   COMMAND IMPLEMENTATIONS
-   ========================================================================================= */
 
 void setThermostatFanControlSource(String value) {
     if (value == null) return
@@ -461,25 +443,10 @@ private List<String> processSetpoint(degrees, int attributeId) {
     return zigbee.writeAttribute(0x0201, attributeId, DataType.INT16, finalValue) 
 }
 
-/* =========================================================================================
-   HEALTH CHECK ROUTINE TEMPLATE
-   ========================================================================================= */
+List<String> "Health Check"() { return executePing() }
 
-void "Health Check"() {
-    List<String> cmds = executeHealthCheck()
-    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
-}
-
-void executeHealthCheckScheduled() {
-    logTrace "executeHealthCheckScheduled(): Triggering scheduled health check..."
-    List<String> cmds = executeHealthCheck()
-    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
-}
-
-private List<String> executeHealthCheck() {
-    logInfo "Executing Health Check..."
-    unschedule("deviceCommandTimeout")
-    state.healthCheckPending = true
+private List<String> executePing() {
+    logDebug "Health Check Ping sent..."
     scheduleCommandTimeoutCheck()
     return zigbee.readAttribute(0x0000, 0x0007)
 }
@@ -493,34 +460,46 @@ private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
     unschedule(methodToSchedule)
     initializeHealthCheckPhase()
 
-    final int h = state.healthCheckStartHour as Integer
-    final int m = state.healthCheckStartMinute as Integer
+    final int h = (state.healthCheckStartHour != null) ? (state.healthCheckStartHour as Integer) : 0
+    final int m = (state.healthCheckStartMinute != null) ? (state.healthCheckStartMinute as Integer) : 0
 
     logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
 
     switch (intervalMin) {
         case 60: schedule("0 ${m} * ? * * *", methodToSchedule); break
-        case 240: schedule("0 ${m} ${[0,4,8,12,16,20].collect{(it+h)%24}.sort().join(',')} ? * * *", methodToSchedule); break
-        case 480: schedule("0 ${m} ${[0,8,16].collect{(it+h)%24}.sort().join(',')} ? * * *", methodToSchedule); break
-        case 720: schedule("0 ${m} ${[0,12].collect{(it+h)%24}.sort().join(',')} ? * * *", methodToSchedule); break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
+            break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
+            break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
+            break
         case 1440: schedule("0 ${m} ${h} ? * * *", methodToSchedule); break
-        default: schedule("0 */${intervalMin} * ? * * *", methodToSchedule); break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
     }
 }
 
 private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
-    runIn(delay, "deviceCommandTimeout", [overwrite: true])
+    unschedule("deviceCommandTimeout")
+    runIn(delay, "deviceCommandTimeout")
 }
 
 void deviceCommandTimeout() {
-    logWarn "Health Check failed: No response received within ${COMMAND_TIMEOUT} seconds (device offline?)"
-    state.healthCheckPending = false
+    logWarn "No device communication received within health check timeout window (device offline?)"
     updateAttribute("healthStatus", "offline")
 }
-
-/* =========================================================================================
-   ZIGBEE MESSAGE PARSING
-   ========================================================================================= */
 
 void parse(String description) {
     logDebug "Parsing raw description -> ${description}"
@@ -533,9 +512,17 @@ void parse(String description) {
 
             Integer clusterInt = descMap.cluster ? Integer.parseInt(descMap.cluster, 16) : descMap.clusterInt
             Integer attrInt = descMap.attrId ? Integer.parseInt(descMap.attrId, 16) : descMap.attrInt
-            String clusterHex = descMap.cluster ?: (clusterInt != null ? zigbee.convertToHexString(clusterInt, 4) : "unknown")
-
-            markDeviceActivity()
+            
+            unschedule("deviceCommandTimeout")
+            
+            // Force health check event refresh to ensure Hubitat updates platform 'lastActivity'
+            sendEvent(
+                name: "healthStatus", 
+                value: "online", 
+                type: "physical", 
+                isStateChange: true, 
+                descriptionText: "${device.displayName} health check verified online"
+            )
 
             switch(clusterInt) {
                 case 0x0201: // Thermostat Cluster
@@ -588,7 +575,6 @@ void parse(String description) {
                     
                 case 0x0000: // Basic Cluster
                     if (attrInt == 0x0007) {
-                        markHealthCheckSuccess(clusterHex)
                         String source = getPowerSource()[descMap.value] ?: "unknown"
                         updateAttribute("powerSource", source, null, "physical")
                     }
@@ -597,32 +583,6 @@ void parse(String description) {
         }
     } catch (Exception e) {
         logError "Error parsing description frame [${description}]: ${e.message}"
-    }
-}
-
-private void markHealthCheckSuccess(String clusterHex = "0000") {
-    if (state.healthCheckPending == true) {
-        logInfo "Valid Health Check response verified on cluster 0x${clusterHex}"
-        state.healthCheckPending = false
-        unschedule("deviceCommandTimeout")
-    }
-    
-    sendEvent(
-        name: "healthStatus", 
-        value: "online", 
-        isStateChange: true, 
-        descriptionText: "${device.displayName} health check verified online"
-    )
-}
-
-private void markDeviceActivity() {
-    if (device.currentValue("healthStatus") == "offline") {
-        sendEvent(
-            name: "healthStatus", 
-            value: "online", 
-            isStateChange: true, 
-            descriptionText: "${device.displayName} healthStatus restored to online via active traffic"
-        )
     }
 }
 
@@ -642,7 +602,7 @@ private BigDecimal getTemperature(String value) {
     double tempVal = (getTemperatureScale() == "C") ? celsius : celsiusToFahrenheit(celsius)
     
     int precision = settings?.tempPrecision != null ? settings.tempPrecision.toInteger() : 1
-    return BigDecimal.valueOf(tempVal).setScale(precision, RoundingMode.HALF_UP)
+    return new BigDecimal(tempVal).setScale(precision, RoundingMode.HALF_UP)
 }
 
 private Integer getBatteryLevel(String rawValue) {
@@ -654,43 +614,24 @@ private Integer getBatteryLevel(String rawValue) {
     return Math.max(0, Math.min(pct, 100))
 }
 
-/* =========================================================================================
-   MASTER UTILITY ROUTINES & LOGGING ENGINE
-   ========================================================================================= */
-
 void resetDriver() {
     logInfo "Starting full driver reset..."
-    
-    Object savedHour = state.healthCheckStartHour
-    Object savedMinute = state.healthCheckStartMinute
-
     clearAllSchedules()
-    clearAllAttributes()
     clearAllDriverStates()
-
-    if (savedHour != null) state.healthCheckStartHour = savedHour
-    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
-
     initialize(false)
     logInfo "Driver reset process completed and re-initialized."
 }
 
 void clearAllDriverStates() {
-    logInfo "Clearing all driver states..."
     state.clear()
-    logInfo "All states have been cleared."
 }
 
-void clearAllAttributes() {
-    logInfo "Clearing all attributes..."
+void clearAllDeviceAttributes() {
     device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
-    logInfo "All attributes have been cleared."
 }
 
 void clearAllSchedules() {
-    logInfo "Clearing all scheduled jobs (including orphaned schedules)..."
     unschedule()
-    logInfo "All scheduled jobs have been successfully cleared."
 }
 
 private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
@@ -719,17 +660,7 @@ void disableDebugLogging() {
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String devName = device.displayName ?: "Device Driver"
-    
-    String settingKey
-    switch (lowerLevel) {
-        case "info":  settingKey = "logInfoEnable"; break
-        case "error": settingKey = "logErrorEnable"; break
-        case "warn":  settingKey = "logWarnEnable"; break
-        case "debug": settingKey = "logDebugEnable"; break
-        case "trace": settingKey = "logTraceEnable"; break
-        default:      settingKey = "logInfoEnable"; break
-    }
-
+    String settingKey = "log${lowerLevel.capitalize()}Enable"
     Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
 
     if (getSettingBool(settingKey, defaultEnabled)) {
