@@ -32,24 +32,24 @@
  **/
 /**
  * Changelog:
- * v1.17    09/05/26    jshimota    Cleaned up updateFirmware log message to standard Hubitat API conventions.
- * v1.16    09/05/26    jshimota    Reordered humidity processing math (raw offset -> round), and replaced forceNextEvent state flags with last_ value state invalidation on preference updates to let standard delta processing handle offset changes seamlessly.
- * v1.15    09/05/26    jshimota    Hardened getSettingInteger with BigDecimal half-up rounding conversion and updated preference descriptions to clearly state integer enforcement for humidity fields.
- * v1.14    09/05/26    jshimota    Updated humidityOffset preference type to integer number input to align with standard Hubitat RelativeHumidityMeasurement conventions.
- * v1.13    09/05/26    jshimota    Fixed decimal range UI validation bug by changing endpoints to integers (-10..10 and 0..10), enforced minDelta >= 0.1 in code, added forced next event state flags on preference offset changes, restored COMMAND_TIMEOUT to 20s, and isolated initialize() unschedule logic.
- * v1.12    09/05/26    jshimota    Updated header comments, metadata name to wo/Display, and importUrl to third_reality_temp-humidity_sensor_wo-display_custom path.
- * v1.11    09/05/26    jshimota    Fixed NullPointerException in logMessage by replacing dynamic capitalize() with explicit string switch mapping for setting keys, resolving trace logging crashes in updated() and parse().
- * v1.10    09/05/26    jshimota    Expanded tempDelta range boundary (0.1 to 10.0) to fix input validation rejection and dynamically format description text according to hub location scale.
- * v1.09    09/05/26    jshimota    Restored COMMAND_TIMEOUT to 2 seconds for crisp health check timeout evaluations during normal scheduled execution.
- * v1.08    09/05/26    jshimota    Expanded health check command timeout guard to 30 seconds for stacked sleepy end device requests and ensured assertDeviceOnline() auto-recovers offline states on any valid sensor payload.
- * v1.07    09/05/26    jshimota    Updated naming and importUrl path from Sensor Lite to Third Reality Temperature & Humidity Sensor (Custom).
- * v1.06    09/05/26    jshimota    Fixed health check timeout cancellation bug by isolating unschedule to basic cluster 0x0000 response, allowed valid sensor traffic to assert online status for sleepy devices, corrected naming to Sensor Lite (3RTHS0224Z), and documented OTA as experimental.
- * v1.05    09/05/26    jshimota    Isolated cluster 0x0001 reporting configuration strictly to Battery Percentage (0x0021) to purge leftover 0x86 status traces, verified humidity parsing, space-separated temperatureText, and delta filtering.
- * v1.04    09/05/26    jshimota    Fixed MissingMethodException in parseHumidityCluster by enforcing explicit BigDecimal types on math operations, added space separator in temperatureText ("X °F"), and added timeout unschedule guard on all valid responses.
- * v1.03    09/05/26    jshimota    Removed unsupported battery voltage attribute (0x0020) reporting request to fix Zigbee 0x86 error and expanded health check timeout guard to 20s for sleepy end devices.
- * v1.02    09/05/26    jshimota    Synchronized driver naming and versioning baseline for Third Reality Temp & Humidity Sensor w/Display (Custom).
- * v1.01	09/05/26	jshimota	revamped naming device and driver
- * v1.00    09/05/26    jshimota    Initial purpose-built release for 3RTHS0224Z model featuring driver-side delta filtering, software offset calibration, custom tile formatting, and phase-anchored health monitoring.
+ * v1.0.17    09/05/26    jshimota    Cleaned up updateFirmware log message to standard Hubitat API conventions.
+ * v1.0.16    09/05/26    jshimota    Reordered humidity processing math (raw offset -> round), and replaced forceNextEvent state flags with last_ value state invalidation on preference updates to let standard delta processing handle offset changes seamlessly.
+ * v1.0.15    09/05/26    jshimota    Hardened getSettingInteger with BigDecimal half-up rounding conversion and updated preference descriptions to clearly state integer enforcement for humidity fields.
+ * v1.0.14    09/05/26    jshimota    Updated humidityOffset preference type to integer number input to align with standard Hubitat RelativeHumidityMeasurement conventions.
+ * v1.0.13    09/05/26    jshimota    Fixed decimal range UI validation bug by changing endpoints to integers (-10..10 and 0..10), enforced minDelta >= 0.1 in code, added forced next event state flags on preference offset changes, restored COMMAND_TIMEOUT to 20s, and isolated initialize() unschedule logic.
+ * v1.0.12    09/05/26    jshimota    Updated header comments, metadata name to wo/Display, and importUrl to third_reality_temp-humidity_sensor_wo-display_custom path.
+ * v1.0.11    09/05/26    jshimota    Fixed NullPointerException in logMessage by replacing dynamic capitalize() with explicit string switch mapping for setting keys, resolving trace logging crashes in updated() and parse().
+ * v1.0.10    09/05/26    jshimota    Expanded tempDelta range boundary (0.1 to 10.0) to fix input validation rejection and dynamically format description text according to hub location scale.
+ * v1.0.09    09/05/26    jshimota    Restored COMMAND_TIMEOUT to 2 seconds for crisp health check timeout evaluations during normal scheduled execution.
+ * v1.0.08    09/05/26    jshimota    Expanded health check command timeout guard to 30 seconds for stacked sleepy end device requests and ensured assertDeviceOnline() auto-recovers offline states on any valid sensor payload.
+ * v1.0.07    09/05/26    jshimota    Updated naming and importUrl path from Sensor Lite to Third Reality Temperature & Humidity Sensor (Custom).
+ * v1.0.06    09/05/26    jshimota    Fixed health check timeout cancellation bug by isolating unschedule to basic cluster 0x0000 response, allowed valid sensor traffic to assert online status for sleepy devices, corrected naming to Sensor Lite (3RTHS0224Z), and documented OTA as experimental.
+ * v1.0.05    09/05/26    jshimota    Isolated cluster 0x0001 reporting configuration strictly to Battery Percentage (0x0021) to purge leftover 0x86 status traces, verified humidity parsing, space-separated temperatureText, and delta filtering.
+ * v1.0.04    09/05/26    jshimota    Fixed MissingMethodException in parseHumidityCluster by enforcing explicit BigDecimal types on math operations, added space separator in temperatureText ("X °F"), and added timeout unschedule guard on all valid responses.
+ * v1.0.03    09/05/26    jshimota    Removed unsupported battery voltage attribute (0x0020) reporting request to fix Zigbee 0x86 error and expanded health check timeout guard to 20s for sleepy end devices.
+ * v1.0.02    09/05/26    jshimota    Synchronized driver naming and versioning baseline for Third Reality Temp & Humidity Sensor w/Display (Custom).
+ * v1.0.01	09/05/26	jshimota	revamped naming device and driver
+ * v1.0.00    09/05/26    jshimota    Initial purpose-built release for 3RTHS0224Z model featuring driver-side delta filtering, software offset calibration, custom tile formatting, and phase-anchored health monitoring.
 **/
 
 static String version() { return '1.17' }
