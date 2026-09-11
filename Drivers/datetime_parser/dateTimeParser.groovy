@@ -26,6 +26,7 @@
  *
  * Date         Source      Version What       URL
  * ----         ------      ------- ---- 
+ * 2026-09-04   jshimota    0.4.5   Removed manageSchedules() from refresh() pass and added schedule interval state tracking to eliminate 45-minute quartz scheduler rebuild churn.
  * 2026-09-03   jshimota    0.4.4   Renamed custom command scheduleRefresh to Refresh Scheduler for clearer administrative intent.
  * 2026-09-03   jshimota    0.4.3   Restored v0.3.8 string format preservation for lead/no-lead attributes (preventing .toInteger() truncation), while retaining schedule optimizations, 5-tier logging, and lastUpdate tracking.
  * 2026-09-03   jshimota    0.4.1   Streamlined execution paths: eliminated schedule churn in mySchedule/dailySchedule, shifted attribute logs to logDebug, added lastUpdate attribute, and removed Health Check/Reset driver routines.
@@ -34,7 +35,6 @@
  * 2026-05-14   jshimota    0.3.8   Fix package json to required true.
  * 2026-05-01   jshimota    0.3.7   Bug on 176 log enabled should be txtEnable.
  * 2026-03-08   jshimota    0.3.6   Moved daily schedule to 3:15 to get past Hub hour update on DST.
- * 2026-01-10   jshimota    0.3.5   Changed log dbg and txt params for debugging.
  * 2025-10-20   jshimota    0.3.4   Added dailyRefresh.
  * 2025-10-19   jshimota    0.3.3   Added debug log - restructured log reporting.
  * 2025-03-14   jshimota    0.3.2   Added daily schedule run time to after HE and DST changes (2:45am).
@@ -65,8 +65,8 @@
 import java.text.SimpleDateFormat
 import groovy.transform.Field
 
-static String version() { return '0.4.4' }
-def timeStamp() { return "2026/09/03 09:52 AM" }
+static String version() { return '0.4.5' }
+def timeStamp() { return "2026/09/04 09:30 AM" }
 
 static String getOrdinal(int n) {
     if (n >= 11 && n <= 13) return "th"
@@ -157,7 +157,6 @@ metadata {
     }
 }
 
-// Single-Shot Version Demarcation Trace Logging Helper Routine
 private void checkAndLogVersionDemarcation() {
     String currentVer = version()
     if (state.driverVersion != currentVer) {
@@ -180,6 +179,8 @@ void installed() {
     updateAttribute("driverVersion", version())
 
     initialize(true)
+    manageSchedules(true)
+    runCmd()
 }
 
 void updated() {
@@ -188,7 +189,8 @@ void updated() {
     updateAttribute("driverVersion", version())
     
     initialize(false)
-    refresh()
+    manageSchedules(false)
+    runCmd()
 }
 
 def configure() {
@@ -197,14 +199,14 @@ def configure() {
     updateAttribute("driverVersion", version())
     
     initialize(false)
-    refresh()
+    manageSchedules(true)
+    runCmd()
     return []
 }
 
 def refresh() {
     logDebug "refresh() requested"
     runCmd()
-    manageSchedules()
     return []
 }
 
@@ -214,8 +216,8 @@ def dailyRefresh() {
 }
 
 def "Refresh Scheduler"() {
-    logDebug "Refresh Scheduler requested"
-    manageSchedules()
+    logDebug "Refresh Scheduler requested manually."
+    manageSchedules(true)
 }
 
 private void initialize(Boolean isInstall = false) {
@@ -240,13 +242,22 @@ private void initialize(Boolean isInstall = false) {
    DATE & TIME PARSING CORE LOGIC
    ========================================================================================= */
 
-private void manageSchedules() {
+private void manageSchedules(Boolean forceRebuild = false) {
+    Boolean isAuto = getSettingBool("autoUpdate", true)
+    int interval = settings.autoUpdateInterval ? settings.autoUpdateInterval.toInteger() : 5
+
+    String currentConfigKey = "${isAuto}_${interval}"
+
+    if (!forceRebuild && state.activeScheduleConfig == currentConfigKey) {
+        logDebug "Schedule configuration unchanged (${currentConfigKey}). Skipping schedule rebuild."
+        return
+    }
+
     unschedule("mySchedule")
     unschedule("dailySchedule")
     logInfo "Cleared existing schedules."
     
-    if (autoUpdate) {
-        int interval = settings.autoUpdateInterval ? settings.autoUpdateInterval.toInteger() : 5
+    if (isAuto) {
         schedule("0 0/${interval} * ? * * *", "mySchedule")
         logInfo "Set periodic scheduled refresh with ${interval} minute interval."
     } else {
@@ -255,6 +266,8 @@ private void manageSchedules() {
     
     schedule("0 15 3 ? * * *", "dailySchedule")
     logInfo "Setting DAILY schedule at 3:15 AM each day."
+
+    state.activeScheduleConfig = currentConfigKey
 }
 
 void mySchedule() {
@@ -268,7 +281,6 @@ void dailySchedule() {
 void runCmd() {
     def now = new Date()
     
-    // Reuse SimpleDateFormat instances across pattern evaluations
     def sdf = new SimpleDateFormat()
 
     sdf.applyPattern('EEEE'); def DayName = sdf.format(now)
@@ -297,7 +309,6 @@ void runCmd() {
     sdf.applyPattern('z');    def TZIDText3 = sdf.format(now)
     sdf.applyPattern('Z');    def GMTDiffHours = sdf.format(now)
 
-    // Comparison values preserved exactly as original string concatenations
     def comparisonDate = YearNum4Dig + MonthNum + DayOfMonNum
     def comparisonTime = TimeHour24Num + TimeMinNum
     def comparisonDateTime = YearNum4Dig + MonthNum + DayOfMonNum + TimeHour24Num + TimeMinNum
@@ -333,7 +344,6 @@ void runCmd() {
     sdf.applyPattern("yyyy-MM-dd HH:mm:ss")
     def lastUpdateFormatted = sdf.format(now)
 
-    // Preserved raw String payloads for lead/no-lead formatted values
     def events = [
         "DayName": DayName,
         "DayNameText3": DayNameText3,

@@ -13,7 +13,7 @@
       "id": "2100366c-3f81-435f-9272-6300a49c35e9",
       "name": "Centralite Pearl Zigbee Thermostat",
       "namespace": "jshimota",
-      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/centralitePearlThermostat.groovy",
+      "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat_custom/centralitePearlThermostat.groovy",
       "required": true,
       "oauth": false,
       "version": "0.7.7"

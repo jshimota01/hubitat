@@ -30,6 +30,9 @@
 	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
 	
 	VERSIONS:
+	v2.5.13	09/06/26	jshimota	Fixed illuminance horizon math discontinuity at 0° altitude by offsetting daytime power curve with twilight base lux (400lx). Added safe try/catch numeric guard and updated log wording to Estimated Base Lux.
+	v2.5.12	09/06/26	jshimota	Fixed Groovy double type signature mismatches in calcCurrentIlluminance (explicit double literal primitives and BigDecimal logging setScale fix for Hubitat 2.4.4+ sandbox).
+	v2.5.11	09/06/26	jshimota	Replaced illuminance model with CIE Clear/Overcast Sky math (extends twilight down to -6° and eliminates 100% cloud zero-lux bug). Fixed Groovy clamp compatibility.
 	v2.5.10	07/31/26	jshimota	changed scheduling to be aware of day/night change so it updates 5 mins after to keep tiles aware
 	v2.5.9	07/28/26	jshimota	Added moon alt and az text to moonPhaseTile
 	v2.5.8	07/28/26	jshimota	Bug check: Cleaned up calcMoonPosition variables, aligned versions, and added text updates for moon angles in calcTextValue
@@ -56,7 +59,7 @@
 	v2.1.0	07/15/26	jshimota	start point
 **/
 
-static String version()    {  return '2.5.10'  }
+static String version()    {  return '2.5.13'  }
 
 metadata {
     definition(
@@ -1506,7 +1509,7 @@ private String calcWinDirImagePath(String altWDLoc) {
 Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
     logDebug "Calculating moon phase icons, text names, and emojis from API payload maps..."
     
-    List<String> emojis = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
+    List<String> emojis = ["🌑", "🌒", "🌓", "m🌔", "🌕", "🌖", "🌗", "🌘"]
     
     def phases = [
         [sourceMap: todayData, apiKey: "moon_phase", valAttr: "todayMoonPhase", pngAttr: "todayMoonPhasePngImageUrl", textAttr: "todayMoonPhaseText", emojiAttr: "todayMoonPhaseEmojiIcon"],
@@ -1834,7 +1837,7 @@ private void calcIsDayState(BigDecimal sunAltitude) {
 }
 
 private BigDecimal calcCurrentIlluminance(BigDecimal sunAltitude, def liveClouds = null) {
-    logDebug "Calculating dynamic current illuminance adjusted for chosen unit..."
+    logDebug "Calculating dynamic estimated outdoor illuminance..."
     
     def cloudPctVal = (liveClouds != null) ? liveClouds : device.currentValue("currentCloudPCT")
     
@@ -1842,23 +1845,48 @@ private BigDecimal calcCurrentIlluminance(BigDecimal sunAltitude, def liveClouds
         logDebug "calcCurrentIlluminance postponed: Waiting for cloud percentage or sun altitude data."
         return 0.0
     }
-    
-    if (sunAltitude <= 0) {
-        sendIfChanged(name: "currentIlluminance", value: 0)
-        sendIfChanged(name: "illuminance", value: 0)
+
+    double alt
+    double rawClouds
+
+    try {
+        alt = sunAltitude.toDouble()
+        rawClouds = cloudPctVal.toDouble()
+    } catch (Exception e) {
+        logWarn "calcCurrentIlluminance skipped: Invalid numeric input (Altitude: ${sunAltitude}, Clouds: ${cloudPctVal})"
         return 0.0
     }
-    
-    BigDecimal clouds = cloudPctVal.toBigDecimal()
-    double radians = Math.toRadians(sunAltitude.doubleValue())
-    BigDecimal clearSkyLux = 100000 * Math.sin(radians)
-    BigDecimal attenuatedLux = (clearSkyLux * ((100 - clouds) / 100)) * 0.75
-    
-    String targetUnit = settings.illuminanceUnit ?: "lx"
-    BigDecimal finalValue = convertIlluminance(attenuatedLux)
 
-    if (targetUnit == "lx" && finalValue > 100000) finalValue = 100000
-    logDebug "Illuminance Parsed: ${finalValue} ${targetUnit} (Base Lux: ${attenuatedLux.setScale(0, 4)} lx)"
+    double clouds = Math.max(0.0d, Math.min(100.0d, rawClouds))
+    double clearSkyLux = 0.0
+
+    // 1. Solar Elevation Illuminance Model (Anchored Civil Twilight Exponential Decay to Horizon + Daylight Power Curve)
+    if (alt > 0.0) {
+        // Direct Sun + Clear Sky Skylight anchored at 400 lx (horizon) up to 120,000 lx (zenith)
+        double radAlt = Math.toRadians(alt)
+        clearSkyLux = 400.0d + (120000.0d - 400.0d) * Math.pow(Math.sin(radAlt), 1.25d)
+    } else if (alt >= -6.0) {
+        // Civil Twilight Exponential Decay (400 lx at 0° down to ~2.5 lx at -6°)
+        clearSkyLux = 400.0d * Math.exp(0.85d * alt)
+    } else {
+        // Nighttime (Astronomical / Nautical darkness)
+        clearSkyLux = 0.0d
+    }
+
+    // 2. Non-Linear Cloud Transmittance Attenuation
+    // 0% clouds = 100% transmission; 100% clouds = 20% transmission (diffuse overcast daylight)
+    double cloudTransmittance = 0.20d + (0.80d * Math.pow((100.0d - clouds) / 100.0d, 1.5d))
+    
+    // 3. Final Attenuated Outdoor Lux
+    double attenuatedLux = clearSkyLux * cloudTransmittance
+    
+    BigDecimal rawCalculatedLux = BigDecimal.valueOf(attenuatedLux)
+    BigDecimal finalValue = convertIlluminance(rawCalculatedLux)
+
+    String targetUnit = settings.illuminanceUnit ?: "lx"
+    if (targetUnit == "lx" && finalValue > 120000) finalValue = 120000
+    
+    logDebug "Illuminance Parsed: ${finalValue} ${targetUnit} (Estimated Base Lux: ${rawCalculatedLux.setScale(0, java.math.RoundingMode.HALF_UP)} lx)"
 
     sendIfChanged(name: "currentIlluminance", value: finalValue)
     sendIfChanged(name: "illuminance", value: finalValue)
