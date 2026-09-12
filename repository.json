@@ -5,6 +5,7 @@
 		  {
 			"name": "Astro-Meteor Seasons",
 			"category": "Convenience",
+			"version": "0.3.7",
 			"tags": [ "Dashboards", "Monitoring", "Timers", "Weather" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_meteor_seasons/packageManifest.json",
 			"description": "I used the meteorological seasons but wanted higher accuracy like Farmers Almanac.  Along came Ai and got me there. Now the user can choose which Seasons type. Hemisphere and and selectable autumn/fall.  It creates a useable tile, variables for Rules and other nice features as well."
@@ -12,6 +13,7 @@
 		  {
 			"name": "Meteorological Seasons",
 			"category": "Convenience",
+			"version": "2.1.7",
 			"tags": [ "Dashboards", "Monitoring", "Timers", "Weather" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/packageManifest.json",
 			"description": "A need developed for me to be able to set Rules and automations within my Hubitat environment that would allow me to gain control seasonally.  Meteorological Seasons is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver. This driver, when used during creation of a virtual device, creates a clean way to bridge seasons to dashboard tiles, variables for Rules and other nice features  as well.  Now useful for both hemispheres!"
@@ -19,6 +21,7 @@
  		  {
 			"name": "Virtual Inverse-able Switch w-autoOff and Toggle",
 			"category": "Convenience",
+			"version": "0.2.6",
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOff", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/packageManifest.json",
 			"description": "This switch will show ON but will have a device state of Off if the preference is set to Reverse Actions. Useful for apps that allow a switch to control on-off state but you want to reflect the app not the switch"
@@ -26,6 +29,7 @@
 		  {
 			"name": "Zigbee eWeLink-CMARS-Seedan Outlet",
 			"category": "Control",
+			"version": "0.1.2.4",
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/packageManifest.json",
 			"description": "Zigbee eWeLink-CMARS-Seedan Outlet is a driver that is modified from the great code of Markus Liljergren of *OhLa Lab* fame -see https://oh-lalabs.com/. Modifications include ewelink fingerprint and more "
@@ -33,6 +37,7 @@
 		  {
 			"name": "Date & Time Parser",
 			"category": "Control",
+			"version": "0.4.5",
 			"tags": [ "Date", "Timers", "Virtual", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/packageManifest.json",
 			"description": "A virtual device driver that seperates out date and time components into chunks.  Useful for check day of the week, hour of the day etc. in rules "
@@ -40,6 +45,7 @@
 		  {
 			"name": "Virtual Presence Contact and Switch",
 			"category": "Convenience",
+			"version": "0.1.1.8",
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presence_openclose_switch/packageManifest.json",
 			"description": "A virtual device driver that ties Presence, Sensor and Switch (Present/Open/On) capabilities.  Useful for connecting to Alexa, or having Presence give an on/off state "
@@ -47,6 +53,7 @@
 		  {
 			"name": "Centralite Pearl Zigbee Thermostat",
 			"category": "Control",
+			"version": "0.7.7",
 			"tags": [ "Dashboards", "Monitoring", "Thermostat", "Zigbee", "Driver", "Temperature & Humidity", "Climate Control" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/packageManifest.json",
 			"description": "A Zigbee Thermostat driver specific to the Centralite Pearl Thermostat device, (aka Centralite model 3157100). Driver includes FanCirculate feature and accounts for thermostat hardware lack of Auto mode "
@@ -54,6 +61,7 @@
 		  {
 			"name": "Twilight Parser",
 			"category": "Control",
+			"version": "0.3.9",
 			"tags": [ "Dashboards", "Monitoring",  "Driver", "Date", "Timers", "Virtual", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/twilight_parser/packageManifest.json",
 			"description": "A virtual device driver that seperates allows for accurate twilight date and time components into chunks.  Useful for lighting and night activities "
@@ -61,6 +69,7 @@
 		  {
 			"name": "Inverse Link Two Switches",
 			"category": "Convenience",
+			"version": "2.3.4.132",
 			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/packageManifest.json",
 			"description": "A Parent App with children to set two switches to always be inversed to each other.  Can be disabled with its own switch.  Useful for folks who hate boolean! "
@@ -68,6 +77,7 @@
 		  {
 			"name": "OpenWeatherMap Multi-API Weather Driver ",
 			"category": "Control",
+			"version": "2.5.13",
 			"tags": [ "Weather", "Virtual", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/packageManifest.json",
 			"description": "A virtual device driver for weather. Includes multiple tiles, including Alerts and Moon Phase.  Has detailed Sun Altitude and Azimuth and Illuminance for use with blinds. High precision temp, barometer, rainfall and UVI. Forecasted weather data included for next 3 days"
@@ -75,6 +85,7 @@
 		  {
 			"name": "Third Reality Custom Drivers",
 			"category": "Control",
+			"version": "1.0.8",
 			"tags": [ "Zigbee", "Driver", "Sensors", "Lights & Switches", "Temperature & Humidity", "Motion", "Presence", "Open/Closed", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_custom_drivers_packaging/packageManifest.json",
 			"description": "A collection of production-grade custom drivers for Third Reality Zigbee devices. Select and install only the drivers you need (Contact, Motion, Night Light, Power Plug with Metering, and Temp/Humidity Display/Non-Display sensors, RGBW bulb)."

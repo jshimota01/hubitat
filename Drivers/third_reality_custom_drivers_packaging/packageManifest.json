@@ -1,12 +1,12 @@
 {
   "packageName": "Third Reality Custom Drivers",
   "author": "James Shimota",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "minimumHEVersion": "2.4.4.156",
-  "dateReleased": "2026-09-10",
+  "dateReleased": "2026-09-12",
   "documentationLink": "https://github.com/jshimota01/hubitat",
   "communityLink": "https://community.hubitat.com/",
-  "releaseNotes": "1.0.7 - Improved Health Check routine in RGBW Bulb and Multifunction Night Light drivers to force platform lastActivity timestamp refreshes.",
+  "releaseNotes": "1.0.7 - Improved Health Check routine in RGBW Bulb and Multifunction Night Light drivers to force platform lastActivity timestamp refreshes.\n1.0.8 - Added contactInverted attribute to Third Reality Contact Sensor driver to explicitly display state inversion status.",
   "drivers": [
     {
       "id": "e8a933f1-4b12-4c28-98e1-111111111101",
