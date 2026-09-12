@@ -73,7 +73,7 @@ metadata {
         name: "CentraLite Pearl Thermostat (Custom)",
         namespace: "jshimota",
         author: "James Shimota",
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat_custom/centralite_pearl_thermostat_custom.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/centralite_pearl_thermostat_custom.groovy"
     ) {
         capability "Actuator"
         capability "Battery"
