@@ -1,0 +1,35 @@
+Old Echo Speaks
+Primary Speech & Announcement Commands:
+    speak("text") — Basic text-to-speech
+    playAnnouncement("text") / playAnnouncementAll("text") — Broadcasts an announcement
+    playAnnouncementIncludeVis("text") — Announcement with visual display on Echo Shows
+    sendCmdToToDevice("cmd", "val") — Raw command executor
+
+Built-In Alexa Automation & Action Functions:
+    executeRoutine("routine name") — Triggers an Alexa Routine
+    playBuiltInSound("sound_name") — Plays built-in Alexa sound effects
+    playFunFact() / playSingASong() / playTellJoke() — Trigger fun Alexa routines
+    setDoNotDisturb(true/false) — Toggles DND mode
+    setAlarm("time") / createReminder("text", "time") — Creates alarms/reminders
+
+Media & Playback Controls:
+    play(), pause(), stop(), nextTrack(), previousTrack() — Standard playback
+    setVolume(0-100) / volumeUp() / volumeDown() — Volume adjustment
+    playMusicProvider("search_term", "provider_name") — Search and stream music
+    setBluetooth("device_name") / disconnectBluetooth() — Connect/disconnect Bluetooth
+	
+	
+New Echos Speak
+Primary Speech & Announcement Commands:
+    speak("text") — Basic text-to-speech
+    playAnnouncement("text") / playAnnouncementAll("text") — Broadcasts an announcement
+    playAnnouncementIncludeVis("text") — Announcement with visual display on Echo Shows
+    sendCmdToToDevice("cmd", "val") — Raw command executor
+
+Built-In Alexa Automation & Action Functions:
+    setDoNotDisturb(true/false) — Toggles DND mode
+    setAlarm("time") / createReminder("text", "time") — Creates alarms/reminders
+
+Media & Playback Controls:
+    play(), pause(), stop(), nextTrack(), previousTrack() — Standard playback
+    setVolume(0-100) / volumeUp() / volumeDown() — Volume adjustment

@@ -1,0 +1,1092 @@
+echos-speak-bridge
+date,stream,content
+2026/09/09 14:13:24,stdout,================================================================
+
+2026/09/09 14:13:24,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 14:13:24,stdout,REST API Listening on Port: 8093
+
+2026/09/09 14:13:24,stdout,Echos Speak Advanced API Bridge (v1.1.3) Running
+
+2026/09/09 14:13:24,stdout,================================================================
+
+2026/09/09 14:13:24,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 14:13:24,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 14:13:24,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 14:13:23,stdout,Run `npm audit` for details.
+
+2026/09/09 14:13:23,stdout,
+
+2026/09/09 14:13:23,stdout,  npm audit fix --force
+
+2026/09/09 14:13:23,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 14:13:23,stdout,
+
+2026/09/09 14:13:23,stdout,  npm audit fix
+
+2026/09/09 14:13:23,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 14:13:23,stdout,
+
+2026/09/09 14:13:23,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 14:13:23,stdout,
+
+2026/09/09 14:13:23,stdout,  run `npm fund` for details
+
+2026/09/09 14:13:23,stdout,20 packages are looking for funding
+
+2026/09/09 14:13:23,stdout,
+
+2026/09/09 14:13:23,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 14:13:23,stdout,
+
+2026/09/09 14:13:18,stdout,Successfully saved .alexa-cookie.json
+
+2026/09/09 14:13:18,stdout,Received SIGTERM. Flushing session state to disk before exiting...
+
+2026/09/09 13:01:58,stderr,    at AsyncResource.runInAsyncScope (node:async_hooks:203:9)
+
+2026/09/09 13:01:58,stderr,    at /app/node_modules/body-parser/lib/read.js:137:5
+
+2026/09/09 13:01:58,stderr,    at next (/app/node_modules/express/lib/router/index.js:280:10)
+
+2026/09/09 13:01:58,stderr,    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+
+2026/09/09 13:01:58,stderr,    at /app/node_modules/express/lib/router/index.js:284:15
+
+2026/09/09 13:01:58,stderr,    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+
+2026/09/09 13:01:58,stderr,    at Route.dispatch (/app/node_modules/express/lib/router/route.js:119:3)
+
+2026/09/09 13:01:58,stderr,    at next (/app/node_modules/express/lib/router/route.js:149:13)
+
+2026/09/09 13:01:58,stderr,    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+
+2026/09/09 13:01:58,stderr,    at /app/server.js:199:33
+
+2026/09/09 13:01:58,stderr,Execution error for command [announce] on device [G090XG07939306XF]: TypeError: alexa.sendAnnouncement is not a function
+
+2026/09/09 13:01:58,stdout,Executing [announce] for device [G090XG07939306XF]: { text: 'IM here' }
+
+2026/09/09 12:45:24,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:45:21,stdout,Cookie successfully flushed to disk at: /app/data/.alexa-cookie.json
+
+2026/09/09 12:45:21,stdout,New Amazon session cookie captured successfully via proxy!
+
+2026/09/09 12:43:27,stdout,================================================================
+
+2026/09/09 12:43:27,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 12:43:27,stdout,REST API Listening on Port: 8093
+
+2026/09/09 12:43:27,stdout,Echos Speak Advanced API Bridge (v1.1.3) Running
+
+2026/09/09 12:43:27,stdout,================================================================
+
+2026/09/09 12:43:27,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 12:43:27,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 12:43:27,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 12:43:27,stdout,Run `npm audit` for details.
+
+2026/09/09 12:43:27,stdout,
+
+2026/09/09 12:43:27,stdout,  npm audit fix --force
+
+2026/09/09 12:43:27,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 12:43:27,stdout,
+
+2026/09/09 12:43:27,stdout,  npm audit fix
+
+2026/09/09 12:43:27,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 12:43:27,stdout,
+
+2026/09/09 12:43:27,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 12:43:27,stdout,
+
+2026/09/09 12:43:27,stdout,  run `npm fund` for details
+
+2026/09/09 12:43:27,stdout,20 packages are looking for funding
+
+2026/09/09 12:43:27,stdout,
+
+2026/09/09 12:43:27,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 12:43:27,stdout,
+
+2026/09/09 12:43:23,stdout,Successfully saved .alexa-cookie.json
+
+2026/09/09 12:43:23,stdout,Received SIGTERM. Flushing session state to disk before exiting...
+
+2026/09/09 12:37:49,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:37:47,stdout,New Amazon session cookie captured successfully via proxy!
+
+2026/09/09 12:37:37,stdout,================================================================
+
+2026/09/09 12:37:37,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 12:37:37,stdout,REST API Listening on Port: 8093
+
+2026/09/09 12:37:37,stdout,Echos Speak Advanced API Bridge (v1.1.2) Running
+
+2026/09/09 12:37:37,stdout,================================================================
+
+2026/09/09 12:37:37,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 12:37:37,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 12:37:37,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 12:37:37,stdout,Run `npm audit` for details.
+
+2026/09/09 12:37:37,stdout,
+
+2026/09/09 12:37:37,stdout,  npm audit fix --force
+
+2026/09/09 12:37:37,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 12:37:37,stdout,
+
+2026/09/09 12:37:37,stdout,  npm audit fix
+
+2026/09/09 12:37:37,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 12:37:37,stdout,
+
+2026/09/09 12:37:37,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 12:37:37,stdout,
+
+2026/09/09 12:37:37,stdout,  run `npm fund` for details
+
+2026/09/09 12:37:37,stdout,20 packages are looking for funding
+
+2026/09/09 12:37:37,stdout,
+
+2026/09/09 12:37:37,stdout,"up to date, audited 108 packages in 1s
+"
+2026/09/09 12:37:37,stdout,
+
+2026/09/09 12:37:33,stdout,Successfully saved .alexa-cookie.json
+
+2026/09/09 12:37:33,stdout,Received SIGTERM. Flushing session state to disk before exiting...
+
+2026/09/09 12:36:32,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:36:30,stdout,New Amazon session cookie captured successfully via proxy!
+
+2026/09/09 12:36:13,stdout,================================================================
+
+2026/09/09 12:36:13,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 12:36:13,stdout,REST API Listening on Port: 8093
+
+2026/09/09 12:36:13,stdout,Echos Speak Advanced API Bridge (v1.1.2) Running
+
+2026/09/09 12:36:13,stdout,================================================================
+
+2026/09/09 12:36:13,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 12:36:13,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 12:36:13,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 12:36:13,stdout,Run `npm audit` for details.
+
+2026/09/09 12:36:13,stdout,
+
+2026/09/09 12:36:13,stdout,  npm audit fix --force
+
+2026/09/09 12:36:13,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 12:36:13,stdout,
+
+2026/09/09 12:36:13,stdout,  npm audit fix
+
+2026/09/09 12:36:13,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 12:36:13,stdout,
+
+2026/09/09 12:36:13,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 12:36:13,stdout,
+
+2026/09/09 12:36:12,stdout,  run `npm fund` for details
+
+2026/09/09 12:36:12,stdout,20 packages are looking for funding
+
+2026/09/09 12:36:12,stdout,
+
+2026/09/09 12:36:12,stdout,"up to date, audited 108 packages in 1s
+"
+2026/09/09 12:36:12,stdout,
+
+2026/09/09 12:35:55,stdout,Successfully saved .alexa-cookie.json
+
+2026/09/09 12:35:55,stdout,Received SIGTERM. Flushing session state to disk before exiting...
+
+2026/09/09 12:34:25,stderr,}
+
+2026/09/09 12:34:25,stderr,  port: 443
+
+2026/09/09 12:34:25,stderr,"  address: '3.169.169.171',
+"
+2026/09/09 12:34:25,stderr,"  syscall: 'connect',
+"
+2026/09/09 12:34:25,stderr,"  code: 'ENETUNREACH',
+"
+2026/09/09 12:34:25,stderr,"  errno: -101,
+"
+2026/09/09 12:34:25,stderr,    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1555:16) {
+
+2026/09/09 12:34:25,stderr,Failed to fetch devices from Amazon: Error: connect ENETUNREACH 3.169.169.171:443
+
+2026/09/09 12:34:00,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:33:58,stdout,New Amazon session cookie captured successfully via proxy!
+
+2026/09/09 12:33:43,stdout,================================================================
+
+2026/09/09 12:33:43,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 12:33:43,stdout,REST API Listening on Port: 8093
+
+2026/09/09 12:33:43,stdout,Echos Speak Advanced API Bridge (v1.1.2) Running
+
+2026/09/09 12:33:43,stdout,================================================================
+
+2026/09/09 12:33:43,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 12:33:43,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 12:33:43,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 12:33:43,stdout,Run `npm audit` for details.
+
+2026/09/09 12:33:43,stdout,
+
+2026/09/09 12:33:43,stdout,  npm audit fix --force
+
+2026/09/09 12:33:43,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 12:33:43,stdout,
+
+2026/09/09 12:33:43,stdout,  npm audit fix
+
+2026/09/09 12:33:43,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 12:33:43,stdout,
+
+2026/09/09 12:33:43,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 12:33:43,stdout,
+
+2026/09/09 12:33:43,stdout,  run `npm fund` for details
+
+2026/09/09 12:33:43,stdout,20 packages are looking for funding
+
+2026/09/09 12:33:43,stdout,
+
+2026/09/09 12:33:43,stdout,"up to date, audited 108 packages in 1s
+"
+2026/09/09 12:33:43,stdout,
+
+2026/09/09 12:33:31,stdout,Successfully saved .alexa-cookie.json
+
+2026/09/09 12:33:31,stdout,Received SIGTERM. Flushing session state to disk before exiting...
+
+2026/09/09 12:19:01,stdout,Executing [voiceCmd] for device [G090XG07939306XF]: { command: 'Turn off the office ceiling' }
+
+2026/09/09 12:18:53,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:18:51,stdout,New Amazon session cookie captured successfully via proxy!
+
+2026/09/09 12:18:14,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 12:18:14,stdout,================================================================
+
+2026/09/09 12:18:14,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 12:18:14,stdout,REST API Listening on Port: 8093
+
+2026/09/09 12:18:14,stdout,Echos Speak Advanced API Bridge (v1.1.2) Running
+
+2026/09/09 12:18:14,stdout,================================================================
+
+2026/09/09 12:18:14,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 12:18:14,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 12:18:14,stdout,Run `npm audit` for details.
+
+2026/09/09 12:18:14,stdout,
+
+2026/09/09 12:18:14,stdout,  npm audit fix --force
+
+2026/09/09 12:18:14,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 12:18:14,stdout,
+
+2026/09/09 12:18:14,stdout,  npm audit fix
+
+2026/09/09 12:18:14,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 12:18:14,stdout,
+
+2026/09/09 12:18:14,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 12:18:14,stdout,
+
+2026/09/09 12:18:14,stdout,  run `npm fund` for details
+
+2026/09/09 12:18:14,stdout,20 packages are looking for funding
+
+2026/09/09 12:18:14,stdout,
+
+2026/09/09 12:18:14,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 12:18:14,stdout,
+
+2026/09/09 12:14:47,stdout,Executing [voiceCmd] for device [G090XG07939306XF]: { command: 'Turn on the office ceiling' }
+
+2026/09/09 12:14:12,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:14:10,stdout,New Amazon session cookie captured successfully via proxy!
+
+2026/09/09 12:13:22,stdout,================================================================
+
+2026/09/09 12:13:22,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 12:13:22,stdout,REST API Listening on Port: 8093
+
+2026/09/09 12:13:22,stdout,Echos Speak Advanced API Bridge (v1.1.1) Running
+
+2026/09/09 12:13:22,stdout,================================================================
+
+2026/09/09 12:13:22,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 12:13:22,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 12:13:22,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 12:13:22,stdout,Run `npm audit` for details.
+
+2026/09/09 12:13:22,stdout,
+
+2026/09/09 12:13:22,stdout,  npm audit fix --force
+
+2026/09/09 12:13:22,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 12:13:22,stdout,
+
+2026/09/09 12:13:22,stdout,  npm audit fix
+
+2026/09/09 12:13:22,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 12:13:22,stdout,
+
+2026/09/09 12:13:22,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 12:13:22,stdout,
+
+2026/09/09 12:13:21,stdout,  run `npm fund` for details
+
+2026/09/09 12:13:21,stdout,20 packages are looking for funding
+
+2026/09/09 12:13:21,stdout,
+
+2026/09/09 12:13:21,stdout,"up to date, audited 108 packages in 1s
+"
+2026/09/09 12:13:21,stdout,
+
+2026/09/09 12:11:38,stderr,    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+
+2026/09/09 12:11:38,stderr,    at /app/node_modules/express/lib/router/index.js:284:15
+
+2026/09/09 12:11:38,stderr,    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+
+2026/09/09 12:11:38,stderr,    at Route.dispatch (/app/node_modules/express/lib/router/route.js:119:3)
+
+2026/09/09 12:11:38,stderr,    at next (/app/node_modules/express/lib/router/route.js:149:13)
+
+2026/09/09 12:11:38,stderr,    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+
+2026/09/09 12:11:38,stderr,    at /app/server.js:192:23
+
+2026/09/09 12:11:38,stderr,    at sendTextCommandAsync (/app/server.js:91:12)
+
+2026/09/09 12:11:38,stderr,    at new Promise (<anonymous>)
+
+2026/09/09 12:11:38,stderr,    at /app/server.js:92:15
+
+2026/09/09 12:11:38,stderr,Execution error for command [voiceCmd] on device [G090XG07939306XF]: TypeError: alexa.sendTextCommand is not a function
+
+2026/09/09 12:11:38,stdout,Executing [voiceCmd] for device [G090XG07939306XF]: { command: 'Turn on the office ceiling' }
+
+2026/09/09 12:10:43,stderr,    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+
+2026/09/09 12:10:43,stderr,    at /app/node_modules/express/lib/router/index.js:284:15
+
+2026/09/09 12:10:43,stderr,    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+
+2026/09/09 12:10:43,stderr,    at Route.dispatch (/app/node_modules/express/lib/router/route.js:119:3)
+
+2026/09/09 12:10:43,stderr,    at next (/app/node_modules/express/lib/router/route.js:149:13)
+
+2026/09/09 12:10:43,stderr,    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+
+2026/09/09 12:10:43,stderr,    at /app/server.js:192:23
+
+2026/09/09 12:10:43,stderr,    at sendTextCommandAsync (/app/server.js:91:12)
+
+2026/09/09 12:10:43,stderr,    at new Promise (<anonymous>)
+
+2026/09/09 12:10:43,stderr,    at /app/server.js:92:15
+
+2026/09/09 12:10:43,stderr,Execution error for command [voiceCmd] on device [G090XG07939306XF]: TypeError: alexa.sendTextCommand is not a function
+
+2026/09/09 12:10:43,stdout,Executing [voiceCmd] for device [G090XG07939306XF]: { command: 'turn on the office ceiling' }
+
+2026/09/09 12:10:29,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:10:27,stdout,New Amazon session cookie captured successfully via proxy!
+
+2026/09/09 12:09:39,stdout,================================================================
+
+2026/09/09 12:09:39,stdout,Amazon Auth Proxy Listening on Port: 8094
+
+2026/09/09 12:09:39,stdout,REST API Listening on Port: 8093
+
+2026/09/09 12:09:39,stdout,Echos Speak Advanced API Bridge (v1.1.0) Running
+
+2026/09/09 12:09:39,stdout,================================================================
+
+2026/09/09 12:09:39,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 12:09:39,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 12:09:39,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 12:09:38,stdout,Run `npm audit` for details.
+
+2026/09/09 12:09:38,stdout,
+
+2026/09/09 12:09:38,stdout,  npm audit fix --force
+
+2026/09/09 12:09:38,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 12:09:38,stdout,
+
+2026/09/09 12:09:38,stdout,  npm audit fix
+
+2026/09/09 12:09:38,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 12:09:38,stdout,
+
+2026/09/09 12:09:38,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 12:09:38,stdout,
+
+2026/09/09 12:09:38,stdout,  run `npm fund` for details
+
+2026/09/09 12:09:38,stdout,20 packages are looking for funding
+
+2026/09/09 12:09:38,stdout,
+
+2026/09/09 12:09:38,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 12:09:38,stdout,
+
+2026/09/09 12:04:26,stdout,Executing [voiceCmd] for device [G090XG07939306XF]: { command: 'turn on the office ceiling' }
+
+2026/09/09 12:01:11,stdout,"Executing [voiceCmd] for device [G090XG07939306XF]: { command: 'Alexa, What Time Is it?' }
+"
+2026/09/09 12:00:04,stdout,Alexa Remote successfully authenticated via existing cookie!
+
+2026/09/09 12:00:02,stdout,New Amazon cookie captured successfully via proxy!
+
+2026/09/09 11:56:34,stdout,Amazon Auth Proxy listening on port 8094
+
+2026/09/09 11:56:34,stdout,Echos Speak Advanced API Bridge listening on port 8093
+
+2026/09/09 11:56:34,stdout,Open browser to http://192.168.1.12:8094 to authenticate.
+
+2026/09/09 11:56:34,stderr,Alexa Remote initialization failed or cookie expired: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 11:56:34,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 11:56:34,stdout,Run `npm audit` for details.
+
+2026/09/09 11:56:34,stdout,
+
+2026/09/09 11:56:34,stdout,  npm audit fix --force
+
+2026/09/09 11:56:34,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 11:56:34,stdout,
+
+2026/09/09 11:56:34,stdout,  npm audit fix
+
+2026/09/09 11:56:34,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 11:56:34,stdout,
+
+2026/09/09 11:56:34,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 11:56:34,stdout,
+
+2026/09/09 11:56:34,stdout,  run `npm fund` for details
+
+2026/09/09 11:56:34,stdout,20 packages are looking for funding
+
+2026/09/09 11:56:34,stdout,
+
+2026/09/09 11:56:34,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 11:56:34,stdout,
+
+2026/09/09 11:49:53,stdout,Alexa Remote successfully authenticated and connected!
+
+2026/09/09 11:49:25,stdout,Amazon Auth Proxy listening on port 8094
+
+2026/09/09 11:49:25,stdout,Echos Speak Advanced API Bridge listening on port 8093
+
+2026/09/09 11:49:25,stderr,Alexa Remote initialization error: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 11:49:25,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 11:49:25,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 11:49:25,stdout,Run `npm audit` for details.
+
+2026/09/09 11:49:25,stdout,
+
+2026/09/09 11:49:25,stdout,  npm audit fix --force
+
+2026/09/09 11:49:25,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 11:49:25,stdout,
+
+2026/09/09 11:49:25,stdout,  npm audit fix
+
+2026/09/09 11:49:25,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 11:49:25,stdout,
+
+2026/09/09 11:49:25,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 11:49:25,stdout,
+
+2026/09/09 11:49:25,stdout,  run `npm fund` for details
+
+2026/09/09 11:49:25,stdout,20 packages are looking for funding
+
+2026/09/09 11:49:25,stdout,
+
+2026/09/09 11:49:25,stdout,"up to date, audited 108 packages in 1s
+"
+2026/09/09 11:49:25,stdout,
+
+2026/09/09 11:46:56,stdout,Amazon Auth Proxy listening on port 8094
+
+2026/09/09 11:46:56,stdout,Echos Speak Advanced API Bridge listening on port 8093
+
+2026/09/09 11:46:56,stderr,Alexa Remote initialization error: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 11:46:56,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 11:46:56,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 11:46:56,stdout,Run `npm audit` for details.
+
+2026/09/09 11:46:56,stdout,
+
+2026/09/09 11:46:56,stdout,  npm audit fix --force
+
+2026/09/09 11:46:56,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 11:46:56,stdout,
+
+2026/09/09 11:46:56,stdout,  npm audit fix
+
+2026/09/09 11:46:56,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 11:46:56,stdout,
+
+2026/09/09 11:46:56,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 11:46:56,stdout,
+
+2026/09/09 11:46:56,stdout,  run `npm fund` for details
+
+2026/09/09 11:46:56,stdout,20 packages are looking for funding
+
+2026/09/09 11:46:56,stdout,
+
+2026/09/09 11:46:56,stdout,"up to date, audited 108 packages in 1s
+"
+2026/09/09 11:46:56,stdout,
+
+2026/09/09 11:45:27,stderr,Alexa Remote initialization error: Error while checking Authentication: Error: getaddrinfo ENOTFOUND pitangus.amazon.com
+
+2026/09/09 11:45:27,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 11:44:51,stdout,Amazon Auth Proxy listening on port 8094
+
+2026/09/09 11:44:51,stdout,Echos Speak Advanced API Bridge listening on port 8093
+
+2026/09/09 11:44:51,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 11:44:51,stderr,Alexa Remote initialization error: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 11:44:51,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 11:44:51,stdout,Run `npm audit` for details.
+
+2026/09/09 11:44:51,stdout,
+
+2026/09/09 11:44:51,stdout,  npm audit fix --force
+
+2026/09/09 11:44:51,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 11:44:51,stdout,
+
+2026/09/09 11:44:51,stdout,  npm audit fix
+
+2026/09/09 11:44:51,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 11:44:51,stdout,
+
+2026/09/09 11:44:51,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 11:44:51,stdout,
+
+2026/09/09 11:44:51,stdout,  run `npm fund` for details
+
+2026/09/09 11:44:51,stdout,20 packages are looking for funding
+
+2026/09/09 11:44:51,stdout,
+
+2026/09/09 11:44:51,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 11:44:51,stdout,
+
+2026/09/09 11:41:47,stdout,Alexa Remote successfully authenticated and connected!
+
+2026/09/09 11:41:25,stderr,Alexa Remote initialization error: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 11:41:25,stdout,Amazon Auth Proxy listening on port 8094
+
+2026/09/09 11:41:25,stdout,Echos Speak Advanced API Bridge listening on port 8093
+
+2026/09/09 11:41:25,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 11:41:25,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 11:41:25,stdout,Run `npm audit` for details.
+
+2026/09/09 11:41:25,stdout,
+
+2026/09/09 11:41:25,stdout,  npm audit fix --force
+
+2026/09/09 11:41:25,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 11:41:25,stdout,
+
+2026/09/09 11:41:25,stdout,  npm audit fix
+
+2026/09/09 11:41:25,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 11:41:25,stdout,
+
+2026/09/09 11:41:25,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 11:41:25,stdout,
+
+2026/09/09 11:41:25,stdout,  run `npm fund` for details
+
+2026/09/09 11:41:25,stdout,20 packages are looking for funding
+
+2026/09/09 11:41:25,stdout,
+
+2026/09/09 11:41:25,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 11:41:25,stdout,
+
+2026/09/09 11:37:53,stdout,Alexa Remote successfully authenticated and connected!
+
+2026/09/09 11:36:22,stdout,Amazon Auth Proxy listening on port 8094
+
+2026/09/09 11:36:22,stdout,Echos Speak Advanced API Bridge listening on port 8093
+
+2026/09/09 11:36:22,stdout,Re-authentication required. Open browser to http://192.168.1.12:8094
+
+2026/09/09 11:36:22,stderr,Alexa Remote initialization error: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 11:36:22,stdout,Initializing Alexa Remote connection...
+
+2026/09/09 11:36:20,stdout,Run `npm audit` for details.
+
+2026/09/09 11:36:20,stdout,
+
+2026/09/09 11:36:20,stdout,  npm audit fix --force
+
+2026/09/09 11:36:20,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 11:36:20,stdout,
+
+2026/09/09 11:36:20,stdout,  npm audit fix
+
+2026/09/09 11:36:20,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 11:36:20,stdout,
+
+2026/09/09 11:36:20,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 11:36:20,stdout,
+
+2026/09/09 11:36:20,stdout,  run `npm fund` for details
+
+2026/09/09 11:36:20,stdout,20 packages are looking for funding
+
+2026/09/09 11:36:20,stdout,
+
+2026/09/09 11:36:20,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 11:36:20,stdout,
+
+2026/09/09 11:31:47,stdout,[Bridge] Executing command 'speak' for device 'G090XG07939306XF' with payload: { text: 'Trying the Right' }
+
+2026/09/09 11:31:47,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 20 }
+
+2026/09/09 11:31:25,stdout,[Bridge] Executing command 'setAlarmVolume' for device 'G090XG07939306XF' with payload: { level: 100 }
+
+2026/09/09 11:31:19,stdout,[Bridge] Executing command 'dnd' for device 'G090XG07939306XF' with payload: { state: false }
+
+2026/09/09 11:31:08,stdout,[Bridge] Executing command 'voiceCmd' for device 'G090XG07939306XF' with payload: { command: 'test' }
+
+2026/09/09 11:26:40,stdout,[Bridge] Executing command 'speak' for device 'G090XG07939306XF' with payload: { text: 'test' }
+
+2026/09/09 11:22:27,stdout,"[Bridge] Executing command 'voiceCmd' for device 'G090XG07939306XF' with payload: { command: 'Alexa, What Time Is It?' }
+"
+2026/09/09 11:21:44,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 80 }
+
+2026/09/09 11:15:19,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 99 }
+
+2026/09/09 11:08:49,stdout,"[Bridge] Executing command 'announce' for device 'G090XG07939306XF' with payload: { text: 'Are we here?', display: true }
+"
+2026/09/09 11:08:42,stdout,"[Bridge] Executing command 'announce' for device 'G090XG07939306XF' with payload: { text: 'Are we here?', display: true }
+"
+2026/09/09 11:06:27,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 94 }
+
+2026/09/09 11:06:09,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 55 }
+
+2026/09/09 10:58:04,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 50 }
+
+2026/09/09 10:58:02,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 45 }
+
+2026/09/09 10:58:01,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 40 }
+
+2026/09/09 10:57:59,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 35 }
+
+2026/09/09 10:57:53,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 30 }
+
+2026/09/09 10:57:52,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 25 }
+
+2026/09/09 10:57:50,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 20 }
+
+2026/09/09 10:57:48,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 15 }
+
+2026/09/09 10:56:36,stdout,[Bridge] Executing command 'speak' for device 'G090XG07939306XF' with payload: { text: 'HELLO CRUEL WORLD' }
+
+2026/09/09 10:56:20,stdout,[Bridge] Executing command 'mediaControl' for device 'G090XG07939306XF' with payload: { type: 'play' }
+
+2026/09/09 10:16:23,stdout,[Bridge] Executing command 'speak' for device 'G090XG07939306XF' with payload: { text: 'made it right' }
+
+2026/09/09 10:10:28,stdout,[Bridge] Executing command 'speak' for device 'G090XG07939306XF' with payload: { text: 'Made it right.' }
+
+2026/09/09 10:09:30,stdout,[Bridge] Session cookie saved/refreshed locally.
+
+2026/09/09 10:09:30,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/09 10:09:28,stdout,[Bridge] Cookie saved successfully.
+
+2026/09/09 10:09:28,stdout,[Bridge] Event "cookie" fired! Writing session tokens to disk...
+
+2026/09/09 09:41:53,stderr,[Bridge] Alexa Init Warning: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 09:41:53,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/09 09:41:53,stdout,[Bridge] Cookie file present. Overriding internal auth state...
+
+2026/09/09 09:41:53,stdout,[Bridge] Found existing .alexa-cookie.json session file.
+
+2026/09/09 09:41:53,stdout,[Bridge] Initializing Alexa Remote connection...
+
+2026/09/09 09:41:53,stdout,[Bridge] Echos Speak Bridge server active on port 8093
+
+2026/09/09 09:41:53,stdout,Run `npm audit` for details.
+
+2026/09/09 09:41:53,stdout,
+
+2026/09/09 09:41:53,stdout,  npm audit fix --force
+
+2026/09/09 09:41:53,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 09:41:53,stdout,
+
+2026/09/09 09:41:53,stdout,  npm audit fix
+
+2026/09/09 09:41:53,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 09:41:53,stdout,
+
+2026/09/09 09:41:53,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 09:41:53,stdout,
+
+2026/09/09 09:41:53,stdout,  run `npm fund` for details
+
+2026/09/09 09:41:53,stdout,20 packages are looking for funding
+
+2026/09/09 09:41:53,stdout,
+
+2026/09/09 09:41:53,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/09 09:41:53,stdout,
+
+2026/09/09 08:52:10,stdout,[Bridge] Executing command 'speak' for device 'G090XG07939306XF' with payload: { text: 'Im functional' }
+
+2026/09/09 08:51:37,stdout,[Bridge] Executing command 'volume' for device 'G090XG07939306XF' with payload: { level: 25 }
+
+2026/09/09 08:49:25,stdout,[Bridge] Session cookie saved/refreshed locally.
+
+2026/09/09 08:49:25,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/09 08:49:23,stdout,[Bridge] Cookie saved successfully.
+
+2026/09/09 08:49:23,stdout,[Bridge] Event "cookie" fired! Writing session tokens to disk...
+
+2026/09/09 08:48:52,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/09 08:48:52,stdout,[Bridge] Cookie file present. Overriding internal auth state...
+
+2026/09/09 08:48:52,stderr,[Bridge] Alexa Init Warning: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/09 08:48:51,stdout,[Bridge] Found existing .alexa-cookie.json session file.
+
+2026/09/09 08:48:51,stdout,[Bridge] Initializing Alexa Remote connection...
+
+2026/09/09 08:48:51,stdout,[Bridge] Echos Speak Bridge server active on port 8093
+
+2026/09/09 08:48:50,stdout,Run `npm audit` for details.
+
+2026/09/09 08:48:50,stdout,
+
+2026/09/09 08:48:50,stdout,  npm audit fix --force
+
+2026/09/09 08:48:50,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/09 08:48:50,stdout,
+
+2026/09/09 08:48:50,stdout,  npm audit fix
+
+2026/09/09 08:48:50,stdout,"To address issues that do not require attention, run:
+"
+2026/09/09 08:48:50,stdout,
+
+2026/09/09 08:48:50,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/09 08:48:50,stdout,
+
+2026/09/09 08:48:50,stdout,  run `npm fund` for details
+
+2026/09/09 08:48:50,stdout,20 packages are looking for funding
+
+2026/09/09 08:48:50,stdout,
+
+2026/09/09 08:48:50,stdout,"up to date, audited 108 packages in 3s
+"
+2026/09/09 08:48:50,stdout,
+
+2026/09/08 15:44:23,stderr,[Bridge] Execution Error (speak): Unknown Device or Serial number
+
+2026/09/08 15:44:23,stdout,[Bridge] Command Execution: 'speak' for serial: G090XG07939306XF
+
+2026/09/08 15:32:46,stderr,[Bridge] Execution Error (speak): Unknown Device or Serial number
+
+2026/09/08 15:32:46,stdout,[Bridge] Command Execution: 'speak' for serial: G090XG07939306XF
+
+2026/09/08 15:32:20,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/08 15:32:20,stdout,[Bridge] Cookie file present. Overriding internal auth state...
+
+2026/09/08 15:32:20,stderr,[Bridge] Alexa Init Warning: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/08 15:32:20,stdout,[Bridge] Found existing .alexa-cookie.json session file.
+
+2026/09/08 15:32:20,stdout,[Bridge] Initializing Alexa Remote connection...
+
+2026/09/08 15:32:20,stdout,[Bridge] Echos Speak Bridge server active on port 8093
+
+2026/09/08 15:32:20,stdout,Run `npm audit` for details.
+
+2026/09/08 15:32:20,stdout,
+
+2026/09/08 15:32:20,stdout,  npm audit fix --force
+
+2026/09/08 15:32:20,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/08 15:32:20,stdout,
+
+2026/09/08 15:32:20,stdout,  npm audit fix
+
+2026/09/08 15:32:20,stdout,"To address issues that do not require attention, run:
+"
+2026/09/08 15:32:20,stdout,
+
+2026/09/08 15:32:20,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/08 15:32:20,stdout,
+
+2026/09/08 15:32:20,stdout,  run `npm fund` for details
+
+2026/09/08 15:32:20,stdout,20 packages are looking for funding
+
+2026/09/08 15:32:20,stdout,
+
+2026/09/08 15:32:20,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/08 15:32:20,stdout,
+
+2026/09/08 15:26:23,stdout,[Bridge] Command 'speak' executed successfully for G090XG07939306XF
+
+2026/09/08 15:26:23,stdout,[Bridge] Received command 'speak' for device: G090XG07939306XF
+
+2026/09/08 15:25:31,stdout,[Bridge] Session cookie saved/refreshed locally.
+
+2026/09/08 15:25:31,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/08 15:25:29,stdout,[Bridge] Cookie saved successfully.
+
+2026/09/08 15:25:29,stdout,[Bridge] Event "cookie" fired! Writing session tokens to disk...
+
+2026/09/08 15:24:05,stderr,[Bridge] Command execution error (speak): Unknown Device or Serial number
+
+2026/09/08 15:24:05,stdout,[Bridge] Received command 'speak' for device: G090XG07939306XF
+
+2026/09/08 15:23:31,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/08 15:23:31,stdout,[Bridge] Cookie file present. Overriding internal auth state...
+
+2026/09/08 15:23:31,stderr,[Bridge] Alexa Init Warning: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/08 15:23:30,stdout,[Bridge] Found existing .alexa-cookie.json session file.
+
+2026/09/08 15:23:30,stdout,[Bridge] Initializing Alexa Remote connection...
+
+2026/09/08 15:23:30,stdout,[Bridge] Echos Speak Bridge server active on port 8093
+
+2026/09/08 15:23:30,stdout,Run `npm audit` for details.
+
+2026/09/08 15:23:30,stdout,
+
+2026/09/08 15:23:30,stdout,  npm audit fix --force
+
+2026/09/08 15:23:30,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/08 15:23:30,stdout,
+
+2026/09/08 15:23:30,stdout,  npm audit fix
+
+2026/09/08 15:23:30,stdout,"To address issues that do not require attention, run:
+"
+2026/09/08 15:23:30,stdout,
+
+2026/09/08 15:23:30,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/08 15:23:30,stdout,
+
+2026/09/08 15:23:30,stdout,  run `npm fund` for details
+
+2026/09/08 15:23:30,stdout,20 packages are looking for funding
+
+2026/09/08 15:23:30,stdout,
+
+2026/09/08 15:23:30,stdout,"up to date, audited 108 packages in 2s
+"
+2026/09/08 15:23:30,stdout,
+
+2026/09/08 12:12:23,stdout,[Bridge] Session cookie saved/refreshed locally.
+
+2026/09/08 12:12:23,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/08 12:12:21,stdout,[Bridge] Cookie saved successfully.
+
+2026/09/08 12:12:21,stdout,[Bridge] Event "cookie" fired! Writing session tokens to disk...
+
+2026/09/08 12:11:21,stderr,[Bridge] Alexa Init Warning: You can try to get the cookie manually by opening http://192.168.1.12:8094/ with your browser.
+
+2026/09/08 12:11:21,stdout,[Bridge] Alexa Remote session established successfully!
+
+2026/09/08 12:11:21,stdout,[Bridge] Cookie file present. Overriding internal auth state...
+
+2026/09/08 12:11:21,stdout,[Bridge] Found existing .alexa-cookie.json session file.
+
+2026/09/08 12:11:21,stdout,[Bridge] Initializing Alexa Remote connection...
+
+2026/09/08 12:11:21,stdout,[Bridge] Echos Speak Bridge server active on port 8093
+
+2026/09/08 12:11:20,stdout,Run `npm audit` for details.
+
+2026/09/08 12:11:20,stdout,
+
+2026/09/08 12:11:20,stderr,npm notice
+
+2026/09/08 12:11:20,stderr,npm notice To update run: npm install -g npm@12.0.2
+
+2026/09/08 12:11:20,stderr,npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.2
+
+2026/09/08 12:11:20,stderr,npm notice New major version of npm available! 10.8.2 -> 12.0.2
+
+2026/09/08 12:11:20,stderr,npm notice
+
+2026/09/08 12:11:20,stdout,  npm audit fix --force
+
+2026/09/08 12:11:20,stdout,"To address all issues (including breaking changes), run:
+"
+2026/09/08 12:11:20,stdout,
+
+2026/09/08 12:11:20,stdout,  npm audit fix
+
+2026/09/08 12:11:20,stdout,"To address issues that do not require attention, run:
+"
+2026/09/08 12:11:20,stdout,
+
+2026/09/08 12:11:20,stdout,"6 vulnerabilities (2 low, 4 moderate)
+"
+2026/09/08 12:11:20,stdout,
+
+2026/09/08 12:11:20,stdout,  run `npm fund` for details
+
+2026/09/08 12:11:20,stdout,20 packages are looking for funding
+
+2026/09/08 12:11:20,stdout,
+
+2026/09/08 12:11:20,stdout,"up to date, audited 108 packages in 3s
+"
+2026/09/08 12:11:20,stdout,
+

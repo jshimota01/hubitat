@@ -1,0 +1,9 @@
+Image locations issue:
+wierd non-functioning Amazon folder:
+https://m.media-amazon.com/images/G/01/mobile-apps/dex/alexa/alexa-skills-kit/stock/amazon-echo-1._CB346614488_.png
+
+Github Jshimota01 (which seems to fail)
+https://raw.githubusercontent.com/jshimota01/hubitat/main/Icons-Images/echo_speaks/resources/icons/
+
+Stored location
+http://192.168.1.12/myicons/echos_speak/

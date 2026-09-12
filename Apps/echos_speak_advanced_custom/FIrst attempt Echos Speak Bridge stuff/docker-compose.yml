@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  echos-speak-bridge:
+    image: node:18-alpine
+    container_name: echos-speak-bridge
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8093:8093"
+      - "8094:8094"
+    environment:
+      - NODE_ENV=production
+      - PORT=8093
+      - NAS_IP=192.168.1.12
+    command: ["sh", "-c", "npm install && exec node server.js"]

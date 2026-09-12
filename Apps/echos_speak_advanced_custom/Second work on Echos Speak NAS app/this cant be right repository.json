@@ -1,0 +1,90 @@
+{
+	"author": "James Shimota (Shumo) (jshimota01)",
+	"gitHubUrl": "https://github.com/jshimota01",
+	"packages": [
+		  {
+			"name": "Astro-Meteor Seasons",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Timers", "Weather" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_meteor_seasons/packageManifest.json",
+			"description": "I used the meteorological seasons but wanted higher accuracy like Farmers Almanac.  Along came Ai and got me there. Now the user can choose which Seasons type. Hemisphere and and selectable autumn/fall.  It creates a useable tile, variables for Rules and other nice features as well."
+		  },
+		  {
+			"name": "Meteorological Seasons",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Timers", "Weather" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/meteorological_seasons/packageManifest.json",
+			"description": "A need developed for me to be able to set Rules and automations within my Hubitat environment that would allow me to gain control seasonally.  Meteorological Seasons is a driver that provides, when installed correctly on a Hubitat platform, a selectable device driver. This driver, when used during creation of a virtual device, creates a clean way to bridge seasons to dashboard tiles, variables for Rules and other nice features  as well.  Now useful for both hemispheres!"
+		  },
+ 		  {
+			"name": "Virtual Inverse-able Switch w-autoOff and Toggle",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOff", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_inverse-able_switch/packageManifest.json",
+			"description": "This switch will show ON but will have a device state of Off if the preference is set to Reverse Actions. Useful for apps that allow a switch to control on-off state but you want to reflect the app not the switch"
+		  },
+		  {
+			"name": "Zigbee eWeLink-CMARS-Seedan Outlet",
+			"category": "Control",
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/packageManifest.json",
+			"description": "Zigbee eWeLink-CMARS-Seedan Outlet is a driver that is modified from the great code of Markus Liljergren of *OhLa Lab* fame -see https://oh-lalabs.com/. Modifications include ewelink fingerprint and more "
+		  },
+		  {
+			"name": "Date & Time Parser",
+			"category": "Control",
+			"tags": [ "Date", "Timers", "Virtual", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/datetime_parser/packageManifest.json",
+			"description": "A virtual device driver that seperates out date and time components into chunks.  Useful for check day of the week, hour of the day etc. in rules "
+		  },
+		  {
+			"name": "Virtual Presence Contact and Switch",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/virtual_presence_openclose_switch/packageManifest.json",
+			"description": "A virtual device driver that ties Presence, Sensor and Switch (Present/Open/On) capabilities.  Useful for connecting to Alexa, or having Presence give an on/off state "
+		  },
+		  {
+			"name": "Centralite Pearl Zigbee Thermostat",
+			"category": "Control",
+			"tags": [ "Dashboards", "Monitoring", "Thermostat", "Zigbee", "Driver", "Temperature & Humidity", "Climate Control" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/packageManifest.json",
+			"description": "A Zigbee Thermostat driver specific to the Centralite Pearl Thermostat device, (aka Centralite model 3157100). Driver includes FanCirculate feature and accounts for thermostat hardware lack of Auto mode "
+		  },
+		  {
+			"name": "Twilight Parser",
+			"category": "Control",
+			"tags": [ "Dashboards", "Monitoring",  "Driver", "Date", "Timers", "Virtual", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/twilight_parser/packageManifest.json",
+			"description": "A virtual device driver that seperates allows for accurate twilight date and time components into chunks.  Useful for lighting and night activities "
+		  },
+		  {
+			"name": "Inverse Link Two Switches",
+			"category": "Convenience",
+			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Virtual", "AutoOn", "Misc. Devices", "Presence", "Open/Closed" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/inverse_link/packageManifest.json",
+			"description": "A Parent App with children to set two switches to always be inversed to each other.  Can be disabled with its own switch.  Useful for folks who hate boolean! "
+		  },
+		  {
+			"name": "OpenWeatherMap Multi-API Weather Driver ",
+			"category": "Control",
+			"tags": [ "Weather", "Virtual", "Misc. Devices" ],
+			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/packageManifest.json",
+			"description": "A virtual device driver for weather. Includes multiple tiles, including Alerts and Moon Phase.  Has detailed Sun Altitude and Azimuth and Illuminance for use with blinds. High precision temp, barometer, rainfall and UVI. Forecasted weather data included for next 3 days"
+		  },
+		  {
+			"author": "James Shimota",
+			"gitHubUrl": "https://github.com/jshimota01/hubitat",
+			"packages": [
+				{
+				"id": "a92c4102-12f8-4e89-b883-999999999999",
+				"name": "Third Reality Custom Drivers",
+				"category": "Drivers",
+				"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/packageManifest.json",
+				"description": "Production-grade custom Hubitat Elevation drivers for Third Reality Zigbee devices (Contact, Motion, Night Light, Power Plug, and Temp/Humidity sensors)."
+    }
+  ]
+}
+	]
+	
+}

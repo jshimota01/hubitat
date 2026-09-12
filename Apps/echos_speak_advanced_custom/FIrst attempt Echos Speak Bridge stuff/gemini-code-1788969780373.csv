@@ -1,0 +1,36 @@
+Legacy Attribute Name,Exists in New Driver?,New Attribute Name / Status,Notes & Mapping Details
+Alarm Volume,No,Missing,Not currently parsed from Amazon device properties
+Alexa Wake Word,No,Missing,Can be added to server.js device payload
+Audio Track Data,No,Missing,Legacy JSON track metadata object
+Bt Device Connected,No,Missing,Bluetooth status is not currently tracked in bridge
+Bt Devices Paired,No,Missing,Bluetooth paired list is not currently tracked in bridge
+Current Album,Yes,currentAlbum,Included in driver and parsed in parseDeviceData()
+Current Station,Yes,currentStation,Included in driver and parsed in parseDeviceData()
+Device Family,Yes,deviceFamily,Included in driver and parsed in parseDeviceData()
+Device Icon,Yes,deviceImageUrl,Mapped directly to Amazon's device icon image URL
+Device Serial,Yes,deviceNetworkId (DNI),Driver uses raw Amazon Serial Number as DNI
+Device Status,No,Missing,Mapped as detailed status string in old driver
+Device Style,Yes,deviceStyle,Mapped to Amazon deviceType in bridge
+Device Type,Yes,deviceStyle,Captured alongside device type information
+Do Not Disturb,Yes,dnd / doNotDisturb,Both attributes exist and update synchronously
+Firmware Ver,No,Missing,Software build version not currently mapped in bridge
+Follow Up Mode,No,Missing,Alexa setting flag not currently parsed
+Health Status,Yes,healthStatus,"Managed via local health checks (""online"", ""offline"", ""unknown"")"
+Last Announcement,No,Missing,Tracked text for playAnnouncement() calls
+Last Speak Cmd,Yes,lastSpokenText,Captures text passed into speak()
+Last Updated,No,Missing,Bridge sync timestamp string
+Last Voice Activity,No,Missing,Captures spoken voice commands to Alexa
+Level,Yes,volume,Standard Hubitat MusicPlayer / AudioNotification attribute
+Media Source,No,Missing,Mapped as mediaProvider in new driver
+Mute,Yes,mute,"Mapped as ""muted"" / ""unmuted"""
+Online Status,Yes,onlineStatus,"Mirror attribute for healthStatus (""online""/""offline"")"
+Permissions,No,Missing,Array of capabilities reported by Amazon
+Phrase Spoken,No,Missing,Spoken text parsed from last voice activity
+Status,Yes,status,"Standard playback status string (""playing"", ""stopped"", etc.)"
+Supported Music,No,Missing,List of enabled music providers
+Track Data,No,Missing,Raw track metadata JSON string
+Track Description,Yes,trackDescription,Text string describing current track
+Track Image,Yes,trackImage / albumArtUrl,Both exist; also rendered in mediaTile HTML block
+Volume,Yes,volume,Core volume attribute (0–100)
+Wake Words,No,Missing,Supported wake word list
+Was Last Spoken To Device,Yes,wasLastSpokenToNode,Included in driver declarations
