@@ -1,9 +1,12 @@
 /**
- * Driver Name (Custom)
+ * Jasco/GE 43078 Switch w/Power Meter Driver (Custom)
  * Device Driver for Hubitat Elevation
  *
  * Purpose:
- * Detailed breakdown of driver purpose and supported functionality.
+ * Dedicated Hubitat Elevation driver for the Jasco / GE / Enbrighten 43078 (ZB4003) Zigbee 3.0 In-Wall Smart Switch.
+ * Provides native On/Off control, real-time Instantaneous Power (W), Cumulative Energy (kWh) tracking,
+ * formatted string attributes (powerText, energyText), precise reporting execution,
+ * and background custom Health Check monitoring without using stock platform ping/pong UI elements.
  *
  * Notes:
  * Custom Health Check Implementation
@@ -29,42 +32,55 @@
  **/
 /**
  * Changelog:
- * v1.0.12   09/14/26    jshimota    Added standardized markHealthCheckSuccess helper (isStateChange: false) to guarantee lastActivity refresh without event log clutter.
- * v1.0.11   09/03/26    jshimota    Standardized custom Health Check method naming (executeHealthCheck) and purged remaining internal ping/pong nomenclature to match Plug Driver architecture.
- * v1.0.10   08/31/26    jshimota    Updated Health Check interval option label from 'Once a Day' to 'Every 24 Hours'.
- * v1.0.9    08/31/26    jshimota    Enforced immediate Health Check execution on configure() and guaranteed healthStatus initialization on reset/initialize.
- * v1.0.8    08/31/26    jshimota    Integrated standardized custom Health Check architecture, Notes header block, and consolidated version tracking.
- * v1.0.7    08/31/26    jshimota    Moved Purpose block into top header comment block.
- * v1.0.6    08/30/26    jshimota    Added auto-reinitialization initialize(false) inside resetDriver() routine.
- * v1.0.0    08/30/26    jshimota    Initial release of standardized template.
+ * v1.0.4    09/14/26    jshimota    Optimized parseDescMap to emit isStateChange: false to refresh lastActivity without event history log clutter.
+ * v1.0.3    09/10/26    jshimota    Fixed platform 'Last Activity' timestamp refresh by forcing healthStatus state change on health check verification.
+ * v1.0.2    09/04/26    jshimota    Added powerText ("X.X Watts") and energyText ("X.XXXX kWh") custom display attributes for tile visualization.
+ * v1.0.1    09/04/26    jshimota    Added Power & Energy informational preference block and enriched descriptionText for metering events.
+ * v1.0.0    09/04/26    jshimota    Initial production driver promotion following verified protocol archaeology on 43078 hardware.
  **/
 
-static String version() { return '1.0.12' }
-def timeStamp() { return "2026/09/14 10:40 AM" }
+static String version() { return '1.0.4' }
+def timeStamp() { return "2026/09/14 10:20 AM" }
 
 import groovy.transform.Field
+import hubitat.zigbee.zcl.DataType
+import java.math.RoundingMode
 
 metadata {
     definition (
-        name: "Driver Name (Custom)", 
+        name: "Jasco/GE 43078 Switch w/Power Meter Driver (Custom)", 
         namespace: "jshimota", 
         author: "James Shimota", 
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/driver_directory/Driver_File.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/jasco-ge-switch-43078/jasco-43078-switch-custom.groovy"
     ) {
         capability "Actuator"
         capability "Configuration"
+        capability "EnergyMeter"
+        capability "PowerMeter"
         capability "Refresh"
+        capability "Sensor"
+        capability "Switch"
 
         // Attributes
         attribute "healthStatus", "enum", ["unknown", "offline", "online"]
+        attribute "powerText", "string"
+        attribute "energyText", "string"
 
         // Custom Commands
         command "Health Check"
+        command "updateFirmware"
         command "resetDriver"
+
+        // Fingerprint (Jasco 43078 / ZB4003)
+        fingerprint profileId: "0104", inClusters: "0000,0003,0004,0005,0006,0702,0B05", outClusters: "000A,0019", manufacturer: "Jasco Products", model: "43078", deviceJoinName: "Enbrighten Zigbee In-Wall Smart Switch w/ Metering (43078)"
     }
 
     preferences {
-        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+        // Driver Informational Preference Blocks
+        input name: "meteringInfoNote", type: "hidden", title: "<b>Power & Energy Metering Explanation</b>", description: "<i><b>Power (`power` in Watts):</b> Instantaneous real-time electrical draw currently consumed by the connected load (scaled ÷10).<br><b>Energy (`energy` in kWh):</b> Total cumulative electrical usage accrued by the switch over time (scaled ÷10000).<br><b>Formatted Attributes:</b> `powerText` (\"X Watts\") and `energyText` (\"X kWh\") are available for tile visualization.</i>"
+        input name: "ledInfoNote", type: "hidden", title: "<b>LED Indicator Behavior</b>", description: "<i>The driver does not expose remote Zigbee LED configuration because no LED-control parameter has been verified for this firmware.<br>To change the LED mode locally on the hardware, quickly press the <b>TOP rocker 3 times</b>, then press the <b>BOTTOM rocker 1 time</b>.<br>This cycles through the three modes: <b>LED ON when Load OFF</b> (Default), <b>LED ON when Load ON</b>, and <b>LED Always OFF</b>.</i>"
+
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status and preserve Last Activity reporting.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -84,13 +100,103 @@ private void checkAndLogVersionDemarcation() {
     }
 }
 
+/* =========================================================================================
+   ZIGBEE PARSING ENGINE
+   ========================================================================================= */
+
 void parse(String description) {
     logDebug "parse(): ${description}"
+
+    if (description?.startsWith("read attr -") || description?.startsWith("catchall:")) {
+        Map descMap = zigbee.parseDescriptionAsMap(description)
+        if (descMap) {
+            parseDescMap(descMap)
+        }
+    }
 }
 
-def refresh() {
+private void parseDescMap(Map descMap) {
+    logTrace "parseDescMap(): ${descMap}"
+
+    // ZDO Cluster 0x8021 (Bind Response) - Confirmation frame
+    if (descMap.clusterInt == 32801 || descMap.clusterId == "8021") {
+        logDebug "Received Zigbee Bind Response (0x8021) status: ${descMap.data}"
+        return
+    }
+
+    boolean isHealthFrame = false
+
+    // Cluster 0x0006: On/Off Control
+    if (descMap.clusterInt == 6 || descMap.clusterId == "0006") {
+        if (descMap.attrInt == 0 || descMap.attrId == "0000") {
+            isHealthFrame = true
+            String val = (descMap.value == "01" || descMap.value == "1") ? "on" : "off"
+            updateAttribute("switch", val)
+        }
+    }
+    // Cluster 0x0702: Simple Metering
+    else if (descMap.clusterInt == 1794 || descMap.clusterId == "0702") {
+        if (descMap.attrInt == 0 || descMap.attrId == "0000") { // CurrentSummationDelivered (Cumulative Energy)
+            isHealthFrame = true
+            Long rawVal = Long.parseLong(descMap.value, 16)
+            BigDecimal energyKwh = (rawVal / 10000.0).setScale(4, RoundingMode.HALF_UP)
+            
+            updateAttribute("energy", energyKwh, "kWh", null, "Cumulative Energy")
+            updateAttribute("energyText", "${energyKwh} kWh", null, null, "Cumulative Energy Text")
+        } else if (descMap.attrInt == 1024 || descMap.attrId == "0400") { // InstantaneousDemand (Real-time Power)
+            isHealthFrame = true
+            Long rawVal = Long.parseLong(descMap.value, 16)
+            BigDecimal powerWatts = (rawVal / 10.0).setScale(1, RoundingMode.HALF_UP)
+            
+            updateAttribute("power", powerWatts, "W", null, "Instantaneous Power")
+            updateAttribute("powerText", "${powerWatts} Watts", null, null, "Instantaneous Power Text")
+        }
+    }
+
+    // Strict Health Check Validation
+    if (isHealthFrame) {
+        if (state.healthCheckPending == true) {
+            logDebug "Valid Health Check response verified on cluster 0x${descMap.clusterId}"
+            state.healthCheckPending = false
+            unschedule("deviceCommandTimeout")
+        }
+        
+        // Emit healthStatus event with isStateChange: false to refresh lastActivity without cluttering event log history
+        sendEvent(
+            name: "healthStatus", 
+            value: "online", 
+            isStateChange: false, 
+            descriptionText: "${device.displayName} health check verified online"
+        )
+    }
+}
+
+/* =========================================================================================
+   COMMAND IMPLEMENTATIONS
+   ========================================================================================= */
+
+List<String> on() {
+    logInfo "on() requested"
+    return zigbee.on()
+}
+
+List<String> off() {
+    logInfo "off() requested"
+    return zigbee.off()
+}
+
+List<String> refresh() {
     logInfo "refresh() requested"
-    return []
+    List<String> cmds = []
+    cmds += zigbee.readAttribute(0x0006, 0x0000) // OnOff state
+    cmds += zigbee.readAttribute(0x0702, 0x0000) // Cumulative Energy (kWh)
+    cmds += zigbee.readAttribute(0x0702, 0x0400) // Instantaneous Power (W)
+    return cmds
+}
+
+List<String> updateFirmware() {
+    logInfo "Checking for firmware updates..."
+    return zigbee.updateFirmware()
 }
 
 /* =========================================================================================
@@ -116,13 +222,19 @@ void updated() {
 
 def configure() {
     checkAndLogVersionDemarcation()
-    logInfo "Configuring device..."
+    logInfo "Configuring device reporting & bindings..."
     
     initialize(false)
     
     List<String> cmds = []
     
-    // Immediately execute a Health Check to establish online healthStatus right away
+    // Configure OnOff Reporting
+    cmds += zigbee.configureReporting(0x0006, 0x0000, DataType.BOOLEAN, 0, 65000, null)
+    
+    // Configure Simple Metering Reporting (Power & Energy)
+    cmds += zigbee.configureReporting(0x0702, 0x0000, DataType.UINT48, 10, 3600, 10) // Energy (0.001 kWh delta)
+    cmds += zigbee.configureReporting(0x0702, 0x0400, DataType.INT24, 5, 300, 10)   // Power (1.0 W delta)
+    
     cmds += executeHealthCheck()
     
     return cmds
@@ -132,12 +244,12 @@ private void initialize(Boolean isInstall = false) {
     checkAndLogVersionDemarcation()
     unschedule("disableDebugLogging")
 
-    // Ensure healthStatus attribute exists on initialize/reset
+    state.healthCheckPending = false
+
     if (device.currentValue("healthStatus") == null) {
         sendEvent(name: "healthStatus", value: "unknown")
     }
 
-    // Centralized Health Check Scheduler
     final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
     if (interval > 0) {
         scheduleHealthCheck("executeHealthCheckScheduled", interval)
@@ -163,60 +275,41 @@ private void initialize(Boolean isInstall = false) {
 
 /**
  * Public GUI Command Entry Point.
- * Single entry point exposed on the Device Detail page to avoid Hubitat UI button duplication.
+ * Explicitly dispatches health check commands using sendHubCommand.
  **/
-List<String> "Health Check"() {
-    return executeHealthCheck()
+void "Health Check"() {
+    List<String> cmds = executeHealthCheck()
+    if (cmds) {
+        sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+    }
 }
 
 /**
  * Public Scheduled Callback Target.
- * Serves as the public entry point required by Hubitat's scheduler engine,
- * delegating to the private execution helper.
  **/
 void executeHealthCheckScheduled() {
     List<String> cmds = executeHealthCheck()
-    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+    if (cmds) {
+        sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+    }
 }
 
 /**
  * Private Health Check Execution Helper.
- * Transmits underlying device query request, registers timeout check,
- * and remains hidden from the Hubitat GUI command interface.
+ * Queries actual OnOff, Power, and Energy attributes to refresh device activity status natively.
  **/
 private List<String> executeHealthCheck() {
     logDebug "Executing Health Check..."
     state.healthCheckPending = true
     scheduleCommandTimeoutCheck()
     
-    // Example: Return device-specific read command list here
-    return []
+    List<String> cmds = []
+    cmds += zigbee.readAttribute(0x0006, 0x0000)
+    cmds += zigbee.readAttribute(0x0702, 0x0000)
+    cmds += zigbee.readAttribute(0x0702, 0x0400)
+    return cmds
 }
 
-/**
- * Helper to register successful Health Check responses from inbound Zigbee frames.
- * Emits isStateChange: false to update platform lastActivity without generating event log history clutter.
- **/
-private void markHealthCheckSuccess(String clusterHex = null) {
-    if (state.healthCheckPending == true) {
-        String clusterMsg = clusterHex ? " on cluster 0x${clusterHex}" : ""
-        logDebug "Valid Health Check response verified${clusterMsg}"
-        state.healthCheckPending = false
-        unschedule("deviceCommandTimeout")
-    }
-    
-    sendEvent(
-        name: "healthStatus", 
-        value: "online", 
-        isStateChange: false, 
-        descriptionText: "${device.displayName} health check verified online"
-    )
-}
-
-/**
- * Modular Health Check Scheduler with Persistent Phase-Anchoring.
- * Anchors check schedules to a persistent random daily time offset to stagger hub network traffic.
- **/
 private void initializeHealthCheckPhase() {
     if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
     if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
@@ -275,7 +368,6 @@ void deviceCommandTimeout() {
    MASTER UTILITY ROUTINES & LOGGING ENGINE
    ========================================================================================= */
 
-// Auto-Disable Debug Routine
 void disableDebugLogging() {
     if (getSettingBool("logDebugEnable", false)) {
         logWarn "30 minutes have elapsed. Automatically disabling debug logging."
@@ -283,7 +375,6 @@ void disableDebugLogging() {
     }
 }
 
-// Master Utility Routine for Driver GUI Button
 void resetDriver() {
     logInfo "Starting full driver reset..."
     
@@ -301,7 +392,6 @@ void resetDriver() {
     logInfo "Driver reset process completed and re-initialized."
 }
 
-// Individual Utility Routines
 void clearAllDriverStates() {
     logInfo "Clearing all driver states..."
     state.clear()
@@ -320,16 +410,16 @@ void clearAllSchedules() {
     logInfo "All scheduled jobs have been successfully cleared."
 }
 
-private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
+private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null, final String customLabel = null) {
     final String currentVal = device.currentValue(attribute)?.toString()
     if (currentVal == value?.toString()) return
 
-    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
+    final String label = customLabel ?: attribute
+    final String descriptionText = "${device.displayName} - ${label} was set to ${value}${unit ? ' ' + unit : ''}"
     logInfo descriptionText
     sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
 
-// Centralized Logging Engine
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String devName = device.displayName ?: "Device Driver"
