@@ -1,0 +1,43 @@
+ *  v1.4.3 (2026-09-15) - Health Check Method Signature Fix:
+ *                        - Added zero-argument executeHealthCheckScheduled() method signature to resolve missing method exception during scheduled health checks.
+ *  v1.4.2 (2026-09-14) - Volume 0 + Saved State Mute/Unmute Implementation:
+ *                        - Refactored mute() to save current volume to state.preMuteVolume before dispatching server mute (volume 0).
+ *                        - Refactored unmute() to retrieve state.preMuteVolume and pass { level: savedVolume } payload to server unmute.
+ *  v1.4.1 (2026-09-14) - Restored Complete Driver Historical Changelog:
+ *                        - Restored all historical changelog entries back through v1.0.0.
+ *  v1.4.0 (2026-09-14) - Mute, DND & Voice Command Payload Refactor:
+ *                        - Explicitly mapped mute() and unmute() to dispatch 'mute' command with boolean state.
+ *                        - Mapped doNotDisturbOn() and doNotDisturbOff() to dispatch 'dnd' command with boolean state.
+ *                        - Cleaned up voiceCmdAsText(text) command signature.
+ *  v1.3.0 (2026-09-14) - Extended Command Suite Implementation:
+ *                        - Added capability 'AudioVolume' to register standard volume/mute attributes.
+ *                        - Added native mute() and unmute() command implementations.
+ *                        - Added doNotDisturbOn() and doNotDisturbOff() convenience commands.
+ *                        - Added voiceCmdAsText(text) command to execute text-based voice command sequences.
+ *  v1.2.0 (2026-09-12) - Backend Contract Alignment:
+ *                        - Aligned sendBridgeCommand dispatch cycles to strict POST /api/command contract.
+ *                        - Mapped media player controls (play, pause, stop, nextTrack, previousTrack) to backend dispatcher.
+ *                        - Updated volume commands to interface directly with sendSequenceCommand('volume', level) backend logic.
+ *  v1.1.4 (2026-09-09) - Capability & Handler Alignment:
+ *                        - Added trace log version banner demarcation on driver configuration updates.
+ *                        - Added SwitchLevel capability and setLevel() signatures to satisfy MusicPlayer/SwitchLevel integrations.
+ *                        - Safe-guarded restoreVolumeAfterSpeech map parsing to prevent NPEs during delayed callbacks.
+ *  v1.1.3 (2026-09-09) - Hubitat Platform Schema Alignment:
+ *                        - Removed invalid capability "VolumeControl" to resolve Hubitat metadata import error.
+ *  v1.1.2 (2026-09-09) - Speech & Restore Sequence Timing Fix:
+ *                        - Resolved premature volume restore truncating speech playback by introducing runIn() delayed restore callbacks.
+ *                        - Added word-count based speech duration estimation to prevent clipping TTS audio.
+ *  v1.1.1 (2026-09-09) - Command Parameter Normalization:
+ *                        - Enforced strict integer casting on setVolume() to align with bridge API sequence requirements.
+ *  v1.1.0 (2026-09-08) - Initial deployment of Echos Speak Advanced Child Device Driver.
+ *  v1.1.0    09/09/26    jshimota    Audited all metadata command parameters to remove strict required field flags and added null/empty safety guards.
+ *  v1.0.9    09/09/26    jshimota    Removed duplicate setLevel command definition and updated default IP/MAC attributes to 'Masked by Amazon'.
+ *  v1.0.8    09/09/26    jshimota    Added SwitchLevel capability, setLevel() signatures, multi-type command guards, and bd() BigDecimal helper.
+ *  v1.0.7    09/09/26    jshimota    Standardized trace log version update banner demarcation on driver state updates.
+ *  v1.0.6    09/09/26    jshimota    Refactored parseDeviceData() mapping to enforce synchronized state updates across all extended bridge attributes.
+ *  v1.0.5    09/09/26    jshimota    Expanded attribute suite: added alarmVolume, deviceIcon HTML tile, firmwareVer, followUpMode, lastAnnouncement, lastUpdated, lastVoiceActivity, permissions, and phraseSpoken.
+ *  v1.0.4    09/09/26    jshimota    Added full command suite for announcements, raw commands, alarms, reminders, and relative volume adjustment.
+ *  v1.0.3    09/08/26    jshimota    Standardized naming references to EchosSpeak and updated metadata display.
+ *  v1.0.2    09/08/26    jshimota    Added multi-signature speak(), playTextAndRestore(), missing speech attributes, and health check response handlers.
+ *  v1.0.1    09/08/26    jshimota    Relocated @Field constants above preferences block to resolve compilation error on initial import.
+ *  v1.0.0    09/08/26    jshimota    Initial release of EchosSpeak Advanced Device (Custom) based on standardized driver template.

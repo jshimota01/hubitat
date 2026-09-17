@@ -1,0 +1,8 @@
+Echos Speak Advanced Server v1.2.5 test build
+
+Adds command: textCommand
+POST /api/command
+{"serialNumber":"...","command":"textCommand","payload":{"text":"pause"}}
+
+Purpose: test Amazon tell-alexa behavior routing against an actively playing Echo Show video session.
+This does NOT change the existing play/pause/stop commands.

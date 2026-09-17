@@ -1,0 +1,33 @@
+Echos Speak Advanced Server v1.2.6 Fire TV video-control test build
+
+Purpose
+-------
+Test direct Alexa Fire TV sequence controls against an active on-screen video session.
+
+New POST /api/command test commands
+------------------------------------
+1. Pause video:
+   {"serialNumber":"FIRE_TV_SERIAL","command":"fireTVPauseVideo","payload":{}}
+
+2. Start/resume video:
+   {"serialNumber":"FIRE_TV_SERIAL","command":"fireTVStartVideo","payload":{}}
+
+3. Resume video (direct alias):
+   {"serialNumber":"FIRE_TV_SERIAL","command":"fireTVResumeVideo","payload":{}}
+
+4. Stop test:
+   {"serialNumber":"FIRE_TV_SERIAL","command":"fireTVStopVideo","payload":{}}
+
+Expected sequence behavior
+--------------------------
+- fireTVPauseVideo -> Alexa.Operation.FireTV.PauseVideo
+- fireTVResumeVideo -> Alexa.Operation.FireTV.ResumeVideo
+- fireTVStartVideo -> Alexa.Operation.FireTV.ResumeVideo
+- fireTVStopVideo -> Alexa.DeviceControls.Stop / deviceStop
+
+Important
+---------
+The three requested tests are intentionally separate from the existing generic
+play/pause/stop commands. They are diagnostic commands intended to determine
+whether the authenticated Alexa session accepts direct Fire TV sequence controls.
+The stop test remains distinct and is not implemented as Pause.
