@@ -19,28 +19,28 @@
  * limitations under the License.
  **/
 /**
- *  Purpose:
- *  Child application instance managing a single Advanced vThermostat Device (Custom) instance.
- *
- *  Changelog:
- *  v2.4.2    09/06/26    jshimota    Enforced explicit off command execution across setOutletsState when state is idle to ensure floor heaters shut off immediately on setpoint drop.
- *  v2.4.1    09/05/26    jshimota    Aligned child app initial setpoint limits to support 90 °F (32.0 °C) maximum heating boundary.
- *  v2.4.0    09/05/26    jshimota    Added event subscriptions for setpoint changes to trigger immediate driver refresh evaluation passes without waiting on full timer intervals.
- *  v2.3.5    08/30/26    jshimota    Converted current temperature check to Double comparison and added [DEVICE CREATION FAILED] badge
- *  v2.3.4    08/30/26    jshimota    Confirmed co-located importUrl paths under Apps directory on GitHub
- *  v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub
- *  v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement
- *  v2.3.1    08/30/26    jshimota    Added automatic assignment of new child devices to 'Virtual' room
- *  v2.3.0    08/30/26    jshimota    Added automated device creation help callout and applied v1.1.0 App Master Template
- *  v2.2.1    08/30/26    jshimota    Verified brackets/parentheses parity and NPE-safe location scale checks
- *  v2.2.0    08/30/26    jshimota    Applied initial App Master Template
- *  v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style
- *  v2.1.0    08/30/26    jshimota    Removed v2 identifiers, updated URLs and app/device references
- *  v2.0.0    08/22/26    jshimota    Bumped definition name to v2 and corrected child device creation
+ * Changelog:
+ * v2.5.0    09/18/26    jshimota    Guarded setpointChangeHandler against virtual thermostat 'off' mode state to prevent background refresh loops during schedule changes.
+ * v2.4.2    09/06/26    jshimota    Enforced explicit off command execution across setOutletsState when state is idle to ensure floor heaters shut off immediately on setpoint drop.
+ * v2.4.1    09/05/26    jshimota    Aligned child app initial setpoint limits to support 90 °F (32.0 °C) maximum heating boundary.
+ * v2.4.0    09/05/26    jshimota    Added event subscriptions for setpoint changes to trigger immediate driver refresh evaluation passes without waiting on full timer intervals.
+ * v2.3.5    08/30/26    jshimota    Converted current temperature check to Double comparison and added [DEVICE CREATION FAILED] badge.
+ * v2.3.4    08/30/26    jshimota    Confirmed co-located importUrl paths under Apps directory on GitHub.
+ * v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub.
+ * v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement.
+ * v2.3.1    08/30/26    jshimota    Added automatic assignment of new child devices to 'Virtual' room.
+ * v2.3.0    08/30/26    jshimota    Added automated device creation help callout and applied v1.1.0 App Master Template.
+ * v2.2.1    08/30/26    jshimota    Verified brackets/parentheses parity and NPE-safe location scale checks.
+ * v2.2.0    08/30/26    jshimota    Applied initial App Master Template architecture.
+ * v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style.
+ * v2.1.0    08/30/26    jshimota    Removed v2 identifiers, updated URLs and app/device references.
+ * v2.0.0    08/22/26    jshimota    Bumped definition name to v2 and corrected child device creation logic.
+ * v1.1.0    04/15/21    NelsonClark Added support for multi-outlet binding and hysteresis threshold configuration.
+ * v1.0.0    12/03/20    NelsonClark Initial public release of Advanced vThermostat Child App.
  **/
 
-static String version() { return '2.4.2' }
-def timeStamp() { return "2026/09/06 01:00 PM" }
+static String version() { return '2.5.0' }
+def timeStamp() { return "2026/09/18 09:00 AM" }
 
 definition(
     name: "Advanced vThermostat Child (Custom)",
@@ -292,10 +292,15 @@ def temperatureHandler(evt) {
 }
 
 def setpointChangeHandler(evt) {
-    logDebug "Setpoint changed on virtual device (${evt.name} = ${evt.value}). Forcing evaluation pass."
     def thermostat = getThermostat()
     if (thermostat) {
-        thermostat.refresh()
+        String pMode = thermostat.currentValue("physicalThermostatMode") ?: "off"
+        if (pMode != "off") {
+            logDebug "Setpoint changed on active virtual device (${evt.name} = ${evt.value}). Forcing evaluation pass."
+            thermostat.refresh()
+        } else {
+            logDebug "Setpoint changed on virtual device while OFF (${evt.name} = ${evt.value}). Skipping refresh."
+        }
     }
 }
 

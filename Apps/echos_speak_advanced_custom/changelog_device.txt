@@ -1,4 +1,48 @@
- *  v1.4.3 (2026-09-15) - Health Check Method Signature Fix:
+*  v1.5.10 (2026-09-16) - Live Server Media State Query Refactor for Toggle Playback:
+ *                         - Refactored togglePlayback() to query server GET /api/media/{serialNumber} endpoint via parent.
+ *                         - Added handleMediaStateAndToggle() callback to evaluate result.playing authoritative boolean state.
+ *                         - Dispatches pause() if playing == true, or play() if playing == false.
+ *                         - Bypasses toggle action cleanly on HTTP/API errors without relying on local attribute assumptions.
+ *  v1.5.9 (2026-09-16) - Transactional DND Bypass, Timer Race Guard & Parameter Alignment Refactor:
+ *                        - Replaced global state.preDndBypassState with transactional state.dndBypassActiveCount and state.lastDndBypassTime.
+ *                        - Eliminated blocking pauseExecution() calls from speech/announcement pipelines to reduce rule latency.
+ *                        - Overloaded playAnnouncementAndRestore(text, announceVolume, ignoreDnd) to explicitly accept Ignore DND input.
+ *                        - Removed redundant "unmute" bridge HTTP payload dispatch from unmute() (volume set performs restore).
+ *                        - Guarded restoreDoNotDisturbAfterSpeech() against race conditions when overlapping announcements occur.
+ *  v1.5.8 (2026-09-16) - DND Command Interface Streamlining & Refactor:
+ *                        - Removed redundant setDoNotDisturb, doNotDisturbOn, and doNotDisturbOff commands.
+ *                        - Added explicit parameterless setDNDOn, setDNDOff, and toggleDND commands.
+ *                        - Refactored internal DND bypass helpers to invoke setDNDOn() and setDNDOff().
+ *                        - Preserved attribute "doNotDisturb" ("enabled"/"disabled") and parent bridge "dnd" payload structure.
+ *  v1.5.7 (2026-09-16) - Mute State Engine Decoupling & Server Sync Refactor:
+ *                        - Decoupled mute/unmute restoration from general state.storedVolume into dedicated state.muteVolume.
+ *                        - Added idempotency guard in mute() to prevent overwriting saved volume when already muted.
+ *                        - Added state.remove("muteVolume") cleanup following successful unmute restoration.
+ *  v1.5.6 (2026-09-15) - UI Metadata Declaration for Ignore DND Inputs:
+ *                        - Updated command metadata definitions for speak, playAnnouncement, and playAnnouncementAll to expose ignoreDnd ENUM inputs in Hubitat Web UI.
+ *                        - Reinforced type conversions for ignoreDnd parameter inputs across all speech and announcement pathways.
+ *  v1.5.5 (2026-09-15) - Ignore DND Bypass Logic & Toggle Playback Refactor:
+ *                        - Added togglePlayback() driver command to evaluate transportStatus and route play/pause.
+ *                        - Integrated Ignore DND bypass logic across speak(), playAnnouncement(), and playAnnouncementAll().
+ *                        - Added state.preDndBypassState tracking and scheduled restoreDoNotDisturbAfterSpeech() callbacks.
+ *  v1.5.4 (2026-09-15) - Overloaded Speech Signature Guard & Replay Refactor:
+ *                        - Overloaded speak(String text, String voice, Object volume) signature to catch 3-argument Hubitat platform & Rule Machine calls.
+ *                        - Integrated inline temporary volume handling and restore callback scheduling when speak() receives volume parameter.
+ *  v1.5.3 (2026-09-15) - Consolidated Replay Text & Announcement State Engine:
+ *                        - Added state.lastOutputType and attribute lastOutputType tracking to store command modalities (speak, announce, announceAll).
+ *                        - Refactored processOutputPayload() pipeline to capture speech, deviceNotification, and announcements into state.lastSpokenText.
+ *                        - Refactored replayText() to re-issue stored audio payloads using their exact original command modality.
+ *                        - Added playAnnouncementAll() command signature for targeted child-initiated whole-house announcements.
+ *  v1.5.2 (2026-09-15) - Stored Volume State Engine Integration:
+ *                        - Added storeCurrentVolume() command to snapshot active volume to state.storedVolume.
+ *                        - Added restoreLastVolume() / restoreCurrentVolume() command to restore stored volume level.
+ *  v1.5.1 (2026-09-15) - Driver-Side Relative Volume Calculation Fix:
+ *                        - Refactored volumeUp() and volumeDown() to calculate relative volume changes (+/- 5%) directly from driver state.
+ *                        - Dispatches explicit 'volume' command with calculated integer target level to bypass server null currentVolume bugs.
+ *  v1.5.0 (2026-09-15) - Template Alignment & Driver Maintenance Refactor:
+ *                        - Purged obsolete custom Health Check scheduling and attributes.
+ *                        - Integrated single-shot version demarcation logging helper to track version in state.driverVersion.
+ *                        - Added resetDriver(), clearAllDriverStates(), clearAllAttributes(), and clearAllSchedules() for GUI maintenance. *  v1.4.3 (2026-09-15) - Health Check Method Signature Fix:
  *                        - Added zero-argument executeHealthCheckScheduled() method signature to resolve missing method exception during scheduled health checks.
  *  v1.4.2 (2026-09-14) - Volume 0 + Saved State Mute/Unmute Implementation:
  *                        - Refactored mute() to save current volume to state.preMuteVolume before dispatching server mute (volume 0).

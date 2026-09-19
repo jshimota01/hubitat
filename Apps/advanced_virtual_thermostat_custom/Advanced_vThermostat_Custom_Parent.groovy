@@ -19,28 +19,23 @@
  * limitations under the License.
  **/
 /**
- *  Purpose:
- *  Parent application container for managing child instances of Advanced vThermostat Child (Custom).
- *
- *  Instructions:
- *  1. Install this parent application.
- *  2. Add new virtual thermostat instances from within this parent app interface.
- *  
- *  Changelog:
- *  v2.3.5    08/30/26    jshimota    Upgraded to App Master Template v1.2.0 (code version re-init trigger and dead state cleanup)
- *  v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub
- *  v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement
- *  v2.3.1    08/30/26    jshimota    Finalized refactor alignment for App Master Template v1.1.0
- *  v2.3.0    08/30/26    jshimota    Applied v1.1.0 App Master Template (styled banner, badging, collapsible prefs, settings snapshot hash)
- *  v2.2.1    08/30/26    jshimota    Updated definition display name to Advanced vThermostat Manager (Custom)
- *  v2.2.0    08/30/26    jshimota    Applied initial App Master Template
- *  v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style
- *  v2.1.0    08/30/26    jshimota    Removed v2 identifiers and updated references
- *  v2.0.0    08/22/26    jshimota    Bumped definition name and aligned icon/import URLs
+ *  Changelog History:
+ *  v2.4.0    09/18/26    jshimota    Bumped version to v2.4.0 for parity with child app v2.5.0 and driver v2.6.0 refactorings.
+ *  v2.3.5    08/30/26    jshimota    Upgraded to App Master Template v1.2.0 (code version re-init trigger and dead state cleanup).
+ *  v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub.
+ *  v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement.
+ *  v2.3.1    08/30/26    jshimota    Finalized refactor alignment for App Master Template v1.1.0.
+ *  v2.3.0    08/30/26    jshimota    Applied v1.1.0 App Master Template (styled banner, badging, collapsible prefs, settings snapshot hash).
+ *  v2.2.1    08/30/26    jshimota    Updated definition display name to Advanced vThermostat Manager (Custom).
+ *  v2.2.0    08/30/26    jshimota    Applied initial App Master Template.
+ *  v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style.
+ *  v2.1.0    08/30/26    jshimota    Removed v2 identifiers and updated references.
+ *  v2.0.0    08/22/26    jshimota    Bumped definition name to v2 and aligned icon/import URLs.
+ *  v1.0.0    12/03/20    NelsonClark Original release of Advanced vThermostat Manager.
  **/
 
-static String version() { return '2.3.5' }
-def timeStamp() { return "2026/08/30 10:28 AM" }
+static String version() { return '2.4.0' }
+def timeStamp() { return "2026/09/18 09:00 AM" }
 
 definition(
     name: "Advanced vThermostat Manager (Custom)",
@@ -88,7 +83,6 @@ def mainPage() {
     }
 }
 
-// Single-Shot Version Demarcation Trace Logging Helper
 private void checkAndLogVersionDemarcation() {
     String currentVer = version()
     if (state.lastLoggedVersion != currentVer) {
@@ -97,7 +91,6 @@ private void checkAndLogVersionDemarcation() {
     }
 }
 
-// Dynamic App Label Badging Helper
 private void updateAppLabel() {
     Boolean showVersion = getSettingBool("showVersionInLabel", true)
     String baseLabel = "Advanced vThermostat Manager (Custom)"
@@ -108,7 +101,6 @@ private void updateAppLabel() {
     }
 }
 
-// Settings Hash Snapshot Helper
 private String captureSettingsSnapshot() {
     Map snapshot = [:]
     List<String> sortedKeys = settings.keySet()
@@ -121,7 +113,6 @@ private String captureSettingsSnapshot() {
     return java.security.MessageDigest.getInstance("MD5").digest(jsonString.bytes).encodeHex().toString()
 }
 
-// Hubitat App Lifecycle Routines
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing app v${version()} (${timeStamp()})..."
@@ -176,7 +167,6 @@ private void initialize(Boolean isInstall = false) {
     }
 }
 
-// Auto-Disable Debug Routine
 void disableDebugLogging() {
     if (getSettingBool("logDebugEnable", false)) {
         logWarn "30 minutes have elapsed. Automatically disabling debug logging."
@@ -184,7 +174,6 @@ void disableDebugLogging() {
     }
 }
 
-// Centralized Logging Engine
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String appLabel = app.label ?: app.name ?: "App"

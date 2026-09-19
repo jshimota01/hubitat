@@ -1,0 +1,280 @@
+static final List<Map> deviceModelTable = [
+
+    // ============================================================
+    // ECHO / ECHO DOT / ECHO SPOT / ECHO PLUS
+    // ============================================================
+
+    [deviceType: "AB72C64C86AW2", family: "ECHO", generation: 1,
+     modelName: "Echo", imageFilename: "echo_gen1", validated: true],
+
+    [deviceType: "A7WXQPH584YP", family: "ECHO", generation: 2,
+     modelName: "Echo", imageFilename: "echo_gen2", validated: true],
+
+    [deviceType: "A3FX4UWTP28V1P", family: "ECHO", generation: 3,
+     modelName: "Echo", imageFilename: "echo_gen3", validated: true],
+
+    [deviceType: "A3RMGO6LYLH7YN", family: "ECHO", generation: 4,
+     modelName: "Echo", imageFilename: "echo_gen4", validated: true],
+
+    [deviceType: "A2M35JJZWCQOMZ", family: "ECHO", generation: 1,
+     modelName: "Echo Plus", imageFilename: "echo_plus_gen1", validated: true],
+
+    [deviceType: "A18O6U1UQFJ0XK", family: "ECHO", generation: 2,
+     modelName: "Echo Plus", imageFilename: "echo_plus_gen2", validated: true],
+
+    [deviceType: "ASQZWP4GPYUT7", family: "ECHO", generation: null,
+     modelName: "Echo Pop", imageFilename: "echo_pop", validated: true],
+
+    // Echo Dots
+
+    [deviceType: "AKNO1N0KSFN8L", family: "ECHO", generation: 1,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen1", validated: true],
+
+    [deviceType: "A3S5BH2HU6VAYF", family: "ECHO", generation: 2,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen2", validated: true],
+
+    [deviceType: "A32DDESGESSHZA", family: "ECHO", generation: 3,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen3", validated: true],
+
+    [deviceType: "A32DOYMUN6DTXA", family: "ECHO", generation: 3,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen3", validated: true],
+
+    [deviceType: "A1RABVCI4QCIKC", family: "ECHO", generation: 3,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen3", validated: true],
+
+    [deviceType: "A2U21SRK4QGSE1", family: "ECHO", generation: 4,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen4", validated: true],
+
+    [deviceType: "A4ZXE0RM7LQ7A", family: "ECHO", generation: 5,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen5", validated: true],
+
+    // Echo Dots with Clock
+
+    [deviceType: "A30YDR2MK8HMRV", family: "ECHO", generation: 3,
+     modelName: "Echo Dot with Clock", imageFilename: "echo_dot_clock_gen3", validated: true],
+
+    [deviceType: "A2H4LV5GIZ1JFT", family: "ECHO", generation: 4,
+     modelName: "Echo Dot with Clock", imageFilename: "echo_dot_clock_gen4", validated: true],
+
+    [deviceType: "A2U21SRK4QGSE1", family: "ECHO", generation: 4,
+     modelName: "Echo Dot", imageFilename: "echo_dot_gen4", validated: true],
+
+    [deviceType: "A2DS1Q2TPDJ48U", family: "ECHO", generation: 5,
+     modelName: "Echo Dot with Clock", imageFilename: "echo_dot_clock_gen5", validated: true],
+
+    // Echo Spot
+
+    [deviceType: "A10A33FOX2NUBK", family: "ROOK", generation: 1,
+     modelName: "Echo Spot", imageFilename: "echo_spot_gen1", validated: true],
+
+    [deviceType: "A3EH2E0YZ30OD6", family: "ROOK", generation: 2,
+     modelName: "Echo Spot", imageFilename: "echo_spot_gen2", validated: true],
+
+    // ============================================================
+    // ECHO SHOW
+    // ============================================================
+
+    [deviceType: "A1NL4BVLQ4L3N3", family: "KNIGHT", generation: 1,
+     modelName: "Echo Show", imageFilename: "echo_show_gen1", validated: true],
+
+    [deviceType: "AWZZ5CVHX2CD", family: "KNIGHT", generation: 2,
+     modelName: "Echo Show", imageFilename: "echo_show_gen2", validated: true],
+
+    [deviceType: "A4ZP7ZC4PI6TO", family: "KNIGHT", generation: 1,
+     modelName: "Echo Show 5", imageFilename: "echo_show_5", validated: true],
+
+    [deviceType: "A1XWJRHALS1REP", family: "KNIGHT", generation: 2,
+     modelName: "Echo Show 5", imageFilename: "echo_show_5", validated: true],
+
+    [deviceType: "A11QM4H9HGV71H", family: "KNIGHT", generation: 3,
+     modelName: "Echo Show 5", imageFilename: "echo_show_5", validated: true],
+
+    [deviceType: "A1Z88NGR2BK6A2", family: "KNIGHT", generation: 1,
+     modelName: "Echo Show 8", imageFilename: "echo_show_8", validated: true],
+
+    [deviceType: "A15996VY63BQ2D", family: "KNIGHT", generation: 2,
+     modelName: "Echo Show 8", imageFilename: "echo_show_8", validated: true],
+
+    [deviceType: "A2UONLFQW0PADH", family: "KNIGHT", generation: 3,
+     modelName: "Echo Show 8", imageFilename: "echo_show_8", validated: true],
+
+    [deviceType: "A345JHMQDGG1M5", family: "KNIGHT", generation: 4,
+     modelName: "Echo Show 8", imageFilename: "echo_show_8", validated: true],
+
+    [deviceType: "AIPK7MM90V7TB", family: "KNIGHT", generation: 3,
+     modelName: "Echo Show 10", imageFilename: "echo_show_10_gen3", validated: true],
+
+    [deviceType: "A1EIANJ7PNB0Q7", family: "KNIGHT", generation: 1,
+     modelName: "Echo Show 15", imageFilename: "echo_show_15", validated: true],
+
+    [deviceType: "AQ24620N8QD5Q", family: "KNIGHT", generation: 2,
+     modelName: "Echo Show 15", imageFilename: "echo_show_15", validated: true],
+
+    [deviceType: "AZANTNEUTYY6L", family: "KNIGHT", generation: null,
+     modelName: "Echo Show 21", imageFilename: "echo_show_21", validated: true],
+
+    [deviceType: "A2LLN0UXRW4N50", family: "KNIGHT", generation: null,
+     modelName: "Echo Show 11", imageFilename: "echo_show_11", validated: true],
+
+    // ============================================================
+    // OTHER ECHO HARDWARE
+    // ============================================================
+
+    [deviceType: "A3RBAYBE7VM004", family: "ECHO", generation: null,
+     modelName: "Echo Studio", imageFilename: "echo_studio", validated: true],
+
+    [deviceType: "A3VRME03NAXFUB", family: "ECHO", generation: null,
+     modelName: "Echo Flex", imageFilename: "echo_flex", validated: true],
+
+    [deviceType: "A3SSG6GR8UU7SN", family: "ECHO", generation: 1,
+     modelName: "Echo Sub", imageFilename: "echo_sub_gen1", validated: true],
+
+    [deviceType: "A27VEYGQBW3YR5", family: "ECHO", generation: null,
+     modelName: "Echo Link", imageFilename: "echo_link", validated: false],
+
+    [deviceType: "A2RU4B77X9R9NZ", family: "ECHO", generation: null,
+     modelName: "Echo Link Amp", imageFilename: "echo_link_amp", validated: false],
+
+    [deviceType: "A1JJ0KFC4ZPNJ3", family: "ECHO", generation: null,
+     modelName: "Echo Input", imageFilename: "echo_input", validated: true],
+
+    [deviceType: "A38949IHXHRQ5P", family: "ECHO", generation: null,
+     modelName: "Echo Tap", imageFilename: "echo_tap", validated: true],
+
+    [deviceType: "A3IYPH06PH1HRA", family: "ECHO", generation: null,
+     modelName: "Echo Frames", imageFilename: "echo_frames", validated: false],
+
+    [deviceType: "A15QWUTQ6FSMYX", family: "ECHO", generation: 2,
+     modelName: "Echo Buds", imageFilename: "echo_buds_gen2", validated: false],
+
+    // ============================================================
+    // ECHO AUTO
+    // ============================================================
+
+    [deviceType: "A303PJF6ISQ7IC", family: "ALEXA_AUTO", generation: null,
+     modelName: "Echo Auto", imageFilename: "echo_auto", validated: true],
+
+    [deviceType: "A195TXHV1M5D4A", family: "ALEXA_AUTO", generation: null,
+     modelName: "Echo Auto", imageFilename: "echo_auto", validated: false],
+
+    [deviceType: "ALT9P69K6LORD", family: "ALEXA_AUTO", generation: null,
+     modelName: "Echo Auto", imageFilename: "echo_auto", validated: false],
+
+    [deviceType: "A13W6HQIHKEN3Z", family: "ALEXA_AUTO", generation: null,
+     modelName: "Echo Auto", imageFilename: "echo_auto", validated: false],
+
+    // ============================================================
+    // ECHO HUB
+    // ============================================================
+
+    [deviceType: "ADMKNMEVNL158", family: "KNIGHT", generation: null,
+     modelName: "Echo Hub", imageFilename: "echo_hub", validated: true],
+
+    // ============================================================
+    // FIRE TV
+    // ============================================================
+
+    [deviceType: "A12GXV8XMS007S", family: "FIRE_TV", generation: 1,
+     modelName: "Fire TV", imageFilename: "firetv_gen1", validated: false],
+
+    [deviceType: "A2E0SNTXJVT7WK", family: "FIRE_TV", generation: 2,
+     modelName: "Fire TV", imageFilename: "firetv_gen2", validated: false],
+
+    [deviceType: "A2GFL5ZMWNE0PX", family: "FIRE_TV", generation: 3,
+     modelName: "Fire TV", imageFilename: "firetv_gen3", validated: false],
+
+    [deviceType: "A1P7E7V3FCZKU6", family: "FIRE_TV", generation: 3,
+     modelName: "Fire TV", imageFilename: "firetv_gen3", validated: false],
+
+    [deviceType: "A3IKB0DFR7GKZW", family: "FIRE_TV", generation: 3,
+     modelName: "Fire TV", imageFilename: "firetv_gen3", validated: false],
+
+    [deviceType: "A265XOI9586NML", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Stick", imageFilename: "firetv_stick_gen1", validated: false],
+
+    [deviceType: "ADVBD696BHNV5", family: "FIRE_TV", generation: 1,
+     modelName: "Fire TV Stick", imageFilename: "firetv_stick_gen1", validated: false],
+
+    [deviceType: "A2LWARUGJLBYEW", family: "FIRE_TV", generation: 2,
+     modelName: "Fire TV Stick", imageFilename: "firetv_stick_gen1", validated: false],
+
+    [deviceType: "AKPGW064GI9HE", family: "FIRE_TV", generation: 3,
+     modelName: "Fire TV Stick 4K", imageFilename: "firetv_stick_gen1", validated: false],
+
+    [deviceType: "A31DTMEEVDDOIV", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Stick Lite", imageFilename: "unknown", validated: false],
+
+    [deviceType: "A1WZKXFLI43K86", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Stick 4K Max", imageFilename: "unknown", validated: false],
+
+    [deviceType: "A3EVMLQTU6WL1W", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Stick 4K Max", imageFilename: "unknown", validated: false],
+
+    [deviceType: "A2JKHJ0PX4J3L3", family: "FIRE_TV_CUBE", generation: 2,
+     modelName: "Fire TV Cube", imageFilename: "firetv_cube", validated: false],
+
+    [deviceType: "A3HF4YRA2L7XGC", family: "FIRE_TV_CUBE", generation: null,
+     modelName: "Fire TV Cube", imageFilename: "firetv_cube", validated: false],
+
+    [deviceType: "A1VGB7MHSIEYFK", family: "FIRE_TV_CUBE", generation: 3,
+     modelName: "Fire TV Cube", imageFilename: "firetv_cube", validated: false],
+
+    [deviceType: "AN630UQPG2CA4", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Toshiba", imageFilename: "firetv_toshiba", validated: false],
+
+    [deviceType: "A1F8D55J0FWDTN", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Toshiba", imageFilename: "toshiba_firetv", validated: false],
+
+    [deviceType: "AP4RS91ZQ0OOI", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Toshiba", imageFilename: "toshiba_firetv", validated: false],
+
+    [deviceType: "AFF5OAL5E3DIU", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV", imageFilename: "firetv_toshiba", validated: false],
+
+    [deviceType: "AFF50AL5E3DIU", family: "FIRE_TV", generation: null,
+     modelName: "Fire TV Insignia", imageFilename: "insignia_firetv", validated: false],
+
+    // ============================================================
+    // AMAZON TABLETS
+    // ============================================================
+
+    [deviceType: "A1Q7QCGNMXAKYW", family: "TABLET", generation: null,
+     modelName: "Fire Tablet", imageFilename: "amazon_tablet", validated: false],
+
+    [deviceType: "ATNLRCEBX3W4P", family: "TABLET", generation: null,
+     modelName: "Fire Tablet", imageFilename: "amazon_tablet", validated: false],
+
+    [deviceType: "A1J16TEDOYCZTN", family: "TABLET", generation: null,
+     modelName: "Fire Tablet", imageFilename: "amazon_tablet", validated: false],
+
+    [deviceType: "A2M4YX06LWP8WI", family: "TABLET", generation: null,
+     modelName: "Fire Tablet", imageFilename: "amazon_tablet", validated: false],
+
+    [deviceType: "A1C66CX2XD756O", family: "TABLET", generation: null,
+     modelName: "Fire Tablet HD", imageFilename: "amazon_tablet", validated: false],
+
+    [deviceType: "A2N49KXGVA18AR", family: "TABLET", generation: null,
+     modelName: "Fire Tablet HD 10 Plus", imageFilename: "tablet_hd10", validated: false],
+
+    [deviceType: "A3L0T0VL9A921N", family: "TABLET", generation: null,
+     modelName: "Fire Tablet HD 8", imageFilename: "tablet_hd10", validated: false],
+
+    [deviceType: "AVU7CPPF2ZRAS", family: "TABLET", generation: null,
+     modelName: "Fire Tablet HD 8 Plus", imageFilename: "tablet_hd10", validated: false],
+
+    [deviceType: "A38EHHIB10L47V", family: "TABLET", generation: null,
+     modelName: "Fire Tablet HD 8", imageFilename: "tablet_hd10", validated: false],
+
+    [deviceType: "A3R9S4ZZECZ6YL", family: "TABLET", generation: null,
+     modelName: "Fire Tablet HD 10", imageFilename: "tablet_hd10", validated: false],
+
+    [deviceType: "A2V9UEGZ82H4KZ", family: "TABLET", generation: null,
+     modelName: "Fire Tablet HD 10", imageFilename: "tablet_hd10", validated: false],
+
+    // ============================================================
+    // MULTIROOM / WHA
+    // ============================================================
+
+    [deviceType: "A3C9PE6TNYLTCH", family: "WHA", generation: null,
+     modelName: "Multiroom", imageFilename: "echo_wha", validated: true]
+]

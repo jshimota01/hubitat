@@ -6,13 +6,6 @@
  * Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
  * Features Thermostat Controller functionality, locked 'Auto' dashboard dual-setpoint display support,
  * custom health tracking, and maintenance routines.
- *
- * Notes:
- * Custom Health Check Implementation
- * - Intentionally NOT using Hubitat's native 'Health Check' capability.
- * - Hubitat's native capability exposes an unwanted "Ping" UI control button
- *   and does not provide the phase-anchored scheduling, timeout guards, or trace 
- *   logging behavior required by this driver architecture.
  **/
 /**
  * Copyright 2026 James Shimota / Original 2020 Nelson Clark
@@ -31,6 +24,7 @@
  **/
 /**
  * Changelog:
+ * v2.6.0    09/18/26    jshimota    Prevented physical mode promotion to 'heat'/'auto' on setpoint commands received while OFF. Restricted sensor update timeout Emergency Stop enforcement strictly to active heating/cooling states to eliminate idle timeout loops and unwanted preEmergencyMode autorecovery cycles. Added enableEmergencyStopOnTimeout toggle preference.
  * v2.5.2    09/06/26    jshimota    Promoted physicalThermostatMode to 'heat' inside setHeatingSetpoint when mode is OFF to ensure manual setpoint changes drive outlets correctly.
  * v2.5.1    09/05/26    jshimota    Increased maximum heating setpoint limit (maxHeatTemp / maxHeatingSetpoint) from 80 °F to 90 °F (32.0 °C).
  * v2.5.0    09/05/26    jshimota    Implemented Option C (Hybrid Architecture): Enabled autonomous auto-evaluation in evaluateMode() when physicalThermostatMode is 'auto', promoted physicalThermostatMode to 'auto' on manual dashboard setpoint commands when locked to Auto, and retained explicit 'off' override capabilities for MEM safety routines.
@@ -39,13 +33,19 @@
  * v2.4.0    09/03/26    jshimota    Integrated standard driver template architecture (custom Health Check, healthStatus attribute, phase-anchored ping scheduler, command timeout checks, and master maintenance routines). Preserved locked Auto dashboard tile logic and virtual thermostat execution engine.
  * v2.3.1    09/03/26    jshimota    Added lockDashboardToAuto preference and physicalThermostatMode tracking to preserve dual-setpoint dashboard tiles.
  * v2.3.0    09/01/26    jshimota    Updated with Thermostat Controller functionality.
+ * v2.2.0    08/30/26    jshimota    Applied initial Driver Master Template architecture and updated attribute definitions.
+ * v2.1.1    08/30/26    jshimota    Formatted display names to use (Custom) parenthetical naming standard.
+ * v2.1.0    08/30/26    jshimota    Removed v2 identifiers, updated namespace to jshimota, and corrected GitHub import URLs.
+ * v2.0.0    08/22/26    jshimota    Forked and bumped definition name to v2 for Hubitat Elevation platform testing.
+ * v1.1.0    04/15/21    NelsonClark Added support for threshold hysteresis buffers and multi-sensor temperature averaging.
+ * v1.0.0    12/03/20    NelsonClark Initial public release of Advanced Virtual Thermostat Device Driver.
  **/
 
 import groovy.json.JsonOutput
 import groovy.transform.Field
 
-static String version() { return '2.5.2' }
-def timeStamp() { return "2026/09/06 01:00 PM" }
+static String version() { return '2.6.0' }
+def timeStamp() { return "2026/09/18 09:00 AM" }
 
 metadata {
     definition (
@@ -96,14 +96,15 @@ metadata {
 
     preferences {
         input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i>When enabled, locks thermostatMode attribute to 'auto' so dashboard tiles preserve dual heat/cool setpoint controls.</i>", defaultValue: true, required: true
-        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify temperature sensor updates.<br><b>Note:</b> This is a custom driver health check routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+        input name: "enableEmergencyStopOnTimeout", type: "bool", title: "<b>Enable Sensor Timeout Emergency Stop</b>", description: "<i>When enabled, shuts down active heating/cooling if temperature sensor updates stop for longer than Max Update Interval.</i>", defaultValue: true, required: true
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify temperature sensor updates.</i>"
 
         // Independent Logging Switches
-        input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
-        input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", description: "Enable to output error activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
-        input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", description: "Enable to output warning activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
-        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", description: "Enable to output debugging activity to log<br>Default: <b>Off</b><br>(Is turned on for 30 minutes after Initialized or first installed)", defaultValue: false, required: true
-        input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", description: "Enable to output tracing activity to log<br>Default: <b>Off</b>", defaultValue: false, required: true
+        input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
+        input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", defaultValue: true, required: true
+        input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", defaultValue: true, required: true
+        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", defaultValue: false, required: true
+        input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", defaultValue: false, required: true
     }
 }
 
@@ -212,7 +213,7 @@ private void initialize(Boolean isInstall = false) {
         state.lastTempUpdate = now()
 
         if (getSettingBool("lockDashboardToAuto", true)) {
-            sendIfChanged([name: "physicalThermostatMode", value: "auto"])
+            sendIfChanged([name: "physicalThermostatMode", value: "off"])
             sendIfChanged([name: "thermostatMode", value: "auto"])
         } else {
             sendIfChanged([name: "physicalThermostatMode", value: "off"])
@@ -254,7 +255,7 @@ private void initialize(Boolean isInstall = false) {
 }
 
 /* =========================================================================================
-   HEALTH CHECK ROUTINE ARCHITECTURE (CUSTOM DRIVER HEALTH CHECK)
+   HEALTH CHECK ROUTINE ARCHITECTURE
    ========================================================================================= */
 
 List<String> "Health Check"() {
@@ -403,26 +404,42 @@ def evaluateMode() {
     
     def maxIntervalMili = maxInterval * 60000
     def preMode = device.currentValue("preEmergencyMode")
+    Boolean isSensorStale = (nowMs - lastUpdate >= maxIntervalMili)
+    Boolean eStopEnabled = getSettingBool("enableEmergencyStopOnTimeout", true)
 
-    if (current == "idle" && (nowMs - lastUpdate >= maxIntervalMili)) {
-        logDebug "Temp sensor maximum update interval exceeded ($maxInterval mins). Thermostat idle."
+    if (isSensorStale) {
         updateAttribute("healthStatus", "offline")
-    } else if (mode != "off" && current != "idle" && (nowMs - lastUpdate >= maxIntervalMili)) {
-        logError "Temp sensor update timeout exceeded. Enforcing EMERGENCY STOP."
-        updateAttribute("healthStatus", "offline")
-        sendIfChanged([name: "preEmergencyMode", value: mode])
-        setThermostatMode("off")
-        sendIfChanged([name: "thermostatOperatingState", value: "idle"])
-        sendIfChanged([name: "controllerState", value: "idle"])
-        return
-    } else if (preMode && preMode != "none" && preMode != "" && preMode != "null" && (nowMs - lastUpdate < maxIntervalMili)) {
-        logWarn "Sensors reporting again. Autorecovered to previous mode: ${preMode}"
+        if (eStopEnabled && mode != "off" && current != "idle") {
+            logError "Temp sensor update timeout exceeded while active (${current}). Enforcing EMERGENCY STOP."
+            sendIfChanged([name: "preEmergencyMode", value: mode])
+            setThermostatMode("off")
+            sendIfChanged([name: "thermostatOperatingState", value: "idle"])
+            sendIfChanged([name: "controllerState", value: "idle"])
+            return
+        } else {
+            logDebug "Temp sensor update interval exceeded (${maxInterval} mins). Thermostat is idle or OFF; holding state without emergency stop."
+        }
+    } else {
         updateAttribute("healthStatus", "online")
-        sendIfChanged([name: "preEmergencyMode", value: "none"])
-        setThermostatMode(preMode)
+        if (preMode && preMode != "none" && preMode != "" && preMode != "null") {
+            logWarn "Sensors reporting again. Clearing preEmergencyMode."
+            sendIfChanged([name: "preEmergencyMode", value: "none"])
+            if (mode == "off") {
+                logInfo "Physical thermostat mode is currently OFF. Autorecovery skipped."
+                return
+            } else {
+                setThermostatMode(preMode)
+                return
+            }
+        }
+    }
+
+    if (mode == "off") {
+        if (current != "idle") {
+            sendIfChanged([name: "thermostatOperatingState", value: "idle"])
+            sendIfChanged([name: "controllerState", value: "idle"])
+        }
         return
-    } else if ((nowMs - lastUpdate) < maxIntervalMili) {
-        updateAttribute("healthStatus", "online")
     }
 
     def callFor = "idle"
@@ -470,12 +487,6 @@ def setHeatingSetpoint(Object value) {
     Double dVal = value.toString().toDouble()
     Double newHeatingSetpoint = roundDegrees(dVal)
 
-    // Promote physical mode to 'heat' if dashboard setpoint command is received while physical mode was OFF
-    if (device.currentValue("physicalThermostatMode") == "off") {
-        logInfo "Dashboard setpoint command received while physical mode was OFF. Promoting physicalThermostatMode to 'heat'."
-        sendIfChanged([name: "physicalThermostatMode", value: "heat"])
-    }
-
     if (newHeatingSetpoint == device.currentValue("heatingSetpoint")) {
         runIn(1, 'evaluateMode')
         return
@@ -516,11 +527,6 @@ def setCoolingSetpoint(Object value) {
     if (value == null || !value.toString().isNumber()) return
     Double dVal = value.toString().toDouble()
     Double newCoolingSetpoint = roundDegrees(dVal)
-
-    if (getSettingBool("lockDashboardToAuto", true) && device.currentValue("physicalThermostatMode") == "off") {
-        logInfo "Dashboard setpoint command received while physical mode was OFF. Promoting physicalThermostatMode to 'auto'."
-        sendIfChanged([name: "physicalThermostatMode", value: "auto"])
-    }
 
     if (newCoolingSetpoint == device.currentValue("coolingSetpoint")) {
         runIn(1, 'evaluateMode')
