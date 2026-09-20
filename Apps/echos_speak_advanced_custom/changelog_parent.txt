@@ -1,4 +1,32 @@
- *  v1.3.7 (2026-09-14) - Diagnostic Button Refresh & Category Section Persistence Fix:
+ *  v1.5.10 (2026-09-18) - Platform Environment Optimization & C-7 Alignment:
+ *                          - Verified bridge dispatch pipelines for Hubitat C-7 platform environment (v2.4.4.156).
+ *  v1.5.0 (2026-09-17) - Child Driver v1.6.0 Attribute Matrix & Discovery Cache Alignment:
+ *                         - Aligned parent version tracking with child driver v1.6.0 attribute schema matrix refactor.
+ *                         - Expanded getDiscoveredDeviceMap() cache to store family, model/style, generation, model number, and serial details for child provisioning.
+ *  v1.4.10 (2026-09-17) - Child Driver v1.5.15 Version Alignment:
+ *                         - Aligned version tracking with child driver v1.5.15 2-argument speak() overload resolution.
+ *  v1.4.9 (2026-09-17) - Child Driver v1.5.14 Alignment & DND Command Standardization:
+ *                        - Aligned parent version demarcation to match child driver v1.5.14 setDoNotDisturbOn / setDoNotDisturbOff command standardization.
+ *                        - Verified sendBridgeCommand dispatch for bridge "dnd" payload structure ([state: true/false]).
+ *  v1.4.8 (2026-09-16) - Periodic Media State Polling Sync Integration:
+ *                        - Updated syncDeviceStates() background poll loop to query live GET /api/media/{serialNumber} endpoints and parse track details to child devices.
+ *  v1.4.7 (2026-09-16) - Live Media State Query Endpoint Addition:
+ *                        - Added fetchDeviceMediaState(String serialNumber) method to execute GET /api/media/{serialNumber} queries for child driver togglePlayback().
+ *  v1.4.6 (2026-09-16) - Child Driver v1.5.9 Alignment & Version Sync:
+ *                        - Aligned parent version demarcation to match child driver v1.5.9 transactional DND bypass refactor.
+ *  v1.4.5 (2026-09-16) - DND Command Architecture Alignment:
+ *                        - Aligned parent version tracking with child driver v1.5.8 DND interface streamlining (setDNDOn, setDNDOff, toggleDND).
+ *  v1.4.4 (2026-09-16) - Mute / Unmute Command Mapping Verification:
+ *                        - Verified generic REST bridge endpoint forwarding for mute and unmute payload operations.
+ *  v1.4.3 (2026-09-15) - Signature Guard & Child Refresh Helper Implementation:
+ *                        - Updated refreshDeviceData(String deviceId = null) signature to support optional device ID parameters.
+ *                        - Added refreshServerStatusData() and forceServerSessionRevalidation() helper methods for child status tile triggers.
+ *  v1.4.2 (2026-09-14) - LazyMap Signature Fix for Health Card:
+ *                        - Changed renderHealthCard(Map auth) signature to dynamic renderHealthCard(auth) to prevent LazyMap MissingMethodException during UI rendering.
+ *  v1.4.1 (2026-09-14) - Restored Complete Parent App Historical Changelog:
+ *                        - Restored all historical changelog entries back through v1.0.0.
+ *  v1.4.0 (2026-09-14) - Server Command Dispatch Mapping Alignment:
+ *                        - Aligned sendBridgeCommand mapping for mute, unmute, dnd, doNotDisturbOn/Off, and voiceCmdAsText. *  v1.3.7 (2026-09-14) - Diagnostic Button Refresh & Category Section Persistence Fix:
  *                        - Resolved UI non-responsiveness on diagnostic button presses by enforcing dynamic page re-evaluation.
  *                        - Preserved active Category expansion state during diagnostic button refreshes.
  *  v1.3.6 (2026-09-14) - Advanced State Engine & Section 1B Diagnostic UI Refactor:

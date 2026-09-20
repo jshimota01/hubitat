@@ -77,7 +77,7 @@
 		  {
 			"name": "OpenWeatherMap Multi-API Weather Driver ",
 			"category": "Control",
-			"version": "2.5.13",
+			"version": "2.5.16",
 			"tags": [ "Weather", "Virtual", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/owm_multi-API_weather/packageManifest.json",
 			"description": "A virtual device driver for weather. Includes multiple tiles, including Alerts and Moon Phase.  Has detailed Sun Altitude and Azimuth and Illuminance for use with blinds. High precision temp, barometer, rainfall and UVI. Forecasted weather data included for next 3 days"

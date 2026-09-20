@@ -1,4 +1,49 @@
-*  v1.5.10 (2026-09-16) - Live Server Media State Query Refactor for Toggle Playback:
+ *  v1.6.15 (2026-09-18) - Hubitat C-7 Runtime Optimization & Numeric Parsing Safety:
+ *                          - Verified elimination of unsupported Groovy .clamp() method calls across all driver commands.
+ *                          - Added safe numeric checking for st.temperature to prevent BigDecimal coercion errors on null sensor states.
+ *  v1.6.14 (2026-09-18) - Integer Clamp Method Exception Resolution:
+ *                          - Replaced unsupported .clamp(0, 100) calls with standard Math.max(0, Math.min(100, val)) bounds clamping.
+ *                          - Fixed parseDeviceFeatures() runtime MissingMethodException when parsing displayBrightness for Echo Dot Gen 5 w/Clock devices.
+ *  v1.6.13 (2026-09-18) - Response Safety Unwrap & Platform Capability Declarations:
+ *                          - Added automatic payload unwrapping for result objects passed to parseDeviceFeatures().
+ *                          - Declared TemperatureMeasurement and MotionSensor capabilities in driver metadata to ensure proper platform indexing.
+ *  v1.6.12 (2026-09-18) - Canonical Server Contract Alignment (getDeviceFeatures):
+ *                          - Refactored parseDeviceFeatures() to consume official {capabilities, state, errors} payload structure.
+ *                          - Implemented dynamic state attribute cleanup for unsupported capabilities (temperature, motion, display, displayBrightness, adaptiveBrightness).
+ *                          - Aligned setDisplayBrightness command dispatch with explicit level payload structure ({level: 0..100}).
+ *                          - Aligned adaptive brightness command interfaces (setAdaptiveBrightnessOn / setAdaptiveBrightnessOff).
+ *  v1.6.11 (2026-09-18) - Device Generation Attribute & Model Table String Standardization:
+ *                          - Updated all generation values in deviceModelTable to explicit String literals.
+ *                          - Verified parseDeviceData() string coercion and generation state event formatting.
+ *  v1.6.10 (2026-09-18) - Device Model Table Refresh:
+ *                          - Integrated updated deviceModelTable structure with formatted multi-line entries and stringified non-numeric generation tokens ("Unspecified", "N/A").
+ *  v1.6.9 (2026-09-18) - Parent App v1.5.6 Version Demarcation Alignment:
+ *                         - Incremented driver version to reflect alignment with Parent App v1.5.6 GUI label ordering updates.
+ *  v1.6.8 (2026-09-18) - Amazon Account Device Name Reference Attribute:
+ *                         - Added 'amazonDeviceName' attribute to preserve and display the authoritative reference device name as reported by Amazon.
+ *                         - Updated parseDeviceData() to capture accountName / deviceName payload values.
+ *  v1.6.7 (2026-09-18) - Hardware Identification & Model Lookup Refresh:
+ *                         - Replaced embedded map with validated deviceModelTable static map.
+ *                         - Maintained Echo Server API-driven capabilities checking while utilizing deviceModelTable for lookup of Model name, assigned image, and generation.
+ *  v1.6.6 (2026-09-17) - Capability-Aware Display & Sensor Integration (Server v1.2.8):
+ *                         - Implemented dynamic capability guards for DISPLAY_BRIGHTNESS_ADJUST, DISPLAY_POWER_TOGGLE, DISPLAY_ADAPTIVE_BRIGHTNESS, MOTION_DETECTION, and TEMPERATURE_SENSOR.
+ *                         - Exposed displayBrightness, displayPower, adaptiveBrightness, motion, and temperature attributes.
+ *                         - Exposed setDisplayBrightness(level), setDisplayPowerOn(), setDisplayPowerOff(), setAdaptiveBrightnessOn(), setAdaptiveBrightnessOff() commands.
+ *                         - Added location temperature scale auto-conversion (°F / °C).
+ *                         - Purged debug attributes (rawCapabilities, liveViewSupported, mediaDisplaySupported).
+ *                         - Ensured dynamic in-place attribute migration without device recreation.
+ *  v1.6.3 (2026-09-17) - Attribute Terminology Alignment & UI Optimization:
+ *                         - Renamed firmwareVer attribute to softwareVer to align with Amazon Alexa app terminology.
+ *                         - Replaced empty string defaults with "None" for all string attributes to prevent platform event suppression.
+ *  v1.6.2 (2026-09-17) - UI Visibility & Attribute Rendering Fixes:
+ *                         - Resolved empty string default issues for attribute rendering to ensure visibility in Current States.
+ *  v1.6.1 (2026-09-17) - Attribute Seeding Engine:
+ *                         - Introduced comprehensive attribute seeding across initialization routines to guarantee default state presence.
+ *  v1.6.0 (2026-09-17) - Dual-Track Interaction Engine & Attribute Matrix Architecture:
+ *                         - Finalized core attribute matrix and dual-track speech and announcement execution pipelines.
+ *                         - Added WHA hardware safety guards for global announcements.
+ *  v1.5.11 (2026-09-16) - Mute Command Payload Dispatch Refactor:
+ *                         - Refactored mute() to send explicit level 0 volume commands to bridge server, preventing HTTP 400 errors.*  v1.5.10 (2026-09-16) - Live Server Media State Query Refactor for Toggle Playback:
  *                         - Refactored togglePlayback() to query server GET /api/media/{serialNumber} endpoint via parent.
  *                         - Added handleMediaStateAndToggle() callback to evaluate result.playing authoritative boolean state.
  *                         - Dispatches pause() if playing == true, or play() if playing == false.

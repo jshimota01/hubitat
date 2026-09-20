@@ -30,7 +30,6 @@
 	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
 	
 	VERSIONS:
-	v2.5.16	09/20/26	jshimota	Refactored text formatting: aligned currentWeatherSummaryText with selected humidity unit preference and fixed illuminanceUnit "none" display behavior.
 	v2.5.15	09/20/26	jshimota	Production merge release. Integrated minutely precip routines (from dev branch v2.5.14-v2.5.28-Dev), depth unit selectors, and humidity zero-division guard while maintaining v2.5.13 CIE illuminance math and fixed moon emojis.
 	v2.5.14	08/19/26	jshimota	Development branch: Minutely short-term precipitation analysis, precipNextHr attributes, and depth unit selector updates.
 	v2.5.13	09/06/26	jshimota	Fixed illuminance horizon math discontinuity at 0° altitude by offsetting daytime power curve with twilight base lux (400lx). Added safe try/catch numeric guard and updated log wording to Estimated Base Lux.
@@ -62,7 +61,7 @@
 	v2.1.0	07/15/26	jshimota	start point
 **/
 
-static String version()    {  return '2.5.16'  }
+static String version()    {  return '2.5.15'  }
 
 metadata {
     definition(
@@ -2039,7 +2038,7 @@ private void calcTextValue(BigDecimal freshLux = null, BigDecimal freshTemp = nu
     String tUnit = settings.temperatureUnit ?: "°F"
     String pUnit = settings.pressureUnit ?: "inHg"
     String wUnit = (settings.windSpeedUnit == "none") ? "" : " ${settings.windSpeedUnit ?: 'mph'}"
-    String iUnit = (settings.illuminanceUnit == "none") ? "" : (settings.illuminanceUnit ?: "lx")
+    String iUnit = (settings.illuminanceUnit == "none") ? "lx" : (settings.illuminanceUnit ?: "lx")
     String hUnit = settings.humidityUnit ?: "%"
     
     if (hUnit == "none") hUnit = ""
@@ -2074,10 +2073,7 @@ private void calcTextValue(BigDecimal freshLux = null, BigDecimal freshTemp = nu
 
     // 4. Illuminance Text Formatting
     def luxVal = (freshLux != null) ? freshLux : device.currentValue("currentIlluminance")
-    if (luxVal != null) {
-        String spaceI = (iUnit == "") ? "" : " "
-        sendIfChanged(name: "currentIlluminanceText", value: "${luxVal}${spaceI}${iUnit}")
-    }
+    if (luxVal != null) sendIfChanged(name: "currentIlluminanceText", value: "${luxVal} ${iUnit}")
     
     // 5. Sun and Moon Angles Formatting
     int sunMoonPrecision = (settings.precisionSunMoonAngles ?: "0").toInteger()
@@ -2218,7 +2214,7 @@ private void calcTextValue(BigDecimal freshLux = null, BigDecimal freshTemp = nu
         String tempText = (temp != null) ? "${temp}${tUnit}" : (device.currentValue("currentTemperatureText") ?: "--")
         
         humVal = (freshHum != null) ? freshHum : device.currentValue("currentHumidity")
-        String humText = (humVal != null) ? "${humVal}${hUnit}" : "--"
+        String humText = (humVal != null) ? "${humVal}%" : "--"
         
         def windRaw = (currentMap && currentMap.wind_speed != null) ? currentMap.wind_speed : device.currentValue("currentWindSpeed")
         String windStrengthText = getBeaufortText(windRaw)

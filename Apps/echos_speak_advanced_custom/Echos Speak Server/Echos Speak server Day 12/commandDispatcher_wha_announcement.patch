@@ -1,0 +1,68 @@
+--- /mnt/data/commandDispatcher_current.js	2026-09-19 21:25:26.104038489 +0000
++++ /mnt/data/commandDispatcher_v1.3.0_wha_announcement.js	2026-09-19 21:25:51.802907449 +0000
+@@ -72,7 +72,21 @@
+       ? targetDevice.capabilities
+       : [];
+ 
+-    // CAPABILITIES = what Alexa says the device supports.
++    // WHA is not natively announcement-capable through Amazon's virtual
++    // multi-room endpoint, but Echos Speak provides announcement support by
++    // targeting the group's physical cluster members. Treat that as a
++    // normalized Echos Speak capability when physical members are available.
++    const isWha =
++      String(targetDevice.deviceFamily || '').toUpperCase() === 'WHA';
++
++    const whaAnnouncementSupported =
++      isWha &&
++      Array.isArray(targetDevice.clusterMembers) &&
++      targetDevice.clusterMembers.length > 0;
++
++    // CAPABILITIES = normalized Echos Speak capability contract.
++    // Amazon-derived capabilities remain unchanged except for the explicit
++    // Echos Speak WHA announcement override described above.
+     const capabilities = {
+       // Normalized capability names used by the Hubitat Parent.
+       // The server is the authoritative Amazon -> capability mapping.
+@@ -95,7 +109,8 @@
+         caps.includes('ALEXA_VOICE'),
+ 
+       audioNotification:
+-        caps.includes('TIMERS_ALARMS_NOTIFICATIONS_VOLUME'),
++        caps.includes('TIMERS_ALARMS_NOTIFICATIONS_VOLUME') ||
++        whaAnnouncementSupported,
+ 
+       notification:
+         caps.includes('TIMERS_ALARMS_NOTIFICATIONS_VOLUME'),
+@@ -1126,8 +1141,31 @@
+         }
+ 
+         invokeAlexa('announce', (done) => {
++          // WHA virtual endpoints cannot execute AlexaAnnouncement directly.
++          // Use one multi-device AlexaAnnouncement sequence targeted at the
++          // physical cluster members. This preserves the normal announcement
++          // payload while avoiding the unsupported WHA virtual endpoint.
++          let announcementTarget = serialNumber;
++
++          if (
++            targetDevice &&
++            String(targetDevice.deviceFamily || '').toUpperCase() === 'WHA' &&
++            Array.isArray(targetDevice.clusterMembers) &&
++            targetDevice.clusterMembers.length > 0
++          ) {
++            announcementTarget = targetDevice.clusterMembers;
++
++            logger.info(
++              '[CommandDispatcher] WHA announce expanded to physical cluster members',
++              {
++                whaSerialNumber: serialNumber,
++                clusterMembers: announcementTarget
++              }
++            );
++          }
++
+           alexa.sendSequenceCommand(
+-            serialNumber,
++            announcementTarget,
+             'announcement',
+             payload.text,
+             done
