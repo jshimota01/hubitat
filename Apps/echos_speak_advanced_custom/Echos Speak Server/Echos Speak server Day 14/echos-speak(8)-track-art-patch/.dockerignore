@@ -1,0 +1,16 @@
+# Source-control and editor files
+.git
+.gitignore
+*.log
+
+# Backup/archive files not needed in the runtime image
+*.backup
+*.bak
+*.bak-*
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Persistent runtime data must remain outside the image
+data/

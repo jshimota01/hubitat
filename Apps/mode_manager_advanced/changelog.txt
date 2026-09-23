@@ -1,4 +1,52 @@
- * v1.1.59 (2026-08-25) - Sleep Intent Calculation & Synchronization Fix:
+ *                        - Added btnRestoreGroundTruth UI button allowing manual execution of restorePersistedGroundTruth().
+ *  v1.1.79 (2026-09-21) - Deterministic Persisted Ground Truth & Boot Guard Architecture:
+ *                        - Implemented state.lastKnownGroundTruth snapshot commit pipeline.
+ *                        - Enforced snapshot commit strictly AFTER successful syncOutputs() execution.
+ *                        - Implemented state.isInitializing boot guard to suppress transient mesh/virtual switch reads during hub startup.
+ *                        - Decoupled state restoration from operational time-boundary rechecks following reboot.
+ *  v1.1.78 (2026-09-13) - Section 4 GUI Solar Night & Day UI Update:
+ *                        - Added live dynamic Solar Night Window status badge displaying hub's calculated Sunset (+60m) and Sunrise (-30m) times.
+ *                        - Clarified textual rules explaining how Night vs. Day solar windows govern Armed Night vs. Disarmed states during sleep.
+ *  v1.1.77 (2026-09-13) - Integrated Solar Window Guard for HSM Arm Night:
+ *                        - Added isNightWindow() helper computing [Sunset + 60m] to [Sunrise - 30m] using Hubitat native location sunrise/sunset times.
+ *                        - Enforced armedNight strictly when Home, Sleeping, AND within the solar night window. Naps during daytime retain Disarmed status.
+ *  v1.1.76 (2026-09-13) - HSM Arm Night Decoupled from Wee Hours:
+ *                        - Refactored syncOutputs(), Section 4 GUI, and HSM evaluation logic to enforce armedNight strictly when Sleeping.
+ *                        - Un-sleept night periods (Wee Hours) now maintain Disarmed status so opening doors late at night does not trigger intrusion alerts.
+ *                        - Standardized header comment block layout.
+ *  v1.1.75 (2026-09-13) - Resolved Echo Loop and Presence Override Race:
+ *                        - Added consumeExpectedAck(evt) to alexaPresenceSwitchHandler() to suppress back-fed switch updates from internal syncOutputs.
+ *                        - Fixed hardcoded "Override" control source in alexaPresenceSwitchHandler() to attribute correctly to Presence or Voice.
+ *                        - Retained background time period tracking while Away to prevent "unknown" period transition log entries upon returning home.
+ *  v1.1.74 (2026-09-11) - Hardened Subscription Lifecycle Management:
+ *                        - Added unconditional unsubscribe() at top of updated() to prevent orphaned subscriptions on deselecting/clearing trigger switches/buttons.
+ *                        - Hardened initialize() collection handling for multi-device inputs (trigger switches, trigger buttons, period switches).
+ *  v1.1.73 (2026-08-30) - Applied App Master Template v1.2.1:
+ *                        - Integrated single-shot version demarcation trace logging helper checkAndLogVersionDemarcation().
+ *                        - Added state.lastInitializedVersion != version() code-version upgrade check in updated().
+ *                        - Standardized app label badging and collapsible preferences UI structure.
+ *                        - Standardized centralized logging engine and auto-debug disabler routine.
+ *  v1.1.72 (2026-08-27) - Pure Control Source & HSM Messaging Engine Alignment:
+ *                        - Added dedicated HSM Control Source GUI controls, message templates, and notification dispatch routing in Section 8.
+ *                        - Added logInfo entry inside syncHsmState() when dispatching HSM state transitions.
+ *                        - Completely purged legacy 'Reason' terminology from message template placeholders (%controlSource% replacing %reason%).
+ *                        - Updated updateStatusTileDevice discrete fallback setters to target setControlSource().
+ *  v1.1.71 (2026-08-27) - Pipeline Architecture Refactor (Evaluation Trigger vs. Control Source):
+ *                        - Explicitly decoupled transient Evaluation Triggers (e.g. Schedule CRON, Recheck Switch, Startup, Manual Button) from persistent Control Sources (Voice, Presence, Override, Scheduled, Reboot).
+ *                        - Evaluation Triggers are handled strictly as in-flight transaction metadata passed through processStatePipeline() without polluting persistent state.
+ *                        - Overhauled log wrappers, transaction headers, and tile output metadata to report Evaluation Trigger and Control Source as distinct dimensions.
+ *  v1.1.70 (2026-08-27) - Terminology Shift to Control Source Architecture:
+ *                        - Refactored all GUI, tile displays, preferences, logs, and state parameters from 'Reason' to 'Control Source'.
+ *                        - Clarified the distinction between short-lived pipeline Triggers and persistent Control Sources (Voice, Presence, Override, Scheduled, Reboot).
+ *  v1.1.66 (2026-08-26) - Clean HTML Payload Optimization:
+ *                        - Removed 'white-space: nowrap' and 'font-size:1.0em' CSS properties from HTML push outputs.
+ *                        - Outputs color-only markup so tile drivers natively handle wrapping and font scaling.
+ *  v1.1.65 (2026-08-26) - Converted HTML push notification wrappers from block <div> to inline <span> tags to prevent unwanted line breaks.
+ *  v1.1.64 (2026-08-26) - Demoted raw JSON snapshot payload diff trace lines inside updated() to logDebug to minimize log noise.
+ *  v1.1.63 (2026-08-26) - Refactored all log strings, preference templates, UI labels, and helper methods from 'Mode Recheck' to 'State Recheck' / 'State Evaluation'.
+ *  v1.1.62 (2026-08-26) - Added alphabetical sorting to settings.keySet() and List values inside captureSettingsSnapshot() to ensure canonical JSON hashing.
+ *  v1.1.61 (2026-08-25) - Fixed transient stale desync warning inside syncHsmState by explicitly zeroing out state.pendingHsmExpires when pending targets are cleared.
+ *  v1.1.60 (2026-08-25) - Overhauled calculateDecision() to prioritize incoming Alexa awake/sleep intent over stale physical switch reads. * v1.1.59 (2026-08-25) - Sleep Intent Calculation & Synchronization Fix:
  *                        - Fixed race condition in calculateDecision() where incoming Alexa sleep transitions evaluated stale physical awake switch states.
  *                        - Enforced authoritative isSleeping intent mapping to prevent syncOutputs from falsely turning awake switches back ON.
  * v1.1.58 (2026-08-25) - Variable & Setting Naming Refactor:

@@ -1,3 +1,48 @@
+ *  v1.8.14 (2026-09-21) - Architectural Driver-Selection Refactor:
+ *                          - Expanded parent driver selection logic to evaluate Temperature, Motion, AND Display capabilities.
+ *                          - Routes devices exposing Temperature, Motion, OR Display capabilities to the extended Sensors driver.
+ *                          - Preserved raw server capability contract and historical changelog entries.
+ *  v1.8.13 (2026-09-20) - Decoupled Hubitat Device Label Persistence from Amazon Endpoint Sync:
+ *                          - Removed child.setLabel() overwrites from periodic syncDeviceStates() and targeted refreshDeviceData().
+ *                          - Preserved initial label assignment during child creation via addChildDevice devProps map.
+ *                          - Retained amazonDeviceName attribute updates via parseDeviceData() while allowing local Hubitat labels to remain user-managed and persistent.
+ *  v1.8.12 (2026-09-20) - Masking Log Escalation Adjustments:
+ *                          - Lowered routine Amazon bug-endpoint masking entries ('EverywhereTwo' & 'Office Test') from logWarn to logTrace during background polling.
+ *                          - Added isExplicitRefresh parameter to getRawAmazonEndpointMap() to log masking entries as logWarn strictly during Force Device Refresh operations.
+ *  v1.8.11 (2026-09-20) - Targeted GUI Refresh Fix for REST Bridge Network Test:
+ *                          - Refactored btnTestBridge in appButtonHandler() to execute synchronously before returning mainPage().
+ *                          - Guaranteed state.lastBridgeTestResult is written to memory prior to dynamic page rendering so the GUI updates immediately upon button click.
+ *  v1.8.10 (2026-09-20) - Targeted Reconciliation & Feature Storm Elimination:
+ *                          - Separated raw authoritative Amazon endpoint retrieval (getRawAmazonEndpointMap) from UI family filtering (getDiscoveredDeviceMap). Toggling Category filters no longer deletes existing child devices.
+ *                          - Removed fetchDeviceFeatures() from periodic background syncDeviceStates() polling loop while preserving capability fetching during child creation, discovery refresh, and targeted child refresh.
+ *                          - Refactored refreshDeviceData(deviceId) to perform targeted single-child state and capability refresh when supplied with a deviceNetworkId.
+ *  v1.8.9 (2026-09-20) - Known Amazon API Bug Endpoint Masking:
+ *                         - Hardcoded explicit masking map for phantom/corrupt WHA endpoints 'EverywhereTwo' (abf36a9da0114483b860af9748b4b10b) and 'Office Test' (95bdc5e229e245a88f82e2adddf694d3).
+ *                         - Excluded masked endpoints from getDiscoveredDeviceMap() discovery map and state.discoveredDeviceCache.
+ *                         - Added clear UI callout card in Section 2 displaying the specific masked WHA devices and serial numbers.
+ *  v1.8.8 (2026-09-20) - Full Master Orchestration Engine & Authoritative Reconciliation Refactor:
+ *                         - Implemented robust syncDeviceStates() as the master synchronization engine between Amazon and Hubitat.
+ *                         - Authoritative Amazon Reconciliation: Automatically strips deleted or invalid DNIs from settings.selectedEchoes.
+ *                         - Automatic Orphan Cleanup: Deletes Hubitat child devices no longer present on Amazon server endpoint map.
+ *                         - Dynamic Label & Name Sync: Automatically updates Hubitat child device labels and amazonDeviceName attributes when changed on Amazon.
+ *                         - Connected Capability Pipeline: Invokes fetchDeviceFeatures() during sync path to populate state.capabilitiesMap on child drivers.
+ *                         - Standardized Name Resolution Hierarchy: Aligned parent accountName resolution to dev.accountName ?: dev.deviceName ?: dev.label.
+ *                         - Wired btnRefreshDevices to trigger full cache clearing and syncDeviceStates() reconciliation directly.
+ *  v1.8.7 (2026-09-20) - Discovery Cache Invalidation & Stale Endpoint Cleanup:
+ *                         - Clears state.discoveredDeviceCache explicitly inside appButtonHandler() when btnRefreshDevices is clicked.
+ *                         - Ensures removed or renamed Alexa endpoints are updated immediately in UI dropdowns without retaining stale state keys.
+ *  v1.8.6 (2026-09-19) - Dynamic Dual-Driver Selection Architecture Sync:
+ *                         - Updated syncChildDevices() to inspect state.discoveredDeviceCache[dni].capabilities for TEMPERATURE_SENSOR or MOTION_DETECTION.
+ *                         - Routes child device creation to "Echos Speak Advanced W/Sensors Device" or "Echos Speak Advanced Standard Device".
+ *                         - Updated getDiscoveredDeviceMap() display options to indicate sensor capability status.
+ *                         - Renumbered Parent app version to align directly with v1.8.6 child drivers.
+ *  v1.6.1 (2026-09-19) - Alignment with Driver v1.7.3 Announcement Pipeline Streamlining:
+ *                         - Incremented version demarcation following removal of legacy announceAll command dispatch.
+ *  v1.6.0 (2026-09-18) - Shared Device Features & Shared Icon Base Location:
+ *                         - Inserted Category C: Shared Device Features into main GUI layout.
+ *                         - Added altIconLoc setting defaulting to "http://192.168.1.12/myicons/echos_speak/".
+ *                         - Added calcIconBasePath() and getIconBasePath() methods to serve child drivers.
+ *                         - Shifted Polling Schedule to Category D and System Diagnostics to Category E.
  *  v1.5.10 (2026-09-18) - Platform Environment Optimization & C-7 Alignment:
  *                          - Verified bridge dispatch pipelines for Hubitat C-7 platform environment (v2.4.4.156).
  *  v1.5.0 (2026-09-17) - Child Driver v1.6.0 Attribute Matrix & Discovery Cache Alignment:

@@ -1,4 +1,30 @@
- *  v1.6.15 (2026-09-18) - Hubitat C-7 Runtime Optimization & Numeric Parsing Safety:
+ *  v2.0.9 (2026-09-21) - PlayTextAndRestore Volume Parameter Addition
+ *  v2.0.8 (2026-09-21) - PlayText Pipeline Correction
+ *  v2.0.7 (2026-09-21) - Custom Notification Command Restoration
+ *  v2.0.6 (2026-09-21) - Custom Playback Transport Command Restoration
+ *  v2.0.5 (2026-09-21) - Server-Provided Track Artwork Direct Integration
+ *  v2.0.4 (2026-09-21) - Groovy Multimethod Compilation Fix (Hubitat 2.4.4.156)
+ *  v2.0.3 (2026-09-21) - Explicit GUI Initialize Command Addition
+ *  v2.0.2 (2026-09-21) - Target GUI Command Cleanup
+ *  v2.0.1 (2026-09-21) - Hubitat Capability Isolation & Transport Cleanup
+ *  v2.0.0 (2026-09-21) - Major Architecture Version Release & Driver Naming Standardization
+ *  v1.8.6 (2026-09-19) - Static Dual-Driver Architecture Separation (Sensors)
+ *  v1.8.5 (2026-09-19) - Static Platform Capability Declaration Restoration
+ *  v1.8.4 (2026-09-19) - Full Changelog History Restoration
+ *  v1.8.3 (2026-09-19) - Sensor Reading vs. Feature Flag Isolation & Diagnostic Logging
+ *  v1.8.2 (2026-09-19) - Feature Parsing & Attribute Recovery Fix
+ *  v1.8.1 (2026-09-19) - Strict Comprehensive Capability Map Guarding
+ *  v1.8.0 (2026-09-19) - Top-of-GUI Refresh Command Addition
+ *  v1.7.9 (2026-09-19) - Legacy Device Status Removal & State Consolidation
+ *  v1.7.8 (2026-09-19) - Authoritative 10-Key Capability Map & Dynamic Call Removal
+ *  v1.7.7 (2026-09-19) - Method Exception Fix & Static Capability Alignment
+ *  v1.7.6 (2026-09-19) - Mandatory Hubitat Capability Isolation
+ *  v1.7.5 (2026-09-19) - Authoritative Server Capability Contract Alignment
+ *  v1.7.4 (2026-09-19) - Dynamic Capability Registration & Overwatch Audit
+ *  v1.7.3 (2026-09-19) - Announcement Pipeline Streamlining
+ *  v1.7.2 (2026-09-18) - Capability State Optimization
+ *  v1.7.1 (2026-09-18) - Icon Filename & HTML Icon Image Separation
+ *  v1.7.0 (2026-09-18) - Shared Icon Repository Resolution Engine *  v1.6.15 (2026-09-18) - Hubitat C-7 Runtime Optimization & Numeric Parsing Safety:
  *                          - Verified elimination of unsupported Groovy .clamp() method calls across all driver commands.
  *                          - Added safe numeric checking for st.temperature to prevent BigDecimal coercion errors on null sensor states.
  *  v1.6.14 (2026-09-18) - Integer Clamp Method Exception Resolution:
