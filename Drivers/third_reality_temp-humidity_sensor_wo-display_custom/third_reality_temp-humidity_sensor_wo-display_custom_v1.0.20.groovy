@@ -1,12 +1,19 @@
 /**
- * Third Reality Temperature & Humidity Sensor w/Display (Custom)
- * Third Reality Zigbee 3.0 Device Model 3RTHS24BZ (LCD Display Model)
+ * Third Reality Temperature & Humidity Sensor wo/Display (Custom)
+ * Third Reality Zigbee 3.0 Device Model 3RTHS0224Z (No Display Model)
  * Device Driver for Hubitat Elevation
  *
  * Purpose:
- * Purpose-built custom driver for the Third Reality Temperature & Humidity Sensor w/Display (3RTHS24BZ).
- * Features hardware LCD screen offset calibration targeting private cluster 0xFF01 (hundredths scale: 100 = 1.0 unit),
- * confirmed-state synchronization, driver-side software delta filtering, software offset calibration, and passive activity watchdog monitoring.
+ * Purpose-built custom driver for the Third Reality Temperature & Humidity Sensor (3RTHS0224Z).
+ * Implements driver-side delta filtering and software offset calibration to eliminate
+ * excessive log chatter and unsolicited Zigbee report spam while providing high-resolution
+ * tile visualization attributes and phase-anchored health monitoring.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Native capability exposes a redundant "Ping" UI button and lacks persistent
+ *   phase-anchored scheduling and timeout guards.
  **/
 /**
  * Copyright 2026 James Shimota
@@ -25,28 +32,31 @@
  **/
 /**
  * Changelog:
- * v1.1.7   09/23/26    jshimota    Removed duplicate getSettingBool declaration that caused Groovy compilation error on hub.
- * v1.1.6   09/23/26    jshimota    Replaced active polling health check with passive activity watchdog in checkIn() and added lastActivity attribute.
- * v1.1.5   09/23/26    jshimota    Cleaned up event description phrasing to eliminate duplicate device name logging and changed log output text to 'temperature/humidity now <value>'.
- * v1.1.4   09/19/26    jshimota    Moved raw numeric temperature/humidity attribute event logs to trace level; preserved temp/humidity text logs as info level.
- * v1.1.3   09/14/26    jshimota    Optimized healthStatus emissions to use isStateChange: false to refresh lastActivity without event history log clutter.
- * v1.1.2   09/05/26    jshimota    Bug Review Fixes: Fixed hexStrToSignedInt conversion safety, resolved type casting inside isDelta(), patched general ZCL command router for cluster 0xFF01, and removed duplicate getSettingBool declaration.
- * v1.1.1   09/05/26    jshimota    Peer Code Review Revisions: Fixed fingerprint #2 definition, updated hardware LCD state variables to sync ONLY upon readback confirmation, cleaned 0xFF01 hex notation, and increased health timeout guard to 30s.
- * v1.1.0   09/05/26    jshimota    Production release: Finalized hardware LCD calibration preferences over cluster 0xFF01 (attrs 0x0031/0x0032/0x0033), purged diagnostic testing commands, and added general ZCL command router fix for 0xFF01 responses.
- * v1.0.10  09/05/26    jshimota    Added unit display state probes (attrs 0x0010/0x0011 on cluster 0xFF01) to automatically track physical screen C/F mode in state.deviceDisplayUnit.
- * v1.0.9   09/05/26    jshimota    Updated temperature calibration write commands to hundredths scale (100 = 1.0 deg) based on empirical testing, and added writeHumidityOffset for cluster 0xFF01 attribute 0x0032 testing.
- * v1.0.8   09/05/26    jshimota    Enforced direct HubMultiAction dispatch in queryPrivateCluster to prevent command queuing on sleepy end-devices.
- * v1.0.7   09/05/26    jshimota    Integrated hardware LCD screen offset calibration preferences targeting cluster 0xFF01 with verified tenths-scale conversion (10 = 1.0 deg).
- * v1.0.6   09/05/26    jshimota    Added writeCelsiusOffset and writeFahrenheitOffset test commands to conduct scaling experiment on cluster 0xFF01.
- * v1.0.5   09/05/26    jshimota    Removed cluster 0x0001 reporting configuration, added cluster 0xFF01 state variable diagnostic tracking (0x0031, 0x0032, 0x0033), and strictly separated driver software calibration from on-device calibration.
- * v1.0.4   09/05/26    jshimota    Verified cluster 0xFF01 (attrs 0x0031, 0x0032, 0x0033) responsiveness, suppressed 0x0001 cluster reporting chatter, and finalized production release.
- * v1.0.3   09/05/26    jshimota    Added queryPrivateCluster command and explicit raw parser logging for 0xFF01 (attrs 0x0031, 0x0032, 0x0033) to verify manufacturer calibration capability.
- * v1.0.2   09/05/26    jshimota    Added diagnostic cluster 0xFF01 query hook in refresh() and header documentation for LCD pairing states.
- * v1.0.1   09/05/26    jshimota    Adapted driver baseline for Model 3RTHS24BZ (LCD Display Model), updated driver definition name, and set importUrl path to third_reality_temp-humidity_sensor_w-display_custom.
+ * v1.1.20   09/23/26   jshimota    Cleaned up event description phrasing to eliminate duplicate device name logging and changed log output text to 'temperature/humidity now <value>'.
+ * v1.1.19   09/19/26   jshimota    Moved raw numeric temperature/humidity attribute event logs to trace level; preserved temp/humidity text logs as info level.
+ * v1.18     09/14/26   jshimota    Optimized healthStatus emissions to use isStateChange: false to refresh lastActivity without event history log clutter.
+ * v1.0.17   09/05/26   jshimota    Cleaned up updateFirmware log message to standard Hubitat API conventions.
+ * v1.0.16   09/05/26   jshimota    Reordered humidity processing math (raw offset -> round), and replaced forceNextEvent state flags with last_ value state invalidation on preference updates to let standard delta processing handle offset changes seamlessly.
+ * v1.0.15   09/05/26   jshimota    Hardened getSettingInteger with BigDecimal half-up rounding conversion and updated preference descriptions to clearly state integer enforcement for humidity fields.
+ * v1.0.14   09/05/26   jshimota    Updated humidityOffset preference type to integer number input to align with standard Hubitat RelativeHumidityMeasurement conventions.
+ * v1.0.13   09/05/26   jshimota    Fixed decimal range UI validation bug by changing endpoints to integers (-10..10 and 0..10), enforced minDelta >= 0.1 in code, added forced next event state flags on preference offset changes, restored COMMAND_TIMEOUT to 20s, and isolated initialize() unschedule logic.
+ * v1.0.12   09/05/26   jshimota    Updated header comments, metadata name to wo/Display, and importUrl to third_reality_temp-humidity_sensor_wo-display_custom path.
+ * v1.0.11   09/05/26   jshimota    Fixed NullPointerException in logMessage by replacing dynamic capitalize() with explicit string switch mapping for setting keys, resolving trace logging crashes in updated() and parse().
+ * v1.0.10   09/05/26   jshimota    Expanded tempDelta range boundary (0.1 to 10.0) to fix input validation rejection and dynamically format description text according to hub location scale.
+ * v1.0.09   09/05/26   jshimota    Restored COMMAND_TIMEOUT to 2 seconds for crisp health check timeout evaluations during normal scheduled execution.
+ * v1.0.08   09/05/26   jshimota    Expanded health check command timeout guard to 30 seconds for stacked sleepy end device requests and ensured assertDeviceOnline() auto-recovers offline states on any valid sensor payload.
+ * v1.0.07   09/05/26   jshimota    Updated naming and importUrl path from Sensor Lite to Third Reality Temperature & Humidity Sensor (Custom).
+ * v1.0.06   09/05/26   jshimota    Fixed health check timeout cancellation bug by isolating unschedule to basic cluster 0x0000 response, allowed valid sensor traffic to assert online status for sleepy devices, corrected naming to Sensor Lite (3RTHS0224Z), and documented OTA as experimental.
+ * v1.0.05   09/05/26   jshimota    Isolated cluster 0x0001 reporting configuration strictly to Battery Percentage (0x0021) to purge leftover 0x86 status traces, verified humidity parsing, space-separated temperatureText, and delta filtering.
+ * v1.0.04   09/05/26   jshimota    Fixed MissingMethodException in parseHumidityCluster by enforcing explicit BigDecimal types on math operations, added space separator in temperatureText ("X °F"), and added timeout unschedule guard on all valid responses.
+ * v1.0.03   09/05/26   jshimota    Removed unsupported battery voltage attribute (0x0020) reporting request to fix Zigbee 0x86 error and expanded health check timeout guard to 20s for sleepy end devices.
+ * v1.0.02   09/05/26   jshimota    Synchronized driver naming and versioning baseline for Third Reality Temp & Humidity Sensor w/Display (Custom).
+ * v1.0.01   09/05/26   jshimota    revamped naming device and driver
+ * v1.0.00   09/05/26   jshimota    Initial purpose-built release for 3RTHS0224Z model featuring driver-side delta filtering, software offset calibration, custom tile formatting, and phase-anchored health monitoring.
 **/
 
-static String version() { return '1.1.7' }
-def timeStamp() { return "2026/09/23 02:15 PM" }
+static String version() { return '1.1.20' }
+def timeStamp() { return "2026/09/23 11:35 AM" }
 
 import groovy.transform.Field
 import hubitat.zigbee.zcl.DataType
@@ -54,10 +64,10 @@ import java.math.RoundingMode
 
 metadata {
     definition(
-        name: "Third Reality Temperature & Humidity Sensor w/Display (Custom)",
+        name: "Third Reality Temperature & Humidity Sensor wo/Display (Custom)",
         namespace: "jshimota", 
         author: "James Shimota",
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_temp-humidity_sensor_w-display_custom/third_reality_temp-humidity_sensor_w-display_custom.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_temp-humidity_sensor_wo-display_custom/third_reality_temp-humidity_sensor_wo-display_custom.groovy"
     ) {
         capability "Battery"
         capability "Configuration"
@@ -66,33 +76,30 @@ metadata {
         capability "Sensor"
         capability "TemperatureMeasurement"
 
+        command "Health Check"
         command "updateFirmware"
         command "resetDriver"
 
-        attribute "lastActivity", "string"
         attribute "healthStatus", "enum", ["unknown", "offline", "online"]
         attribute "temperatureText", "string"
         attribute "humidityText", "string"
 
-        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0001,0003,0020,0402,0405,FF01", outClusters: "0019", model: "3RTHS24BZ", manufacturer: "Third Reality", controllerType: "ZGB"
-        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0001,0003,0020,0402,0405,FF01", outClusters: "0019", model: "3RTHS24BZ", manufacturer: "Third Reality, Inc", controllerType: "ZGB"
+        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0001,0003,0020,0402,0405", outClusters: "0019", model: "3RTHS0224Z", manufacturer: "Third Reality", controllerType: "ZGB"
+        fingerprint profileId: "0104", endpointId: "01", inClusters: "0000,0001,0003,0020,0402,0405", outClusters: "0019", model: "3RTHS0224Z", manufacturer: "Third Reality, Inc", controllerType: "ZGB"
     }
 
     preferences {
         String tempUnit = location.temperatureScale ?: "F"
         
-        // Software Driver Offset Settings
-        input name: "tempOffset", type: "decimal", title: "<b>Driver Temperature Offset</b>", description: "<i>Adjust reported temperature in Hubitat software (-10.0 to +10.0 °${tempUnit}).</i>", range: "-10..10", defaultValue: 0.0
+        // Temperature Settings (Decimal)
+        input name: "tempOffset", type: "decimal", title: "<b>Temperature Offset</b>", description: "<i>Adjust temperature reading (-10.0 to +10.0 °${tempUnit}).</i>", range: "-10..10", defaultValue: 0.0
         input name: "tempDelta", type: "decimal", title: "<b>Temperature Minimum Change Delta</b>", description: "<i>Minimum temperature change required to emit an event (0.1 to 10.0 °${tempUnit}). Evaluated on rounded 1-decimal value.</i>", range: "0..10", defaultValue: 0.2
 
-        input name: "humidityOffset", type: "number", title: "<b>Driver Humidity Offset</b>", description: "<i>Adjust reported relative humidity in Hubitat software (-20 to +20 %). Integers only.</i>", range: "-20..20", defaultValue: 0
-        input name: "humidityDelta", type: "number", title: "<b>Humidity Minimum Change Delta</b>", description: "<i>Minimum humidity % change required to emit an event (1 to 10 %). Integers only.</i>", range: "1..10", defaultValue: 1
+        // Humidity Settings (Integer Enforced)
+        input name: "humidityOffset", type: "number", title: "<b>Humidity Offset</b>", description: "<i>Adjust relative humidity reading (-20 to +20 %). Integers only; decimals will be rounded.</i>", range: "-20..20", defaultValue: 0
+        input name: "humidityDelta", type: "number", title: "<b>Humidity Minimum Change Delta</b>", description: "<i>Minimum humidity % change required to emit an event (1 to 10 %). Integers only; decimals will be rounded.</i>", range: "1..10", defaultValue: 1
 
-        // Hardware LCD Display Calibration Settings (Cluster 0xFF01)
-        input name: "lcdTempOffset", type: "decimal", title: "<b>Hardware LCD Temperature Offset</b>", description: "<i>Adjust offset stored directly on physical LCD screen (-10.0 to +10.0 °${tempUnit}). Hardware uses hundredths scale (100 = 1.0°). Updates within ~10 seconds or immediately upon pressing physical wake button.</i>", range: "-10..10", defaultValue: 0.0
-        input name: "lcdHumidityOffset", type: "number", title: "<b>Hardware LCD Humidity Offset</b>", description: "<i>Adjust offset stored directly on physical LCD screen (-20 to +20 %). Hardware uses hundredths scale (100 = 1.0% RH). Physical LCD screen rounds to nearest whole percentage. Updates within ~10 seconds or immediately upon pressing physical wake button.</i>", range: "-20..20", defaultValue: 0
-
-        input name: "checkInInterval", type: "enum", title: "<b>Activity Check-In Watchdog Interval</b>", options: ["1":"1 Hour", "3":"3 Hours", "6":"6 Hours", "12":"12 Hours", "24":"24 Hours"], defaultValue: "12", required: true
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver verifies device online status.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -110,19 +117,6 @@ private void checkAndLogVersionDemarcation() {
         logTrace "=================== DRIVER VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
         state.driverVersion = currentVer
     }
-}
-
-// NPE-Safe Timestamp Helper Routine
-private String getTimestamp() {
-    TimeZone tz = location?.timeZone ?: TimeZone.getDefault()
-    return new Date().format("yyyy-MM-dd HH:mm:ss", tz)
-}
-
-// Record Inbound Activity Helper Routine
-private void recordActivity() {
-    state.lastActivityTime = now()
-    sendEvent(name: "lastActivity", value: getTimestamp(), displayed: false)
-    updateAttribute("healthStatus", "online")
 }
 
 // NPE-Safe BigDecimal Preference Conversion Helper
@@ -149,22 +143,6 @@ private Integer getSettingInteger(String key, Integer defaultVal = 0) {
     }
 }
 
-private Boolean getSettingBool(String key, Boolean defaultVal = false) {
-    return settings[key] != null ? settings[key] as Boolean : defaultVal
-}
-
-// Safe Signed 16-Bit Hex Conversion Routine
-private Integer parseSignedInt16(String hex) {
-    if (!hex) return 0
-    try {
-        int val = Integer.parseInt(hex, 16)
-        return (val & 0x8000) ? (val - 0x10000) : val
-    } catch (Exception e) {
-        logWarn "Failed to parse 16-bit hex string [${hex}]: ${e.message}"
-        return 0
-    }
-}
-
 /* =========================================================================================
    HUBITAT LIFECYCLE ROUTINES
    ========================================================================================= */
@@ -172,6 +150,8 @@ private Integer parseSignedInt16(String hex) {
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
+    
+    initializeHealthCheckPhase()
     sendEvent(name: "healthStatus", value: "unknown")
 
     initialize(true)
@@ -196,8 +176,6 @@ void updated() {
         state.lastHumidityOffset = currentHumidityOffset
     }
 
-    syncHardwareLcdOffsets()
-
     initialize(false)
     runIn(1, "configure")
 }
@@ -206,11 +184,12 @@ List<String> configure() {
     checkAndLogVersionDemarcation()
     logInfo "Configuring device reporting intervals..."
 
-    setupSchedule()
-
     List<String> cmds = []
+
     cmds += zigbee.configureReporting(0x0402, 0x0000, DataType.INT16, 10, 3600, 10, [:], DELAY_MS)
     cmds += zigbee.configureReporting(0x0405, 0x0000, DataType.UINT16, 10, 3600, 100, [:], DELAY_MS)
+    cmds += zigbee.configureReporting(0x0001, 0x0021, DataType.UINT8, 300, 21600, 2, [:], DELAY_MS)
+    cmds += executeHealthCheck()
 
     runIn(5, "refresh")
     return cmds
@@ -218,12 +197,17 @@ List<String> configure() {
 
 private void initialize(Boolean isInstall = false) {
     checkAndLogVersionDemarcation()
+    
+    unschedule("executeHealthCheckScheduled")
 
     if (device.currentValue("healthStatus") == null) {
         sendEvent(name: "healthStatus", value: "unknown")
     }
 
-    setupSchedule()
+    final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
+    if (interval > 0) {
+        scheduleHealthCheck("executeHealthCheckScheduled", interval)
+    }
 
     if (isInstall) {
         device.updateSetting("logDebugEnable", [type: "bool", value: true])
@@ -236,70 +220,74 @@ private void initialize(Boolean isInstall = false) {
 }
 
 /* =========================================================================================
-   SCHEDULED WATCHDOG & LCD CALIBRATION
+   COMMAND IMPLEMENTATIONS & HEALTH CHECK
    ========================================================================================= */
 
-def checkIn() {
-    logDebug "Executing scheduled passive check-in evaluation"
-    sendEvent(name: "checkIn", value: now(), displayed: false, isStateChange: true)
-
-    Integer checkInHours = (checkInInterval ?: "12").toString().toInteger()
-    Long allowedThresholdMs = (checkInHours * 1.5 * 3600 * 1000) as Long
-    Long lastActivity = state.lastActivityTime != null ? (state.lastActivityTime as Long) : 0L
-    Long elapsedMs = now() - lastActivity
-
-    if (lastActivity > 0 && elapsedMs > allowedThresholdMs) {
-        logWarn "No activity received in ${(elapsedMs / 3600000.0).setScale(1, BigDecimal.ROUND_HALF_UP)} hours (threshold: ${(checkInHours * 1.5)} hours). Device marked offline."
-        updateAttribute("healthStatus", "offline")
-    } else if (lastActivity > 0) {
-        logDebug "Passive check-in verified active (last activity ${(elapsedMs / 60000.0).setScale(1, BigDecimal.ROUND_HALF_UP)} minutes ago)"
-        updateAttribute("healthStatus", "online")
-    }
+List<String> "Health Check"() {
+    return executeHealthCheck()
 }
 
-def setupSchedule() {
-    unschedule("checkIn")
-    String interval = checkInInterval ?: "12"
-    logDebug "Setting activity check-in watchdog interval to ${interval} hour(s)"
-    switch(interval) {
-        case "1":
-            runEvery1Hour("checkIn"); break
-        case "3":
-            runEvery3Hours("checkIn"); break
-        case "6":
-            schedule("0 0 */6 ? * *", "checkIn"); break
-        case "12":
-            schedule("0 0 */12 ? * *", "checkIn"); break
-        case "24":
-            schedule("0 0 0 ? * *", "checkIn"); break
-        default:
-            schedule("0 0 */12 ? * *", "checkIn"); break
-    }
-}
-
-private void syncHardwareLcdOffsets() {
-    Boolean isFahrenheit = location.temperatureScale == "F"
-    BigDecimal targetLcdTempOffset = getSettingBigDecimal("lcdTempOffset", 0.0G)
-    Integer targetLcdHumidityOffset = getSettingInteger("lcdHumidityOffset", 0)
-
-    List<String> cmds = []
-
-    if (state.lastLcdTempOffset != targetLcdTempOffset) {
-        int rawTempInt = (targetLcdTempOffset * 100G).setScale(0, RoundingMode.HALF_UP).intValue()
-        int attrId = isFahrenheit ? 0x0033 : 0x0031
-        logInfo "Updating Hardware LCD Temperature Offset to ${targetLcdTempOffset}°${isFahrenheit ? 'F' : 'C'} (raw INT16: ${rawTempInt})..."
-        cmds += zigbee.writeAttribute(0xFF01, attrId, DataType.INT16, rawTempInt, [mfgCode: 0x1233], DELAY_MS)
-        cmds += zigbee.readAttribute(0xFF01, attrId, [mfgCode: 0x1233], DELAY_MS)
-    }
-
-    if (state.lastLcdHumidityOffset != targetLcdHumidityOffset) {
-        int rawHumidityInt = targetLcdHumidityOffset * 100
-        logInfo "Updating Hardware LCD Humidity Offset to ${targetLcdHumidityOffset}% RH (raw INT16: ${rawHumidityInt})..."
-        cmds += zigbee.writeAttribute(0xFF01, 0x0032, DataType.INT16, rawHumidityInt, [mfgCode: 0x1233], DELAY_MS)
-        cmds += zigbee.readAttribute(0xFF01, 0x0032, [mfgCode: 0x1233], DELAY_MS)
-    }
-
+void executeHealthCheckScheduled() {
+    List<String> cmds = executeHealthCheck()
     if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+private List<String> executeHealthCheck() {
+    logDebug "Executing Health Check..."
+    scheduleCommandTimeoutCheck()
+    return zigbee.readAttribute(zigbee.BASIC_CLUSTER, HEALTH_CHECK_ATTR_ID, [:], 0)
+}
+
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60:
+            schedule("0 ${m} * ? * * *", methodToSchedule); break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule); break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule); break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule); break
+        case 1440:
+            schedule("0 ${m} ${h} ? * * *", methodToSchedule); break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
+    }
+}
+
+private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
+    runIn(delay, "deviceCommandTimeout", [overwrite: true])
+}
+
+void deviceCommandTimeout() {
+    logWarn "No Health Check response received (device offline?)"
+    updateAttribute("healthStatus", "offline")
+}
+
+private void assertDeviceOnline() {
+    sendEvent(name: "healthStatus", value: "online", isStateChange: false, descriptionText: "${device.displayName} is online")
 }
 
 /* =========================================================================================
@@ -314,9 +302,6 @@ List<String> refresh() {
     cmds += zigbee.readAttribute(0x0405, 0x0000, [:], DELAY_MS)
     cmds += zigbee.readAttribute(0x0001, 0x0021, [:], DELAY_MS)
     cmds += zigbee.readAttribute(zigbee.BASIC_CLUSTER, FIRMWARE_VERSION_ID, [:], DELAY_MS)
-    cmds += zigbee.readAttribute(0xFF01, 0x0031, [mfgCode: 0x1233], DELAY_MS)
-    cmds += zigbee.readAttribute(0xFF01, 0x0032, [mfgCode: 0x1233], DELAY_MS)
-    cmds += zigbee.readAttribute(0xFF01, 0x0033, [mfgCode: 0x1233], DELAY_MS)
 
     return cmds
 }
@@ -328,8 +313,6 @@ List<String> updateFirmware() {
 
 void parse(final String description) {
     logDebug "Raw description -> ${description}"
-    recordActivity()
-
     final Map descMap = zigbee.parseDescriptionAsMap(description)
     if (!descMap) return
 
@@ -353,9 +336,6 @@ void parse(final String description) {
         case 0x0405:
             parseHumidityCluster(descMap)
             break
-        case 0xFF01:
-            parsePrivateCluster(descMap)
-            break
         default:
             logDebug "Unhandled cluster message: ${descMap}"
             break
@@ -365,7 +345,13 @@ void parse(final String description) {
 void parseBasicCluster(final Map descMap) {
     if (descMap.attrInt == null) return
     switch (descMap.attrInt as Integer) {
+        case HEALTH_CHECK_ATTR_ID:
+            unschedule("deviceCommandTimeout")
+            logDebug "Health Check response received..."
+            sendEvent(name: "healthStatus", value: "online", isStateChange: false, descriptionText: "${device.displayName} is online")
+            break
         case FIRMWARE_VERSION_ID:
+            assertDeviceOnline()
             final String versionStr = descMap.value ?: "unknown"
             logDebug "Device firmware version is ${versionStr}"
             updateDataValue("softwareBuild", versionStr)
@@ -375,6 +361,7 @@ void parseBasicCluster(final Map descMap) {
 
 void parsePowerCluster(final Map descMap) {
     if (descMap.attrInt == null || descMap.value == null) return
+    assertDeviceOnline()
     final long rawValue = hexStrToUnsignedInt(descMap.value)
 
     switch (descMap.attrInt as Integer) {
@@ -387,8 +374,9 @@ void parsePowerCluster(final Map descMap) {
 
 void parseTemperatureCluster(final Map descMap) {
     if (descMap.attrInt != 0x0000 || descMap.value == null || descMap.value == "FFFF") return
+    assertDeviceOnline()
 
-    int rawTemp = parseSignedInt16(descMap.value)
+    int rawTemp = hexStrToSignedInt(descMap.value)
     BigDecimal celsius = new BigDecimal(rawTemp).divide(100G, 2, RoundingMode.HALF_UP)
     
     Boolean isFahrenheit = location.temperatureScale == "F"
@@ -397,7 +385,7 @@ void parseTemperatureCluster(final Map descMap) {
     BigDecimal offset = getSettingBigDecimal("tempOffset", 0.0G)
     BigDecimal finalTemp = (scaleTemp + offset).setScale(1, RoundingMode.HALF_UP)
 
-    Object currentVal = device.currentValue("temperature")
+    BigDecimal currentVal = device.currentValue("temperature") as BigDecimal
     
     BigDecimal minDelta = getSettingBigDecimal("tempDelta", 0.2G)
     if (minDelta < 0.1G) minDelta = 0.1G
@@ -411,6 +399,7 @@ void parseTemperatureCluster(final Map descMap) {
 
 void parseHumidityCluster(final Map descMap) {
     if (descMap.attrInt != 0x0000 || descMap.value == null || descMap.value == "FFFF") return
+    assertDeviceOnline()
 
     int rawHumidity = hexStrToUnsignedInt(descMap.value)
     BigDecimal rawPct = new BigDecimal(rawHumidity).divide(100G, 2, RoundingMode.HALF_UP)
@@ -423,7 +412,7 @@ void parseHumidityCluster(final Map descMap) {
 
     BigDecimal finalHumidity = calculated.setScale(0, RoundingMode.HALF_UP)
 
-    Object currentVal = device.currentValue("humidity")
+    BigDecimal currentVal = device.currentValue("humidity") as BigDecimal
     
     Integer minDeltaInt = getSettingInteger("humidityDelta", 1)
     if (minDeltaInt < 1) minDeltaInt = 1
@@ -435,40 +424,8 @@ void parseHumidityCluster(final Map descMap) {
     }
 }
 
-void parsePrivateCluster(final Map descMap) {
-    if (descMap.attrInt == null || descMap.value == null) return
-
-    int rawVal = parseSignedInt16(descMap.value)
-    Boolean isFahrenheit = location.temperatureScale == "F"
-    
-    switch (descMap.attrInt as Integer) {
-        case 0x0031:
-            state.deviceCalCelsius = (rawVal / 100.0G).setScale(2, RoundingMode.HALF_UP)
-            if (!isFahrenheit) state.lastLcdTempOffset = state.deviceCalCelsius
-            logDebug "Private Cluster 0xFF01 Celsius Calibration Offset: ${state.deviceCalCelsius}°C (raw: ${rawVal})"
-            break
-        case 0x0032:
-            state.deviceCalHumidity = (rawVal / 100.0G).setScale(2, RoundingMode.HALF_UP)
-            state.lastLcdHumidityOffset = state.deviceCalHumidity.setScale(0, RoundingMode.HALF_UP).intValue()
-            logDebug "Private Cluster 0xFF01 Humidity Calibration Offset: ${state.deviceCalHumidity}% RH (raw: ${rawVal})"
-            break
-        case 0x0033:
-            state.deviceCalFahrenheit = (rawVal / 100.0G).setScale(2, RoundingMode.HALF_UP)
-            if (isFahrenheit) state.lastLcdTempOffset = state.deviceCalFahrenheit
-            logDebug "Private Cluster 0xFF01 Fahrenheit Calibration Offset: ${state.deviceCalFahrenheit}°F (raw: ${rawVal})"
-            break
-    }
-}
-
 void parseGeneralCommandResponse(final Map descMap) {
     if (!descMap.command) return
-    String cmdStr = descMap.command.toString()
-    
-    if (descMap.clusterInt == 0xFF01 && (cmdStr == "01" || cmdStr == "1")) {
-        parsePrivateCluster(descMap)
-        return
-    }
-    
     logTrace "General command response cluster ${descMap.clusterInt}: ${descMap.command}"
 }
 
@@ -479,9 +436,15 @@ void parseGeneralCommandResponse(final Map descMap) {
 void resetDriver() {
     logInfo "Starting full driver reset..."
     
+    Object savedHour = state.healthCheckStartHour
+    Object savedMinute = state.healthCheckStartMinute
+
     clearAllSchedules()
     clearAllAttributes()
     clearAllDriverStates()
+
+    if (savedHour != null) state.healthCheckStartHour = savedHour
+    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
 
     initialize(false)
     logInfo "Driver reset completed."
@@ -527,17 +490,11 @@ private void updateAttribute(final String attribute, final Object value, final S
     sendEvent(name: attribute, value: value, unit: unit, type: type, isStateChange: true, descriptionText: descriptionText)
 }
 
-private boolean isDelta(final BigDecimal value, final Object previousValueObj, final BigDecimal minimumChange) {
-    if (previousValueObj == null || minimumChange == null || minimumChange <= 0) return true
-    try {
-        BigDecimal previousValue = new BigDecimal(previousValueObj.toString())
-        boolean result = (value - previousValue).abs() >= minimumChange
-        logDebug "isDelta(value: ${value}, prev: ${previousValue}, min: ${minimumChange}) = ${result}"
-        return result
-    } catch (Exception e) {
-        logWarn "Failed to evaluate isDelta for [${value}] vs [${previousValueObj}]: ${e.message}"
-        return true
-    }
+private boolean isDelta(final BigDecimal value, final BigDecimal previousValue, final BigDecimal minimumChange) {
+    if (previousValue == null || minimumChange == null || minimumChange <= 0) return true
+    boolean result = (value - previousValue).abs() >= minimumChange
+    logDebug "isDelta(value: ${value}, prev: ${previousValue}, min: ${minimumChange}) = ${result}"
+    return result
 }
 
 void disableDebugLogging() {
@@ -574,5 +531,17 @@ private void logTrace(String msg) { logMessage("trace", msg) }
 private void logWarn(String msg)  { logMessage("warn", msg) }
 private void logError(String msg) { logMessage("error", msg) }
 
+private Boolean getSettingBool(String key, Boolean defaultVal = false) {
+    return settings[key] != null ? settings[key] as Boolean : defaultVal
+}
+
 @Field static final int FIRMWARE_VERSION_ID = 0x4000
+@Field static final int HEALTH_CHECK_ATTR_ID = 0x0000
+
+@Field static final Map HealthCheckIntervalOpts = [
+    defaultValue: 480,
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
+]
+
+@Field static final int COMMAND_TIMEOUT = 20
 @Field static final int DELAY_MS = 200

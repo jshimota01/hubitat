@@ -5,7 +5,7 @@
  * Purpose:
  * Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
  * Features Thermostat Controller functionality, locked 'Auto' dashboard dual-setpoint display support,
- * custom health tracking, and maintenance routines.
+ * passive temperature sensor health tracking, and maintenance routines.
  **/
 /**
  * Copyright 2026 James Shimota / Original 2020 Nelson Clark
@@ -24,6 +24,7 @@
  **/
 /**
  * Changelog:
+ * v2.7.0    09/23/26    jshimota    Ripped out active scheduled health checks/Ping commands and converted healthStatus to a passive sensor update watchdog evaluated inside evaluateMode().
  * v2.6.0    09/18/26    jshimota    Prevented physical mode promotion to 'heat'/'auto' on setpoint commands received while OFF. Restricted sensor update timeout Emergency Stop enforcement strictly to active heating/cooling states to eliminate idle timeout loops and unwanted preEmergencyMode autorecovery cycles. Added enableEmergencyStopOnTimeout toggle preference.
  * v2.5.2    09/06/26    jshimota    Promoted physicalThermostatMode to 'heat' inside setHeatingSetpoint when mode is OFF to ensure manual setpoint changes drive outlets correctly.
  * v2.5.1    09/05/26    jshimota    Increased maximum heating setpoint limit (maxHeatTemp / maxHeatingSetpoint) from 80 °F to 90 °F (32.0 °C).
@@ -44,8 +45,8 @@
 import groovy.json.JsonOutput
 import groovy.transform.Field
 
-static String version() { return '2.6.0' }
-def timeStamp() { return "2026/09/18 09:00 AM" }
+static String version() { return '2.7.0' }
+def timeStamp() { return "2026/09/23 02:30 PM" }
 
 metadata {
     definition (
@@ -82,7 +83,6 @@ metadata {
         attribute "physicalThermostatMode", "string"
 
         // Custom Commands
-        command "Health Check"
         command "heatUp"
         command "heatDown"
         command "coolUp"
@@ -97,7 +97,6 @@ metadata {
     preferences {
         input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i>When enabled, locks thermostatMode attribute to 'auto' so dashboard tiles preserve dual heat/cool setpoint controls.</i>", defaultValue: true, required: true
         input name: "enableEmergencyStopOnTimeout", type: "bool", title: "<b>Enable Sensor Timeout Emergency Stop</b>", description: "<i>When enabled, shuts down active heating/cooling if temperature sensor updates stop for longer than Max Update Interval.</i>", defaultValue: true, required: true
-        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify temperature sensor updates.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
@@ -128,8 +127,6 @@ void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
     updateAttribute("driverVersion", version())
-    
-    initializeHealthCheckPhase()
     updateAttribute("healthStatus", "unknown")
 
     initialize(true)
@@ -156,9 +153,8 @@ def configure() {
     initialize(false)
     sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["auto", "cool", "heat", "off"])])
     
-    List<String> cmds = []
-    cmds += executePing()
-    return cmds
+    evaluateMode()
+    return []
 }
 
 def refresh() {
@@ -235,13 +231,6 @@ private void initialize(Boolean isInstall = false) {
         }
     }
 
-    final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
-    if (interval > 0) {
-        scheduleHealthCheck("executePing", interval)
-    } else {
-        unschedule("executePing")
-    }
-
     if (isInstall) {
         device.updateSetting("logDebugEnable", [type: "bool", value: true])
         logInfo "Debug logging enabled for 30 minutes."
@@ -252,87 +241,6 @@ private void initialize(Boolean isInstall = false) {
     } else {
         unschedule("disableDebugLogging")
     }
-}
-
-/* =========================================================================================
-   HEALTH CHECK ROUTINE ARCHITECTURE
-   ========================================================================================= */
-
-List<String> "Health Check"() {
-    return executePing()
-}
-
-private List<String> executePing() {
-    logDebug "Executing Health Check..."
-    scheduleCommandTimeoutCheck()
-    
-    def nowMs = now()
-    def lastUpdate = state.lastTempUpdate ?: nowMs
-    def maxInterval = (device.currentValue("maxUpdateInterval") ?: 180) as Long
-    def maxIntervalMs = maxInterval * 60000
-
-    if ((nowMs - lastUpdate) < maxIntervalMs) {
-        unschedule("deviceCommandTimeout")
-        updateAttribute("healthStatus", "online")
-    } else {
-        logWarn "Virtual thermostat temperature sensor health status is stale (last update > ${maxInterval} mins)."
-    }
-
-    return []
-}
-
-private void initializeHealthCheckPhase() {
-    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
-    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
-}
-
-private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
-    unschedule(methodToSchedule)
-    initializeHealthCheckPhase()
-
-    final int h = state.healthCheckStartHour as Integer
-    final int m = state.healthCheckStartMinute as Integer
-
-    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
-
-    switch (intervalMin) {
-        case 60:
-            schedule("0 ${m} * ? * * *", methodToSchedule)
-            break
-        case 240:
-            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
-            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
-            break
-        case 480:
-            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
-            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
-            break
-        case 720:
-            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
-            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
-            break
-        case 1440:
-            schedule("0 ${m} ${h} ? * * *", methodToSchedule)
-            break
-        default:
-            if (intervalMin >= 60) {
-                int hours = intervalMin / 60
-                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
-            } else {
-                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
-            }
-            break
-    }
-}
-
-private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
-    unschedule("deviceCommandTimeout")
-    runIn(delay, "deviceCommandTimeout")
-}
-
-void deviceCommandTimeout() {
-    logWarn "No Health Check response received within timeout window (sensor offline?)"
-    updateAttribute("healthStatus", "offline")
 }
 
 /* =========================================================================================
@@ -810,10 +718,3 @@ private void logError(String msg) { logMessage("error", msg) }
 private Boolean getSettingBool(String key, Boolean defaultVal = false) {
     return settings[key] != null ? settings[key] as Boolean : defaultVal
 }
-
-@Field static final Map HealthCheckIntervalOpts = [
-    defaultValue: 480,
-    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
-]
-
-@Field static final int COMMAND_TIMEOUT = 10

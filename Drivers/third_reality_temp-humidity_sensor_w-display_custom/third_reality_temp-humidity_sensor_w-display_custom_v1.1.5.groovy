@@ -6,7 +6,13 @@
  * Purpose:
  * Purpose-built custom driver for the Third Reality Temperature & Humidity Sensor w/Display (3RTHS24BZ).
  * Features hardware LCD screen offset calibration targeting private cluster 0xFF01 (hundredths scale: 100 = 1.0 unit),
- * confirmed-state synchronization, driver-side software delta filtering, software offset calibration, and passive activity watchdog monitoring.
+ * confirmed-state synchronization, driver-side software delta filtering, software offset calibration, and phase-anchored health monitoring.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Native capability exposes a redundant "Ping" UI button and lacks persistent
+ *   phase-anchored scheduling and timeout guards.
  **/
 /**
  * Copyright 2026 James Shimota
@@ -25,8 +31,6 @@
  **/
 /**
  * Changelog:
- * v1.1.7   09/23/26    jshimota    Removed duplicate getSettingBool declaration that caused Groovy compilation error on hub.
- * v1.1.6   09/23/26    jshimota    Replaced active polling health check with passive activity watchdog in checkIn() and added lastActivity attribute.
  * v1.1.5   09/23/26    jshimota    Cleaned up event description phrasing to eliminate duplicate device name logging and changed log output text to 'temperature/humidity now <value>'.
  * v1.1.4   09/19/26    jshimota    Moved raw numeric temperature/humidity attribute event logs to trace level; preserved temp/humidity text logs as info level.
  * v1.1.3   09/14/26    jshimota    Optimized healthStatus emissions to use isStateChange: false to refresh lastActivity without event history log clutter.
@@ -45,8 +49,8 @@
  * v1.0.1   09/05/26    jshimota    Adapted driver baseline for Model 3RTHS24BZ (LCD Display Model), updated driver definition name, and set importUrl path to third_reality_temp-humidity_sensor_w-display_custom.
 **/
 
-static String version() { return '1.1.7' }
-def timeStamp() { return "2026/09/23 02:15 PM" }
+static String version() { return '1.1.5' }
+def timeStamp() { return "2026/09/23 11:35 AM" }
 
 import groovy.transform.Field
 import hubitat.zigbee.zcl.DataType
@@ -66,10 +70,10 @@ metadata {
         capability "Sensor"
         capability "TemperatureMeasurement"
 
+        command "Health Check"
         command "updateFirmware"
         command "resetDriver"
 
-        attribute "lastActivity", "string"
         attribute "healthStatus", "enum", ["unknown", "offline", "online"]
         attribute "temperatureText", "string"
         attribute "humidityText", "string"
@@ -92,7 +96,7 @@ metadata {
         input name: "lcdTempOffset", type: "decimal", title: "<b>Hardware LCD Temperature Offset</b>", description: "<i>Adjust offset stored directly on physical LCD screen (-10.0 to +10.0 °${tempUnit}). Hardware uses hundredths scale (100 = 1.0°). Updates within ~10 seconds or immediately upon pressing physical wake button.</i>", range: "-10..10", defaultValue: 0.0
         input name: "lcdHumidityOffset", type: "number", title: "<b>Hardware LCD Humidity Offset</b>", description: "<i>Adjust offset stored directly on physical LCD screen (-20 to +20 %). Hardware uses hundredths scale (100 = 1.0% RH). Physical LCD screen rounds to nearest whole percentage. Updates within ~10 seconds or immediately upon pressing physical wake button.</i>", range: "-20..20", defaultValue: 0
 
-        input name: "checkInInterval", type: "enum", title: "<b>Activity Check-In Watchdog Interval</b>", options: ["1":"1 Hour", "3":"3 Hours", "6":"6 Hours", "12":"12 Hours", "24":"24 Hours"], defaultValue: "12", required: true
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver verifies device online status.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
@@ -110,19 +114,6 @@ private void checkAndLogVersionDemarcation() {
         logTrace "=================== DRIVER VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
         state.driverVersion = currentVer
     }
-}
-
-// NPE-Safe Timestamp Helper Routine
-private String getTimestamp() {
-    TimeZone tz = location?.timeZone ?: TimeZone.getDefault()
-    return new Date().format("yyyy-MM-dd HH:mm:ss", tz)
-}
-
-// Record Inbound Activity Helper Routine
-private void recordActivity() {
-    state.lastActivityTime = now()
-    sendEvent(name: "lastActivity", value: getTimestamp(), displayed: false)
-    updateAttribute("healthStatus", "online")
 }
 
 // NPE-Safe BigDecimal Preference Conversion Helper
@@ -172,6 +163,8 @@ private Integer parseSignedInt16(String hex) {
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
+    
+    initializeHealthCheckPhase()
     sendEvent(name: "healthStatus", value: "unknown")
 
     initialize(true)
@@ -206,11 +199,11 @@ List<String> configure() {
     checkAndLogVersionDemarcation()
     logInfo "Configuring device reporting intervals..."
 
-    setupSchedule()
-
     List<String> cmds = []
+
     cmds += zigbee.configureReporting(0x0402, 0x0000, DataType.INT16, 10, 3600, 10, [:], DELAY_MS)
     cmds += zigbee.configureReporting(0x0405, 0x0000, DataType.UINT16, 10, 3600, 100, [:], DELAY_MS)
+    cmds += executeHealthCheck()
 
     runIn(5, "refresh")
     return cmds
@@ -218,12 +211,17 @@ List<String> configure() {
 
 private void initialize(Boolean isInstall = false) {
     checkAndLogVersionDemarcation()
+    
+    unschedule("executeHealthCheckScheduled")
 
     if (device.currentValue("healthStatus") == null) {
         sendEvent(name: "healthStatus", value: "unknown")
     }
 
-    setupSchedule()
+    final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
+    if (interval > 0) {
+        scheduleHealthCheck("executeHealthCheckScheduled", interval)
+    }
 
     if (isInstall) {
         device.updateSetting("logDebugEnable", [type: "bool", value: true])
@@ -236,45 +234,11 @@ private void initialize(Boolean isInstall = false) {
 }
 
 /* =========================================================================================
-   SCHEDULED WATCHDOG & LCD CALIBRATION
+   COMMAND IMPLEMENTATIONS & HEALTH CHECK
    ========================================================================================= */
 
-def checkIn() {
-    logDebug "Executing scheduled passive check-in evaluation"
-    sendEvent(name: "checkIn", value: now(), displayed: false, isStateChange: true)
-
-    Integer checkInHours = (checkInInterval ?: "12").toString().toInteger()
-    Long allowedThresholdMs = (checkInHours * 1.5 * 3600 * 1000) as Long
-    Long lastActivity = state.lastActivityTime != null ? (state.lastActivityTime as Long) : 0L
-    Long elapsedMs = now() - lastActivity
-
-    if (lastActivity > 0 && elapsedMs > allowedThresholdMs) {
-        logWarn "No activity received in ${(elapsedMs / 3600000.0).setScale(1, BigDecimal.ROUND_HALF_UP)} hours (threshold: ${(checkInHours * 1.5)} hours). Device marked offline."
-        updateAttribute("healthStatus", "offline")
-    } else if (lastActivity > 0) {
-        logDebug "Passive check-in verified active (last activity ${(elapsedMs / 60000.0).setScale(1, BigDecimal.ROUND_HALF_UP)} minutes ago)"
-        updateAttribute("healthStatus", "online")
-    }
-}
-
-def setupSchedule() {
-    unschedule("checkIn")
-    String interval = checkInInterval ?: "12"
-    logDebug "Setting activity check-in watchdog interval to ${interval} hour(s)"
-    switch(interval) {
-        case "1":
-            runEvery1Hour("checkIn"); break
-        case "3":
-            runEvery3Hours("checkIn"); break
-        case "6":
-            schedule("0 0 */6 ? * *", "checkIn"); break
-        case "12":
-            schedule("0 0 */12 ? * *", "checkIn"); break
-        case "24":
-            schedule("0 0 0 ? * *", "checkIn"); break
-        default:
-            schedule("0 0 */12 ? * *", "checkIn"); break
-    }
+List<String> "Health Check"() {
+    return executeHealthCheck()
 }
 
 private void syncHardwareLcdOffsets() {
@@ -300,6 +264,69 @@ private void syncHardwareLcdOffsets() {
     }
 
     if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+void executeHealthCheckScheduled() {
+    List<String> cmds = executeHealthCheck()
+    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+private List<String> executeHealthCheck() {
+    logDebug "Executing Health Check..."
+    scheduleCommandTimeoutCheck()
+    return zigbee.readAttribute(zigbee.BASIC_CLUSTER, HEALTH_CHECK_ATTR_ID, [:], 0)
+}
+
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60:
+            schedule("0 ${m} * ? * * *", methodToSchedule); break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule); break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule); break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule); break
+        case 1440:
+            schedule("0 ${m} ${h} ? * * *", methodToSchedule); break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
+    }
+}
+
+private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
+    runIn(delay, "deviceCommandTimeout", [overwrite: true])
+}
+
+void deviceCommandTimeout() {
+    logWarn "No Health Check response received (device offline?)"
+    updateAttribute("healthStatus", "offline")
+}
+
+private void assertDeviceOnline() {
+    sendEvent(name: "healthStatus", value: "online", isStateChange: false, descriptionText: "${device.displayName} is online")
 }
 
 /* =========================================================================================
@@ -328,8 +355,6 @@ List<String> updateFirmware() {
 
 void parse(final String description) {
     logDebug "Raw description -> ${description}"
-    recordActivity()
-
     final Map descMap = zigbee.parseDescriptionAsMap(description)
     if (!descMap) return
 
@@ -365,7 +390,13 @@ void parse(final String description) {
 void parseBasicCluster(final Map descMap) {
     if (descMap.attrInt == null) return
     switch (descMap.attrInt as Integer) {
+        case HEALTH_CHECK_ATTR_ID:
+            unschedule("deviceCommandTimeout")
+            logDebug "Health Check response received..."
+            sendEvent(name: "healthStatus", value: "online", isStateChange: false, descriptionText: "${device.displayName} is online")
+            break
         case FIRMWARE_VERSION_ID:
+            assertDeviceOnline()
             final String versionStr = descMap.value ?: "unknown"
             logDebug "Device firmware version is ${versionStr}"
             updateDataValue("softwareBuild", versionStr)
@@ -375,6 +406,7 @@ void parseBasicCluster(final Map descMap) {
 
 void parsePowerCluster(final Map descMap) {
     if (descMap.attrInt == null || descMap.value == null) return
+    assertDeviceOnline()
     final long rawValue = hexStrToUnsignedInt(descMap.value)
 
     switch (descMap.attrInt as Integer) {
@@ -387,6 +419,7 @@ void parsePowerCluster(final Map descMap) {
 
 void parseTemperatureCluster(final Map descMap) {
     if (descMap.attrInt != 0x0000 || descMap.value == null || descMap.value == "FFFF") return
+    assertDeviceOnline()
 
     int rawTemp = parseSignedInt16(descMap.value)
     BigDecimal celsius = new BigDecimal(rawTemp).divide(100G, 2, RoundingMode.HALF_UP)
@@ -411,6 +444,7 @@ void parseTemperatureCluster(final Map descMap) {
 
 void parseHumidityCluster(final Map descMap) {
     if (descMap.attrInt != 0x0000 || descMap.value == null || descMap.value == "FFFF") return
+    assertDeviceOnline()
 
     int rawHumidity = hexStrToUnsignedInt(descMap.value)
     BigDecimal rawPct = new BigDecimal(rawHumidity).divide(100G, 2, RoundingMode.HALF_UP)
@@ -437,6 +471,7 @@ void parseHumidityCluster(final Map descMap) {
 
 void parsePrivateCluster(final Map descMap) {
     if (descMap.attrInt == null || descMap.value == null) return
+    assertDeviceOnline()
 
     int rawVal = parseSignedInt16(descMap.value)
     Boolean isFahrenheit = location.temperatureScale == "F"
@@ -479,9 +514,15 @@ void parseGeneralCommandResponse(final Map descMap) {
 void resetDriver() {
     logInfo "Starting full driver reset..."
     
+    Object savedHour = state.healthCheckStartHour
+    Object savedMinute = state.healthCheckStartMinute
+
     clearAllSchedules()
     clearAllAttributes()
     clearAllDriverStates()
+
+    if (savedHour != null) state.healthCheckStartHour = savedHour
+    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
 
     initialize(false)
     logInfo "Driver reset completed."
@@ -575,4 +616,12 @@ private void logWarn(String msg)  { logMessage("warn", msg) }
 private void logError(String msg) { logMessage("error", msg) }
 
 @Field static final int FIRMWARE_VERSION_ID = 0x4000
+@Field static final int HEALTH_CHECK_ATTR_ID = 0x0000
+
+@Field static final Map HealthCheckIntervalOpts = [
+    defaultValue: 480,
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
+]
+
+@Field static final int COMMAND_TIMEOUT = 30
 @Field static final int DELAY_MS = 200

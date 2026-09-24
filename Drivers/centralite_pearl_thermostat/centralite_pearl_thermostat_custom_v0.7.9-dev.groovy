@@ -1,0 +1,765 @@
+/**
+ * CentraLite Pearl Thermostat (Custom) - DEV BUILD
+ * Device Driver for Hubitat Elevation
+ *
+ * Purpose:
+ * Custom driver for CentraLite Pearl Zigbee Thermostat featuring heating/cooling setpoint 
+ * controls, custom fan circulation cycle loop, battery/power source parsing, and custom health tracking.
+ *
+ * ARCHITECTURAL NOTE - AUTO MODE & THERMOSTAT CONTROLLER:
+ * 'auto' mode is explicitly exposed in supportedThermostatModes to allow the driver to function 
+ * as a full dual-setpoint thermostat controller. This enables Hubitat Dashboard tiles and external 
+ * application controllers (such as MEM) to present and orchestrate dual heating/cooling setpoints, 
+ * automatically issuing system commands across heating, cooling, and idle states as ambient 
+ * conditions require.
+ *
+ * Temperature Calibration Architecture:
+ * - Temperature offset adjustments are applied strictly at the driver layer via hardware calibration
+ *   attribute 0x0201:0x0010. Downstream applications (such as MEM) consume the calibrated 'temperature' 
+ *   attribute directly without applying secondary offsets.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Uses active ZCL attribute reading to verify online presence with phase-anchored scheduling.
+ **/
+/**
+ * Copyright 2026 James Shimota
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+/**
+ * Changelog:
+ * v0.7.9-DEV 09/23/26    jshimota    DEV BUILD: Decoupled dashboard tile 'auto' mode display. Added 'dashboardThermostatMode' attribute to decouple dual-setpoint dashboard presentation from standard 'thermostatMode' updates, preventing MEM loop oscillations.
+ * v0.7.8    09/14/26    jshimota    Optimized markHealthCheckSuccess to emit isStateChange: false to refresh lastActivity without event history log clutter.
+ * v0.7.7    09/11/26    jshimota    Hardened Health Check state engine: isolated health validation to cluster 0x0000:0x0007, unscheduled stale command timeouts on initialize/execute, and updated getTemperature BigDecimal initialization.
+ * v0.7.6    09/11/26    jshimota    Purged all internal ping nomenclature and fully synchronized Health Check architecture with Driver Template v1.0.11 / RGB Bulb driver standards.
+ * v0.7.5    09/11/26    jshimota    Forced healthStatus sendEvent with isStateChange: true in parse() to ensure Hubitat updates platform lastActivity timestamp.
+ * v0.7.4    09/08/26    jshimota    Refined lockDashboardToAuto execution path and updated attribute mapping for dual-setpoint MEM controller support.
+ * v0.7.3    09/08/26    jshimota    Restructured setThermostatMode and auto() fallback handling to align with physicalThermostatMode tracking.
+ * v0.7.2    09/01/26    jshimota    Updated header notice to accurately reflect auto mode implementation for Dashboard and MEM thermostat controller functionality.
+ * v0.7.1    09/01/26    jshimota    Documented 'auto' mode architecture for external manager (MEM) orchestration in header comments and method stubs.
+ * v0.7.0    09/01/26    jshimota    Exposed 'auto' mode in supportedThermostatModes and enabled physical auto() command for external manager (MEM) orchestration.
+ * v0.6.9    08/31/26    jshimota    Added 'tempPrecision' preference strictly isolated to device ambient temperature parsing (0, 1, or 2 decimals). Setpoints remain locked to whole integers.
+ * v0.6.8    08/31/26    jshimota    Standardized log and descriptionText unit formatting across temperature (°F/°C) and percentage (%) attributes to ' [Value] [Unit]'.
+ * v0.6.7    08/31/26    jshimota    Fixed case-sensitive heatingSetpoint attribute check bug in changeSetpoint() fallback logic.
+ * v0.6.6    08/31/26    jshimota    Separated physical thermostatFanMode (on/auto/off/circulate) from thermostatFanControlSource (local/external). Documented driver-level temperature calibration contract.
+ * v0.6.5    08/31/26    jshimota    Hardened 'ext' fan control mode. Preserved 'ext' attribute state while permitting physical fanOn() and fanAuto() Zigbee frame execution from external applications.
+ * v0.6.4    08/31/26    jshimota    Removed enableFanCommands preference switch and fanModeNote operational note. Streamlined fan mode bypass to check for 'ext' state.
+ * v0.6.3    08/31/26    jshimota    Added 'ext' option to supportedThermostatFanModes JSON array and GUI command dropdown. Updated command execution logic and GUI notes.
+ * v0.6.2    08/31/26    jshimota    Refined enableFanCommands preference description text.
+ * v0.6.1    08/31/26    jshimota    Added explicit GUI parameter descriptions to Fan commands notifying user that fan mode commands are only functional when enabled in preferences.
+ * v0.6.0    08/31/26    jshimota    Added enableFanCommands preference switch to bypass physical fan cluster execution when managed externally (e.g., via MEM app). Updated GUI preferences guidance text.
+ * v0.5.0    08/31/26    jshimota    Applied Driver Template v1.0.10: Standardized logging engine, phase-anchored custom Health Check, single-shot version demarcation, master utility routines, and updated GUI controls.
+ **/
+ 
+static String version() { return '0.7.9-DEV' }
+def timeStamp() { return "2026/09/23 10:00 AM" }
+
+import hubitat.zigbee.zcl.DataType
+import groovy.transform.Field
+import java.math.RoundingMode
+
+metadata {
+    definition(
+        name: "CentraLite Pearl Thermostat (Custom DEV)",
+        namespace: "jshimota",
+        author: "James Shimota",
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/centralitePearlThermostat.groovy"
+    ) {
+        capability "Actuator"
+        capability "Battery"
+        capability "Configuration"
+        capability "Refresh"
+        capability "Sensor"
+        capability "TemperatureMeasurement"
+        capability "Thermostat"
+
+        // Commands
+        command "Health Check"
+        command "fanOff"
+        command "initialize"
+        command "lowerCoolingSetpointLevel"
+        command "lowerHeatingSetpointLevel"
+        command "raiseCoolingSetpointLevel"
+        command "raiseHeatingSetpointLevel"
+        command "resetDriver"
+        command "toggleHoldMode"
+
+        command "setCoolingSetpoint", [[name: "degrees", type: "NUMBER", description: "Cooling Setpoint in degrees"]]
+        command "setHeatingSetpoint", [[name: "degrees", type: "NUMBER", description: "Heating Setpoint in degrees"]]
+        command "setThermostatFanControlSource", [[name: "source*", type: "ENUM", description: "Select 'external' when fan circulation is managed by an external application like MEM.", constraints: ["local", "external"]]]
+
+        // Attributes
+        attribute "healthStatus", "enum", ["unknown", "offline", "online"]
+        attribute "powerSource", "string"
+        attribute "supportedThermostatModes", "JSON_OBJECT"
+        attribute "supportedThermostatFanModes", "JSON_OBJECT"
+        attribute "thermostatFanCycleState", "enum", ["on", "off"]
+        attribute "thermostatFanControlSource", "enum", ["local", "external"]
+        attribute "thermostatFanModes", "JSON_OBJECT"
+        attribute "thermostatHoldMode", "string"
+        attribute "thermostatRunMode", "string"
+        attribute "physicalThermostatMode", "string"
+        attribute "dashboardThermostatMode", "string"
+
+        fingerprint profileId: "0104", inClusters: "0000,0001,0003,0020,0201,0202,0204,0B05", outClusters: "000A,0019", manufacturer: "Centralite", model: "3157100", deviceJoinName: "CentraLite Pearl Thermostat (Custom DEV)"
+    }
+
+    preferences {
+        input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i><b>Note:</b> Forces the 'dashboardThermostatMode' attribute to 'auto' for dual-setpoint dashboard tile compatibility without interfering with MEM or physical mode tracking.</i>", defaultValue: true, required: true
+        input name: "tempOffset", type: "decimal", title: "<b>Temperature Offset</b>", description: "<i>Adjust temperature readings by -4.5 to +4.5 degrees. (Applied at driver layer).</i>", defaultValue: 0.0, range: "-4.5..4.5"
+        input name: "tempPrecision", type: "enum", title: "<b>Device Temperature Display Precision</b>", options: ["0": "0 Decimals (Whole Number - e.g., 72)", "1": "1 Decimal (e.g., 71.8)", "2": "2 Decimals (e.g., 71.82)"], defaultValue: "1", description: "<i>Controls decimal precision for reported device ambient temperature attribute only.</i>"
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+
+        // Independent Logging Switches
+        input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
+        input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", defaultValue: true, required: true
+        input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", defaultValue: true, required: true
+        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", defaultValue: false, required: true
+        input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", defaultValue: false, required: true
+    }
+}
+
+private void checkAndLogVersionDemarcation() {
+    String currentVer = version()
+    if (state.driverVersion != currentVer) {
+        logTrace "=================== DRIVER VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
+        state.driverVersion = currentVer
+    }
+}
+
+/* =========================================================================================
+   HUBITAT LIFECYCLE ROUTINES
+   ========================================================================================= */
+
+void installed() {
+    checkAndLogVersionDemarcation()
+    logInfo "Installing CentraLite Pearl Thermostat (Custom DEV) v${version()} (${timeStamp()})..."
+    initializeHealthCheckPhase()
+    sendEvent(name: "healthStatus", value: "unknown")
+    initialize(true)
+}
+
+void updated() {
+    checkAndLogVersionDemarcation()
+    logInfo "Preferences updated"
+    initialize(false)
+    runIn(1, "configure")
+}
+
+void initialize(Boolean isInstall = false) {
+    checkAndLogVersionDemarcation()
+    unschedule("disableDebugLogging")
+    unschedule("deviceCommandTimeout")
+
+    state.healthCheckPending = false
+
+    if (device.currentValue("healthStatus") == null) sendEvent(name: "healthStatus", value: "unknown")
+
+    def fanOptionsList = ["on", "auto", "off", "circulate"] 
+    sendEvent(name: "thermostatFanModes", value: groovy.json.JsonOutput.toJson(fanOptionsList))
+    sendEvent(name: "supportedThermostatFanModes", value: groovy.json.JsonOutput.toJson(fanOptionsList))
+    
+    def systemModesList = ["off", "heat", "cool", "auto", "emergencyHeat"] 
+    sendEvent(name: "supportedThermostatModes", value: groovy.json.JsonOutput.toJson(systemModesList)) 
+
+    if (device.currentValue("thermostatFanControlSource") == null) sendEvent(name: "thermostatFanControlSource", value: "local")
+    if (device.currentValue("battery") == null) sendEvent(name: "battery", value: 100, unit: "%") 
+    if (device.currentValue("powerSource") == null) sendEvent(name: "powerSource", value: "unknown") 
+    if (device.currentValue("thermostatOperatingState") == null) sendEvent(name: "thermostatOperatingState", value: "idle")
+    if (device.currentValue("temperature") == null) sendEvent(name: "temperature", value: 70, unit: getTemperatureScale())
+    if (device.currentValue("heatingSetpoint") == null) sendEvent(name: "heatingSetpoint", value: 68, unit: getTemperatureScale())
+    if (device.currentValue("coolingSetpoint") == null) sendEvent(name: "coolingSetpoint", value: 74, unit: getTemperatureScale())
+    if (device.currentValue("thermostatSetpoint") == null) sendEvent(name: "thermostatSetpoint", value: 68, unit: getTemperatureScale())
+
+    String currentPhysMode = device.currentValue("physicalThermostatMode") ?: "off"
+    if (device.currentValue("thermostatMode") == null) {
+        sendEvent(name: "thermostatMode", value: currentPhysMode)
+    }
+
+    if (getSettingBool("lockDashboardToAuto", true)) {
+        updateAttribute("dashboardThermostatMode", "auto")
+    } else {
+        updateAttribute("dashboardThermostatMode", currentPhysMode)
+    }
+
+    final int interval = settings?.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
+    if (interval > 0) scheduleHealthCheck("executeHealthCheckScheduled", interval) else unschedule("executeHealthCheckScheduled")
+
+    if (isInstall) {
+        device.updateSetting("logDebugEnable", [type: "bool", value: true])
+        logInfo "Debug logging enabled for 30 minutes."
+        runIn(1800, "disableDebugLogging")
+    } else if (getSettingBool("logDebugEnable", false)) {
+        logInfo "Debug logging active. Automatic turn-off scheduled."
+        runIn(1800, "disableDebugLogging", [overwrite: false])
+    } else {
+        unschedule("disableDebugLogging")
+    }
+
+    runIn(2, "refresh")
+}
+
+List<String> configure() {
+    checkAndLogVersionDemarcation()
+    logInfo "Configuring device reporting and options..."
+
+    List<String> cmds = zigbee.batteryConfig() +
+               zigbee.configureReporting(0x0201, 0x0000, DataType.INT16, 10, 600, 50) +
+               zigbee.configureReporting(0x0201, 0x0011, DataType.INT16, 5, 300, 50) +
+               zigbee.configureReporting(0x0201, 0x0012, DataType.INT16, 5, 300, 50) +
+               zigbee.configureReporting(0x0201, 0x001C, DataType.ENUM8, 5, 300, 1) +
+               zigbee.configureReporting(0x0201, 0x0029, DataType.BITMAP16, 5, 300, 1) +
+               zigbee.configureReporting(0x0201, 0x0023, DataType.ENUM8, 5, 300, 1) +
+               zigbee.configureReporting(0x0202, 0x0000, DataType.ENUM8, 5, 300, 1)
+
+    if (settings?.tempOffset != null) {
+        BigDecimal offset = settings.tempOffset as BigDecimal
+        double celsiusOffset = (getTemperatureScale() == "C") ? offset.doubleValue() : (offset.doubleValue() / 1.8)
+        int rawOffset = Math.round(celsiusOffset * 10).toInteger()
+        cmds += zigbee.writeAttribute(0x0201, 0x0010, DataType.INT8, rawOffset)
+    }
+
+    cmds += executeHealthCheck()
+    return cmds
+}
+
+List<String> refresh() {
+    logDebug "Executing refresh()..."
+    return zigbee.readAttribute(0x0000, 0x0007) + 
+           zigbee.readAttribute(0x0201, 0x0000) + 
+           zigbee.readAttribute(0x0201, 0x0010) + 
+           zigbee.readAttribute(0x0201, 0x0011) + 
+           zigbee.readAttribute(0x0201, 0x0012) + 
+           zigbee.readAttribute(0x0201, 0x001C) + 
+           zigbee.readAttribute(0x0201, 0x001E) + 
+           zigbee.readAttribute(0x0201, 0x0023) + 
+           zigbee.readAttribute(0x0201, 0x0029) + 
+           zigbee.readAttribute(0x0001, 0x0020) + 
+           zigbee.readAttribute(0x0202, 0x0000)   
+}
+
+/* =========================================================================================
+   COMMAND IMPLEMENTATIONS
+   ========================================================================================= */
+
+void setThermostatFanControlSource(String value) {
+    if (value == null) return
+    String norm = value.toLowerCase().trim()
+    if (norm in ["local", "external"]) {
+        logInfo "Thermostat Fan Control Source set to '${norm}'"
+        updateAttribute("thermostatFanControlSource", norm)
+        if (norm == "external") unschedule("runCirculateCycle")
+    } else {
+        logError "Invalid fan control source requested: ${value}"
+    }
+}
+
+void raiseHeatingSetpointLevel() { changeSetpoint("heatingSetpoint", 1) }
+void lowerHeatingSetpointLevel() { changeSetpoint("heatingSetpoint", -1) }
+void raiseCoolingSetpointLevel() { changeSetpoint("coolingSetpoint", 1) }
+void lowerCoolingSetpointLevel() { changeSetpoint("coolingSetpoint", -1) }
+
+private void changeSetpoint(String attributeName, int delta) {
+    def currentVal = device.currentValue(attributeName) ?: (attributeName == "heatingSetpoint" ? 68 : 74)
+    int nextLevel = currentVal.toInteger() + delta
+    if (attributeName == "heatingSetpoint") setHeatingSetpoint(nextLevel) else setCoolingSetpoint(nextLevel)
+}
+
+void toggleHoldMode() {
+    String currentHoldMode = device.currentValue("thermostatHoldMode") ?: "holdOff"
+    if (currentHoldMode == "holdOn") holdOff() else holdOn()
+}
+
+void setThermostatMode(String value) {
+    if (value == null) return
+    logDebug "setThermostatMode requested: ${value}"
+    String normalizedValue = value.toLowerCase().replaceAll(/\s+(.)/) { match, group -> group.toUpperCase() }
+    if (normalizedValue == "emergencyheat") normalizedValue = "emergencyHeat"
+    
+    switch(normalizedValue) {
+        case "off": off(); break
+        case "cool": cool(); break
+        case "heat": heat(); break
+        case "emergencyHeat": emergencyHeat(); break
+        case "auto": auto(); break
+        default:
+            logError "Unsupported thermostat mode requested: ${value}"
+            break
+    }
+}
+
+void setThermostatFanMode(String value) { 
+    if (value == null) return
+    String normValue = value.toLowerCase().trim()
+    if (normValue in ["fanon", "on"]) fanOn()
+    else if (normValue in ["fanauto", "auto"]) fanAuto()
+    else if (normValue in ["fanoff", "off"]) fanOff()
+    else if (normValue in ["fancirculate", "circulate"]) fanCirculate()
+    else logError "Unsupported fan mode requested: ${value}"
+}
+
+void setThermostatHoldMode(String value) {
+    if (value == null) return
+    String norm = value.toLowerCase().trim()
+    if (norm in ["holdon", "on", "true"]) holdOn()
+    else if (norm in ["holdoff", "off", "false"]) holdOff()
+    else logError "Invalid hold mode requested: ${value}"
+}
+
+List<String> off() {
+    logInfo "Setting physical thermostat mode to Off"
+    updateModeState("off")
+    return zigbee.writeAttribute(0x0201, 0x1C, DataType.ENUM8, 0)
+}
+
+List<String> cool() {
+    logInfo "Setting physical thermostat mode to Cool"
+    updateModeState("cool")
+    return zigbee.writeAttribute(0x0201, 0x1C, DataType.ENUM8, 3)
+}
+
+List<String> heat() {
+    logInfo "Setting physical thermostat mode to Heat"
+    updateModeState("heat")
+    return zigbee.writeAttribute(0x0201, 0x1C, DataType.ENUM8, 4)
+}
+
+List<String> emergencyHeat() {
+    logInfo "Setting physical thermostat mode to Emergency Heat"
+    updateModeState("emergencyHeat")
+    return zigbee.writeAttribute(0x0201, 0x1C, DataType.ENUM8, 5)
+}
+
+List<String> auto() {
+    logInfo "Setting thermostat mode to Auto"
+    updateModeState("auto")
+    
+    def temp = device.currentValue("temperature") ?: 70
+    def hSp = device.currentValue("heatingSetpoint") ?: 68
+    def cSp = device.currentValue("coolingSetpoint") ?: 74
+    def targetSp = (temp >= cSp) ? cSp : hSp
+    updateAttribute("thermostatSetpoint", targetSp, getTemperatureScale(), "digital")
+    
+    return zigbee.writeAttribute(0x0201, 0x1C, DataType.ENUM8, 1)
+}
+
+private void updateModeState(String newMode) {
+    updateAttribute("physicalThermostatMode", newMode)
+    updateAttribute("thermostatMode", newMode)
+    if (getSettingBool("lockDashboardToAuto", true)) {
+        updateAttribute("dashboardThermostatMode", "auto")
+    } else {
+        updateAttribute("dashboardThermostatMode", newMode)
+    }
+}
+
+List<String> on() { return fanOn() }
+
+List<String> fanOn() {
+    logInfo "Executing physical fanOn command"
+    unschedule("runCirculateCycle") 
+    updateAttribute("thermostatFanMode", "on", null, "digital")
+    return zigbee.writeAttribute(0x0202, 0x00, DataType.ENUM8, 4)
+}
+
+List<String> fanAuto() {
+    logInfo "Executing physical fanAuto command"
+    unschedule("runCirculateCycle") 
+    updateAttribute("thermostatFanMode", "auto", null, "digital")
+    return zigbee.writeAttribute(0x0202, 0x00, DataType.ENUM8, 5)
+}
+
+List<String> fanOff() {
+    logInfo "Executing physical fanOff command"
+    unschedule("runCirculateCycle") 
+    updateAttribute("thermostatFanMode", "off", null, "digital")
+    return zigbee.writeAttribute(0x0202, 0x00, DataType.ENUM8, 0)
+}
+
+void fanCirculate() {
+    if (device.currentValue("thermostatFanControlSource") == "external") {
+        logInfo "fanCirculate command ignored (Control Source is set to 'external')."
+        return
+    }
+    logInfo "Setting thermostat fan mode to Circulate (30m Loop)"
+    unschedule("runCirculateCycle")
+    updateAttribute("thermostatFanMode", "circulate", null, "digital")
+    runCirculateCycle([targetState: "on"])
+}
+
+void runCirculateCycle(Map data = [:]) {
+    if (device.currentValue("thermostatFanControlSource") == "external" || device.currentValue("thermostatFanMode") != "circulate") return
+
+    String targetState = data?.targetState
+    if (targetState == null) {
+        String lastCycleState = device.currentValue("thermostatFanCycleState") ?: "off"
+        targetState = (lastCycleState == "on") ? "off" : "on"
+    }
+
+    sendEvent(name: "thermostatFanCycleState", value: targetState, isStateChange: true, displayed: false)
+
+    if (targetState == "on") {
+        logDebug "Circulation Loop: Turning Fan ON"
+        sendHubCommand(new hubitat.device.HubAction(zigbee.writeAttribute(0x0202, 0x00, DataType.ENUM8, 4)[0], hubitat.device.Protocol.ZIGBEE))
+        runIn(1800, "runCirculateCycle", [overwrite: true, data: [targetState: "off"]])
+    } else {
+        logDebug "Circulation Loop: Setting Fan to AUTO"
+        sendHubCommand(new hubitat.device.HubAction(zigbee.writeAttribute(0x0202, 0x00, DataType.ENUM8, 5)[0], hubitat.device.Protocol.ZIGBEE))
+        runIn(1800, "runCirculateCycle", [overwrite: true, data: [targetState: "on"]])
+    }
+}
+
+List<String> holdOn() {
+    logInfo "Setting Hold Mode to On"
+    updateAttribute("thermostatHoldMode", "holdOn")
+    return zigbee.writeAttribute(0x0201, 0x23, DataType.ENUM8, 1)
+}
+
+List<String> holdOff() {
+    logInfo "Setting Hold Mode to Off"
+    updateAttribute("thermostatHoldMode", "holdOff")
+    return zigbee.writeAttribute(0x0201, 0x23, DataType.ENUM8, 0)
+}
+
+List<String> setHeatingSetpoint(degrees) {
+    return processSetpoint(degrees, 0x12)
+}
+
+List<String> setCoolingSetpoint(degrees) {
+    return processSetpoint(degrees, 0x11)
+}
+
+private List<String> processSetpoint(degrees, int attributeId) { 
+    if (degrees == null || !degrees.toString().isNumber()) return []
+    
+    boolean isC = (getTemperatureScale() == "C") 
+    int maxTemp = isC ? 44 : 86 
+    int minTemp = isC ? 7 : 30 
+    
+    BigDecimal numDegrees = new BigDecimal(degrees.toString())
+    int degreesInteger = Math.round(numDegrees).toInteger() 
+    degreesInteger = Math.max(minTemp, Math.min(degreesInteger, maxTemp)) 
+    
+    double celsius = isC ? degreesInteger : fahrenheitToCelsius(degreesInteger) 
+    int finalValue = Math.round(celsius * 100).toInteger() 
+    
+    String attrName = (attributeId == 0x12) ? "heatingSetpoint" : "coolingSetpoint" 
+    logInfo "Setting ${attrName} to ${degreesInteger} °${getTemperatureScale()}"
+    
+    updateAttribute(attrName, degreesInteger, getTemperatureScale(), "digital")
+    updateAttribute("thermostatSetpoint", degreesInteger, getTemperatureScale(), "digital")
+    
+    if (attrName == "heatingSetpoint" && device.currentValue("coolingSetpoint") == null) {
+        updateAttribute("coolingSetpoint", (degreesInteger + 5), getTemperatureScale(), "digital")
+    } else if (attrName == "coolingSetpoint" && device.currentValue("heatingSetpoint") == null) {
+        updateAttribute("heatingSetpoint", (degreesInteger - 5), getTemperatureScale(), "digital")
+    }
+    
+    return zigbee.writeAttribute(0x0201, attributeId, DataType.INT16, finalValue) 
+}
+
+/* =========================================================================================
+   HEALTH CHECK ROUTINE TEMPLATE
+   ========================================================================================= */
+
+void "Health Check"() {
+    List<String> cmds = executeHealthCheck()
+    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+void executeHealthCheckScheduled() {
+    logTrace "executeHealthCheckScheduled(): Triggering scheduled health check..."
+    List<String> cmds = executeHealthCheck()
+    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+private List<String> executeHealthCheck() {
+    logInfo "Executing Health Check..."
+    unschedule("deviceCommandTimeout")
+    state.healthCheckPending = true
+    scheduleCommandTimeoutCheck()
+    return zigbee.readAttribute(0x0000, 0x0007)
+}
+
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60: schedule("0 ${m} * ? * * *", methodToSchedule); break
+        case 240: schedule("0 ${m} ${[0,4,8,12,16,20].collect{(it+h)%24}.sort().join(',')} ? * * *", methodToSchedule); break
+        case 480: schedule("0 ${m} ${[0,8,16].collect{(it+h)%24}.sort().join(',')} ? * * *", methodToSchedule); break
+        case 720: schedule("0 ${m} ${[0,12].collect{(it+h)%24}.sort().join(',')} ? * * *", methodToSchedule); break
+        case 1440: schedule("0 ${m} ${h} ? * * *", methodToSchedule); break
+        default: schedule("0 */${intervalMin} * ? * * *", methodToSchedule); break
+    }
+}
+
+private void scheduleCommandTimeoutCheck(final int delay = COMMAND_TIMEOUT) {
+    runIn(delay, "deviceCommandTimeout", [overwrite: true])
+}
+
+void deviceCommandTimeout() {
+    logWarn "Health Check failed: No response received within ${COMMAND_TIMEOUT} seconds (device offline?)"
+    state.healthCheckPending = false
+    updateAttribute("healthStatus", "offline")
+}
+
+/* =========================================================================================
+   ZIGBEE MESSAGE PARSING
+   ========================================================================================= */
+
+void parse(String description) {
+    logDebug "Parsing raw description -> ${description}"
+    if (!description) return
+
+    try {
+        if (description.startsWith("read attr -") || description.startsWith("catchall:")) {
+            Map descMap = zigbee.parseDescriptionAsMap(description)
+            if (!descMap) return
+
+            Integer clusterInt = descMap.cluster ? Integer.parseInt(descMap.cluster, 16) : descMap.clusterInt
+            Integer attrInt = descMap.attrId ? Integer.parseInt(descMap.attrId, 16) : descMap.attrInt
+            String clusterHex = descMap.cluster ?: (clusterInt != null ? zigbee.convertToHexString(clusterInt, 4) : "unknown")
+
+            markDeviceActivity()
+
+            switch(clusterInt) {
+                case 0x0201: // Thermostat Cluster
+                    if (attrInt == 0x0000) {
+                        BigDecimal temp = getTemperature(descMap.value)
+                        updateAttribute("temperature", temp, getTemperatureScale(), "physical")
+                    } else if (attrInt == 0x0011) {
+                        BigDecimal temp = getTemperature(descMap.value)
+                        int wholeTemp = Math.round(temp).toInteger()
+                        updateAttribute("coolingSetpoint", wholeTemp, getTemperatureScale(), "physical")
+                        updateAttribute("thermostatSetpoint", wholeTemp, getTemperatureScale(), "physical")
+                    } else if (attrInt == 0x0012) {
+                        BigDecimal temp = getTemperature(descMap.value)
+                        int wholeTemp = Math.round(temp).toInteger()
+                        updateAttribute("heatingSetpoint", wholeTemp, getTemperatureScale(), "physical")
+                        updateAttribute("thermostatSetpoint", wholeTemp, getTemperatureScale(), "physical")
+                    } else if (attrInt == 0x001C) {
+                        String mode = getModeMap()[descMap.value] ?: "off"
+                        updateAttribute("physicalThermostatMode", mode, null, "physical")
+                        updateAttribute("thermostatMode", mode, null, "physical")
+                        if (!getSettingBool("lockDashboardToAuto", true)) {
+                            updateAttribute("dashboardThermostatMode", mode, null, "physical")
+                        }
+                    } else if (attrInt == 0x001E) {
+                        String runMode = getModeMap()[descMap.value] ?: "off"
+                        updateAttribute("thermostatRunMode", runMode, null, "physical")
+                    } else if (attrInt == 0x0023) {
+                        String holdMode = getHoldModeMap()[descMap.value] ?: "holdOff"
+                        updateAttribute("thermostatHoldMode", holdMode, null, "physical")
+                    } else if (attrInt == 0x0029) {
+                        String opState = getThermostatOperatingStateMap()[descMap.value] ?: "idle"
+                        updateAttribute("thermostatOperatingState", opState, null, "physical")
+                    }
+                    break
+                    
+                case 0x0202: // Fan Control Cluster
+                    if (attrInt == 0x0000) {
+                        if (device.currentValue("thermostatFanMode") != "circulate") {
+                            String fanMode = getFanModeMap()[descMap.value] ?: "auto"
+                            updateAttribute("thermostatFanMode", fanMode, null, "physical")
+                        }
+                    }
+                    break
+                    
+                case 0x0001: // Power Configuration Cluster
+                    if (attrInt == 0x0020) {
+                        Integer batLevel = getBatteryLevel(descMap.value)
+                        updateAttribute("battery", batLevel, "%", "physical")
+                    }
+                    break
+                    
+                case 0x0000: // Basic Cluster
+                    if (attrInt == 0x0007) {
+                        markHealthCheckSuccess(clusterHex)
+                        String source = getPowerSource()[descMap.value] ?: "unknown"
+                        updateAttribute("powerSource", source, null, "physical")
+                    }
+                    break
+            }
+        }
+    } catch (Exception e) {
+        logError "Error parsing description frame [${description}]: ${e.message}"
+    }
+}
+
+private void markHealthCheckSuccess(String clusterHex = "0000") {
+    if (state.healthCheckPending == true) {
+        logInfo "Valid Health Check response verified on cluster 0x${clusterHex}"
+        state.healthCheckPending = false
+        unschedule("deviceCommandTimeout")
+    }
+    
+    sendEvent(
+        name: "healthStatus", 
+        value: "online", 
+        isStateChange: false, 
+        descriptionText: "${device.displayName} health check verified online"
+    )
+}
+
+private void markDeviceActivity() {
+    if (device.currentValue("healthStatus") == "offline") {
+        sendEvent(
+            name: "healthStatus", 
+            value: "online", 
+            isStateChange: false, 
+            descriptionText: "${device.displayName} healthStatus restored to online via active traffic"
+        )
+    }
+}
+
+private Map getModeMap() { ["00":"off", "01":"auto", "03":"cool", "04":"heat", "05":"emergencyHeat", "06":"precooling", "07":"fan only", "08":"dry", "09":"sleep"] }
+private Map getHoldModeMap() { ["00":"holdOff", "01":"holdOn"] }
+private Map getPowerSource() { ["01":"24VAC", "03":"Battery", "81":"24VAC"] }
+private Map getFanModeMap() { ["00":"off", "04":"on", "05":"auto"] }
+private Map getThermostatOperatingStateMap() {
+    ["0000":"idle", "0001":"heating", "0002":"cooling", "0004":"fan only", "0005":"heating", "0006":"cooling", "0008":"heating", "0009":"heating", "000A":"heating", "000D":"heating", "0010":"cooling", "0012":"cooling", "0014":"cooling", "0015":"cooling"]
+}
+
+private BigDecimal getTemperature(String value) {
+    if (value == null) return null
+    int raw = Integer.parseInt(value, 16)
+    if (raw > 0x7FFF) raw -= 0x10000
+    double celsius = raw / 100.0
+    double tempVal = (getTemperatureScale() == "C") ? celsius : celsiusToFahrenheit(celsius)
+    
+    int precision = settings?.tempPrecision != null ? settings.tempPrecision.toInteger() : 1
+    return BigDecimal.valueOf(tempVal).setScale(precision, RoundingMode.HALF_UP)
+}
+
+private Integer getBatteryLevel(String rawValue) {
+    if (rawValue == null) return null
+    int intValue = Integer.parseInt(rawValue, 16)
+    int min = 21
+    int max = 30
+    int pct = Math.round(((intValue - min) * 100.0) / (max - min)) as int
+    return Math.max(0, Math.min(pct, 100))
+}
+
+/* =========================================================================================
+   MASTER UTILITY ROUTINES & LOGGING ENGINE
+   ========================================================================================= */
+
+void resetDriver() {
+    logInfo "Starting full driver reset..."
+    
+    Object savedHour = state.healthCheckStartHour
+    Object savedMinute = state.healthCheckStartMinute
+
+    clearAllSchedules()
+    clearAllAttributes()
+    clearAllDriverStates()
+
+    if (savedHour != null) state.healthCheckStartHour = savedHour
+    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
+
+    initialize(false)
+    logInfo "Driver reset process completed and re-initialized."
+}
+
+void clearAllDriverStates() {
+    logInfo "Clearing all driver states..."
+    state.clear()
+    logInfo "All states have been cleared."
+}
+
+void clearAllAttributes() {
+    logInfo "Clearing all attributes..."
+    device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
+    logInfo "All attributes have been cleared."
+}
+
+void clearAllSchedules() {
+    logInfo "Clearing all scheduled jobs (including orphaned schedules)..."
+    unschedule()
+    logInfo "All scheduled jobs have been successfully cleared."
+}
+
+private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
+    final String currentVal = device.currentValue(attribute)?.toString()
+    if (currentVal == value?.toString()) return
+
+    String formattedUnit = ""
+    if (unit) {
+        if (unit in ["F", "C"]) formattedUnit = " °${unit}"
+        else if (unit.startsWith("°")) formattedUnit = " ${unit}"
+        else formattedUnit = " ${unit}"
+    }
+
+    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${formattedUnit}"
+    logInfo descriptionText
+    sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
+}
+
+void disableDebugLogging() {
+    if (getSettingBool("logDebugEnable", false)) {
+        logWarn "30 minutes have elapsed. Automatically disabling debug logging."
+        device.updateSetting("logDebugEnable", [type: "bool", value: false])
+    }
+}
+
+private void logMessage(String level, String msg) {
+    String lowerLevel = level?.toLowerCase() ?: "info"
+    String devName = device.displayName ?: "Device Driver"
+    
+    String settingKey
+    switch (lowerLevel) {
+        case "info":  settingKey = "logInfoEnable"; break
+        case "error": settingKey = "logErrorEnable"; break
+        case "warn":  settingKey = "logWarnEnable"; break
+        case "debug": settingKey = "logDebugEnable"; break
+        case "trace": settingKey = "logTraceEnable"; break
+        default:      settingKey = "logInfoEnable"; break
+    }
+
+    Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
+
+    if (getSettingBool(settingKey, defaultEnabled)) {
+        log."${lowerLevel}" "${devName}: ${msg}"
+    }
+}
+
+private void logInfo(String msg)  { logMessage("info", msg) }
+private void logDebug(String msg) { logMessage("debug", msg) }
+private void logTrace(String msg) { logMessage("trace", msg) }
+private void logWarn(String msg)  { logMessage("warn", msg) }
+private void logError(String msg) { logMessage("error", msg) }
+
+private Boolean getSettingBool(String key, Boolean defaultVal = false) {
+    return (settings && settings[key] != null) ? settings[key] as Boolean : defaultVal
+}
+
+@Field static final Map HealthCheckIntervalOpts = [
+    defaultValue: 480,
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
+]
+
+@Field static final int COMMAND_TIMEOUT = 10

@@ -25,7 +25,6 @@
  **/
 /**
  * Changelog:
- * v1.1.7   09/23/26    jshimota    Removed duplicate getSettingBool declaration that caused Groovy compilation error on hub.
  * v1.1.6   09/23/26    jshimota    Replaced active polling health check with passive activity watchdog in checkIn() and added lastActivity attribute.
  * v1.1.5   09/23/26    jshimota    Cleaned up event description phrasing to eliminate duplicate device name logging and changed log output text to 'temperature/humidity now <value>'.
  * v1.1.4   09/19/26    jshimota    Moved raw numeric temperature/humidity attribute event logs to trace level; preserved temp/humidity text logs as info level.
@@ -45,8 +44,8 @@
  * v1.0.1   09/05/26    jshimota    Adapted driver baseline for Model 3RTHS24BZ (LCD Display Model), updated driver definition name, and set importUrl path to third_reality_temp-humidity_sensor_w-display_custom.
 **/
 
-static String version() { return '1.1.7' }
-def timeStamp() { return "2026/09/23 02:15 PM" }
+static String version() { return '1.1.6' }
+def timeStamp() { return "2026/09/23 01:45 PM" }
 
 import groovy.transform.Field
 import hubitat.zigbee.zcl.DataType
@@ -573,6 +572,10 @@ private void logDebug(String msg) { logMessage("debug", msg) }
 private void logTrace(String msg) { logMessage("trace", msg) }
 private void logWarn(String msg)  { logMessage("warn", msg) }
 private void logError(String msg) { logMessage("error", msg) }
+
+private Boolean getSettingBool(String key, Boolean defaultVal = false) {
+    return settings[key] != null ? settings[key] as Boolean : defaultVal
+}
 
 @Field static final int FIRMWARE_VERSION_ID = 0x4000
 @Field static final int DELAY_MS = 200
