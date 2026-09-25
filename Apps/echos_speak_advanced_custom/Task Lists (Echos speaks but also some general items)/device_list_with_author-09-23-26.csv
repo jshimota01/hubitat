@@ -1,0 +1,202 @@
+Device Name,Device Label,Device ID,deviceNetworkId,roomName,typeName,manufacturer,model,softwareBuild,Driver Author
+Office Tuya Rotary Knob,Office Rotary Knob,521,9965,Office,Tuya Scene Switch TS004F,_TZ3000_abrsvsou,TS004F,122052017,kkossev
+Guest Bedroom Tuya Motion/Lux Sensor,Guest Bedroom Motion/Lux,581,9984,Guest Bedroom,Tuya Multi Sensor 4 In 1,_TZE200_3towulqd,TS0601,,kkossev
+Laundry Room Tuya Motion/Lux Sensor,Laundry Room Motion/Lux,579,2C3E,Laundry Room,Tuya Multi Sensor 4 In 1,_TZE200_3towulqd,TS0601,,kkossev
+Stairwell Lower Tuya Motion/Lux Sensor,Stairwell Lower Motion/Lux,577,941E,Stairwell,Tuya Multi Sensor 4 In 1,_TZE200_3towulqd,TS0601,,kkossev
+Stairwell Tuya Upper Motion/Lux Sensor,Stairwell Upper Motion/Lux,578,80F9,Stairwell,Tuya Multi Sensor 4 In 1,_TZE200_3towulqd,TS0601,,kkossev
+Tuya ZG-204ZV 4-in-1 mmWave Presence Sensor,Kitchen Counter 4-in-1 Motion,469,C3D3,Kitchen,Tuya TS0601 TZE200_rrhgsbacq 4 in 1 Driver,_TZE200_rhgsbacq,TS0601,129122025,jshimota
+Living Room Centralite Pearl Thermostat w/Temp,Living Room Thermostat w/Temp,510,CFA8,Living Room,CentraLite Pearl Thermostat (Custom),Centralite,3157100,4075010,jshimota
+Garage Rolling Door eWeLink Open Contact Sensor,Garage Rolling Door Open Contact,665,9EE8,Garage,Tuya Zigbee Contact Sensor++ w/ healthStatus,eWeLink,CK-TLSR8656-SS5-01(7003),,kkossev
+Bathroom eWeLink Shower Motion Sensor,Bathroom Shower Motion,622,8345,Bathroom,eWeLink MS01 Motion Sensor (Custom),eWeLink,MS01,2,jshimota
+Bathroom eWeLink Sink Motion Sensor,Bathroom Sink Motion,106,BD5F,Bathroom,eWeLink MS01 Motion Sensor (Custom),eWeLink,MS01,2,jshimota
+Guest Bathroom eWeLink Shower Motion Sensor,Guest Bathroom Shower Motion,472,C44A,Guest Bathroom,eWeLink MS01 Motion Sensor (Custom),eWeLink,MS01,5,jshimota
+Kitchen Fridge eWeLink Motion Sensor,Kitchen Fridge Motion,459,82B6,Kitchen,eWeLink MS01 Motion Sensor (Custom),eWeLink,MS01,5,jshimota
+Living Room eWeLink Motion Sensor,Living Room Motion,189,BCB5,Living Room,eWeLink MS01 Motion Sensor (Custom),eWeLink,MS01,5,jshimota
+Bedroom Bed Gledepto Strip Light,Bedroom Bed Strip Light,194,1BD9,Bedroom,Advanced Zigbee RGBW Bulb,GLEDOPTO,GL-C-008P,20451203,hubitat
+Kitchen GLEDOPTO Counter LED Striplight,Kitchen Counter Striplight,151,1.00E+12,Kitchen,Advanced Zigbee RGBW Bulb,GLEDOPTO,GL-C-008P,20451203,hubitat
+Living Room INNR Reading Lamp Bulb,Living Room Reading Lamp,638,F88C,Living Room,Advanced Zigbee RGBW Bulb,innr,AE 287 C,1.9.33,hubitat
+Living Room INNR Torche Light Bulb,Living Room Torche Light,639,09FF,Living Room,Advanced Zigbee RGBW Bulb,innr,AE 287 C,1.9.33,hubitat
+Entryway Jasco Light Switch,Entryway Light,394,BB26,Entryway,Jasco/GE 43078 Switch w/Power Meter Driver (Custom),Jasco Products,43078,5,jshimota
+Hallway Jasco 3-Way Light Switch,Hallway 3-Way Light,383,21CC,Hallway,Jasco/GE 43078 Switch w/Power Meter Driver (Custom),Jasco Products,43078,5,jshimota
+Bathroom Jasco Vanity Light Dimming Switch,Bathroom Vanity Dimmer,111,681A,Bathroom,Jasco/GE 43080 Dimming Switch (Custom),Jasco Products,43080,4,jshimota
+Bedroom Jasco Closet Light Dimming Switch,Bedroom Closet Dimmer,393,F09B,Bedroom,Jasco/GE 43080 Dimming Switch (Custom),Jasco Products,43080,4,jshimota
+Guest Bedroom Jasco Light Dimming Switch,Guest Bedroom Dimmer,546,0C18,Guest Bedroom,Jasco/GE 43080 Dimming Switch (Custom),Jasco Products,43080,4,jshimota
+Office Jasco Ceiling Light Dimming Switch,Office Ceiling Light Dimmer,39,5056,Office,Jasco/GE 43080 Dimming Switch (Custom),Jasco Products,43080,4,jshimota
+Stairwell Jasco Light Dimming Switch,Stairwell Dimmer,584,4ABF,Stairwell,Jasco/GE 43080 Dimming Switch (Custom),Jasco Products,43080,4,jshimota
+Bedroom Jasco Ceiling Light Dimming Switch,Bedroom Ceiling Dimmer,107,F7B1,Bedroom,Jasco/GE 45857 Dimming Switch (Custom),Jasco Products,45857,6,jshimota
+Bedroom Nightstand Lamp CT Bulb,Bedroom Nightstand Lamp,15,5839,Bedroom,Advanced Zigbee CT Bulb,lk,ZBT-CCTLight-GLS0108,2.2,hubitat
+Bedroom Samsung Button w/Temp,Bedroom Button w/Temp,46,6A16,Bedroom,Samsung Zigbee Button,Samjin,button,11,hubitat
+Hallway Samsung Button w/Temp,Hallway Button w/Temp,45,7771,Hallway,Samsung Zigbee Button,Samjin,button,11,hubitat
+Office Entry SmartThings Motion/Temp Sensor,Office Entry Motion/Temp,44,E7B0,Office,SmartThings Motion Sensor Enhanced Custom,Samjin,motion,14,jshimota
+Linen Closet Sengled Dimmable Bulb,Linen Closet Dimmable Bulb,589,8EED,Hallway,Sengled Element Classic,sengled,E11-G13,9,hubitat
+Office RGB/CT Test Lamp Bulb,Office Test Lamp,642,6EBF,Office,Sengled Element Plus,sengled,E11-N1EA,47,hubitat
+Living Room Tunable Lamp Bulb,Living Room Tunable Lamp,30,3400,Living Room,Sengled Element Plus,sengled,Z01-A19NAE26,0000002E,hubitat
+Garage Door Opener Sonoff Relay,Garage Door Opener Relay,437,7110,Garage,Sonoff GDO Relay Driver (Custom),SONOFF,MINI-ZBD,1.0.0,jshimota
+Guest Bathroom Sonoff Temp/Humidity Sensor,Guest Bathroom Temp/Humidity,226,A841,Guest Bathroom,Sonoff Zigbee Temperature/Humidity Sensor,SONOFF,SNZB-02D,1.0.9,hubitat
+Living Room Third Reality Left Ambiance Lamp Bulb,Living Room Left Ambiance Lamp,73,5AA6,Living Room,Third Reality RGBW Bulb (Custom),"Third Reality, Inc",3RCB01057Z,0000004A,jshimota
+Living Room Third Reality Right Ambiance Lamp Bulb,Living Room Right Ambiance Lamp,72,1D33,Living Room,Third Reality RGBW Bulb (Custom),"Third Reality, Inc",3RCB01057Z,0000004A,jshimota
+Garage Rolling Door Third Reality Closed Contact Sensor,Garage Rolling Door Closed Contact,440,501D,Garage,Third Reality Contact Sensor (Custom),"Third Reality, Inc",3RDS17BZ,0000003F,jshimota
+Garage-Foyer Door Third Reality Contact Sensor,Garage-Foyer Door Contact,270,D79F,Entryway,Third Reality Contact Sensor (Custom),"Third Reality, Inc",3RDS17BZ,0000003F,jshimota
+Linen Closet Third Reality Contact Sensor,Linen Closet Contact,588,916E,Hallway,Third Reality Contact Sensor (Custom),"Third Reality, Inc",3RDS17BZ,0000003F,jshimota
+Patio Door Third Reality Contact Sensor,Patio Door Contact,271,91EA,Patio,Third Reality Contact Sensor (Custom),"Third Reality, Inc",3RDS17BZ,v1.00.63,jshimota
+Bedroom Closet Third Reality Motion Sensor,Bedroom Closet Motion,648,555F,Bedroom,Third Reality Motion Sensor (Custom),"Third Reality, Inc",3RMS16BZ,0000004F,jshimota
+Bedroom Third Reality Motion Sensor,Bedroom Motion,55,1FD9,Bedroom,Third Reality Motion Sensor (Custom),"Third Reality, Inc",3RMS16BZ,0000004F,jshimota
+Dining Room Third Reality Motion Sensor,Dining Room Motion,48,03D0,Dining Room,Third Reality Motion Sensor (Custom),"Third Reality, Inc",3RMS16BZ,0000004F,jshimota
+Garage Third Reality Motion Sensor,Garage Motion,1041,99DB,Garage,Third Reality Motion Sensor (Custom),"Third Reality, Inc",3RMS16BZ,0000004F,jshimota
+Kitchen Third Reality Stove Motion Sensor,Kitchen Stove Motion,176,FE24,Kitchen,Third Reality Motion Sensor (Custom),"Third Reality, Inc",3RMS16BZ,0000004F,jshimota
+Office Desk Third Reality Motion Sensor,Office Desk Motion,177,8AD9,Office,Third Reality Motion Sensor (Custom),"Third Reality, Inc",3RMS16BZ,0000004F,jshimota
+Office Third Reality Motion/Lux Night Light,Office Motion/Lux Night Light,608,65B5,Office,Third Reality Night Light (Custom),"Third Reality, Inc",3RSNL02043Z,v1.00.86,jshimota
+Bedroom Third Reality Heating Pad (Left) Outlet,Bedroom Heating Pad (Left),182,0E3B,Bedroom,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Bedroom Third Reality Heating Pad (Right) Outlet,Bedroom Heating Pad (Right),185,97B8,Bedroom,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Garage Third Reality Downstairs POE Cameras Outlet,Garage Downstairs POE Cameras,646,751D,Garage,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Garage Third Reality Table Outlet,Garage Table,405,98A3,Garage,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Hallway Third Reality Glowlight Outlet,Hallway Glowlight,18,DD78,Hallway,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Laundry Room Third Reality Sink Outlet,Laundry Room Sink Outlet,400,D827,Laundry Room,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Living Room Third Reality Room Air Filter Outlet,Living Room Room Air Filter,19,D1B7,Living Room,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Office Third Reality 4:3 Monitor Outlet,Office 4:3 Monitor,20,796,Office,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Office Third Reality Laser Printer Outlet,Office Laser Printer,124,7D21,Office,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Office Third Reality Portrait Monitor Outlet,Office Portrait Monitor,173,9FED,Office,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Office Third Reality Torche Light Outlet,Office Torche Light,14,C966,Office,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Office Third Reality Upstairs POE Cameras Outlet,Office Upstairs POE Cameras,645,B2C6,Office,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Patio Third Reality Outdoor Outlet,Patio Outdoor Outlet,28,B74F,Patio,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP019BZ,1.01.01,jshimota
+Garage Third Reality Tank Outlet w/Power/Energy,Garage Tank w/Power/Energy,390,C755,Garage,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP02028BZ,1.01.01,jshimota
+Office Third Reality Floor Heater Outlet w-Power Monitor,Office Floor Heater w/Power Monitor,181,0AC2,Office,Third Reality Plug w/Power Meter Support (Custom),"Third Reality, Inc",3RSP02028BZ,1.01.01,jshimota
+Bedroom Third Reality Temp/Humidity Sensor,Bedroom Temp/Humidity,625,37FF,Bedroom,Third Reality Temperature & Humidity Sensor wo/Display (Custom),"Third Reality, Inc",3RTHS0224Z,v1.00.47,jshimota
+Dining Room Third Reality Temp/Humidity Sensor,Dining Room Temp/Humidity,626,9E4F,Dining Room,Third Reality Temperature & Humidity Sensor wo/Display (Custom),"Third Reality, Inc",3RTHS0224Z,v1.00.47,jshimota
+Guest Bedroom Third Reality Temp/Humidity Sensor,Guest Bedroom Temp/Humidity,636,FF5D,Guest Bedroom,Third Reality Temperature & Humidity Sensor wo/Display (Custom),"Third Reality, Inc",3RTHS0224Z,v1.00.47,jshimota
+Bathroom Third Reality Temp/Humidity Sensor w/Display,Bathroom Temp/Humidity w/Display,191,4132,Bathroom,Third Reality Temperature & Humidity Sensor w/Display (Custom),"Third Reality, Inc",3RTHS24BZ,v1.00.40,jshimota
+Bedroom Third Reality Temp/Humidity Sensor w/Display,Bedroom Temp/Humidity w/Display,498,BAB7,Bedroom,Third Reality Temperature & Humidity Sensor w/Display (Custom),"Third Reality, Inc",3RTHS24BZ,v1.00.40,jshimota
+Hallway Third Reality Temp/Humidity Sensor w/Display,Hallway Temp/Humidity w/Display,500,2.00E+31,Hallway,Third Reality Temperature & Humidity Sensor w/Display (Custom),"Third Reality, Inc",3RTHS24BZ,v1.00.40,jshimota
+Kitchen Third Reality Temp/Humidity Sensor w/Display,Kitchen Temp/Humidity w/Display,230,1FD3,Kitchen,Third Reality Temperature & Humidity Sensor w/Display (Custom),"Third Reality, Inc",3RTHS24BZ,v1.00.40,jshimota
+Living Room Third Reality Temp/Humidity Sensor w/Display,Living Room Temp/Humidity w/Display,501,ED0A,Living Room,Third Reality Temperature & Humidity Sensor w/Display (Custom),"Third Reality, Inc",3RTHS24BZ,v1.00.40,jshimota
+Office Third Reality Temp/Humidity Sensor w/Display,Office Temp/Humidity w/Display,499,7325,Office,Third Reality Temperature & Humidity Sensor w/Display (Custom),"Third Reality, Inc",3RTHS24BZ,v1.00.40,jshimota
+Front Door Tuya Contact Sensor,Front Door Contact,105,C069,Entryway,Tuya Zigbee Contact Sensor++ w/ healthStatus,TUYATEC-r9hgssol,RH3001,,kkossev
+Guest Bathroom Sonoff Motion Sensor,Guest Bathroom Motion,94,27D1,Guest Bathroom,Tuya Multi Sensor 4 In 1,TUYATEC-zn9wyqtr,RH3040,45,kkossev
+Kitchen Kasa Ceiling Light Dimming Switch,Kitchen Ceiling Dimmer,575,A842A1BFC48F,Kitchen,Kasa Dimming Switch,,HS220,,hubitat
+Bathroom Kasa Fan Switch,Bathroom Fan,558,242FD0B24068,Bathroom,Kasa Plug Switch,,KS200,,hubitat
+Front Porch and Driveway Kasa Light Switch,Front Porch and Driveway Light,561,D844892DF191,Front Porch,Kasa Plug Switch,,KS200,,hubitat
+Garage Overhead Kasa Light Switch,Garage Overhead Light,567,B01921E3D58C,Garage,Kasa Plug Switch,,KS200,,hubitat
+Guest Bathroom Kasa Ceiling Light Switch,Guest Bathroom Ceiling Light,553,242FD0B241E8,Guest Bathroom,Kasa Plug Switch,,KS200,,hubitat
+Guest Bathroom Kasa Fan Switch,Guest Bathroom Fan,552,242FD0B23FF0,Guest Bathroom,Kasa Plug Switch,,KS200,,hubitat
+Laundry Room Kasa Ceiling Light Switch,Laundry Room Ceiling Light,562,D844892DF0F3,Laundry Room,Kasa Plug Switch,,KS200,,hubitat
+Laundry Room Kasa Fan Switch,Laundry Room Fan,563,D844892DD141,Laundry Room,Kasa Plug Switch,,KS200,,hubitat
+Living Room Kasa Bookcase Outlet Switch,Living Room Bookcase Outlet,569,B01921E3D2A9,Living Room,Kasa Plug Switch,,KS200,,hubitat
+Patio Kasa Light Switch,Patio Light,566,B01921E3D6D9,Patio,Kasa Plug Switch,,KS200,,hubitat
+Bathroom Aqara Doorway Motion/Lux Sensor,Bathroom Doorway Motion/Lux,379,F5B3,Bathroom,Aqara P1 Motion Sensor,,lumi.sensor_motion.aq2,,kkossev
+Entryway Aqara P1 Motion/Lux Sensor,Entryway Motion/Lux,517,038A,Entryway,Aqara P1 Motion Sensor,,lumi.sensor_motion.aq2 ,,kkossev
+Virtual Remote Builder Storage Device 1,Remote Builder Storage 1,457,Remote_Builder_Storage_Device_1,Virtual,Remote Builder Storage Driver,,,,garym
+Virtual Remote Builder Storage Device 2,Remote Builder Storage 2,519,Remote_Builder_Storage_Device_2,Virtual,Remote Builder Storage Driver,,,,garym
+Virtual Tile Builder Storage Device 1,Tile Builder Storage 1,221,Tile_Builder_Storage_Device_1,Virtual,Tile Builder Storage Driver,,,,garym
+Virtual Tile Builder Storage Device 2,Tile Builder Storage 2,246,Tile_Builder_Storage_Device_2,Virtual,Tile Builder Storage Driver,,,,garym
+Virtual Tile Builder Storage Device 3,Tile Builder Storage 3,249,Tile_Builder_Storage_Device_3,Virtual,Tile Builder Storage Driver,,,,garym
+All Fans Group,All Fans Group,650,Group_821,Virtual,Group Switch,,,,hubitat
+All Lights Except Porch Group,All Lights Except Porch Group,633,Group_763,Virtual,Group Dimmer,,,,hubitat
+All Lights Group,All Lights Group,53,Group_52,Virtual,Group Bulb Dimmer-2.1,,,,hubitat
+All Outlets Group,All Outlets Group,203,Group_216,Virtual,Group Switch,,,,hubitat
+Bathroom Group,Bathroom Group,318,Group_430,Bathroom,Group Bulb Dimmer-2.1,,,,hubitat
+Bedroom Heated Mattress Group,Bedroom Heated Mattress Group,445,Group_570,Bedroom,Group Switch,,,,hubitat
+Bedroom Lights Group,Bedroom Lights Group,52,Group_51,Bedroom,Group Bulb Dimmer-2.1,,,,hubitat
+Front Porch & Driveway Group,Front Porch & Driveway Group,349,Group_464,Front Porch,Group Switch,,,,hubitat
+Garage Lights Group,Garage Lights Group,386,Group_490,Garage,Group Switch,,,,hubitat
+Guest Bathroom Lights Group,Guest Bathroom Lights Group,471,Group_604,Guest Bathroom,Group Bulb Dimmer-2.1,,,,hubitat
+Hallway Group,Hallway Group,385,Group_489,Hallway,Group Bulb Dimmer-2.1,,,,hubitat
+Hallway Lights Group,Hallway Lights Group,384,Group_488,Hallway,Group Bulb Dimmer-2.1,,,,hubitat
+Kitchen Lights Group,Kitchen Lights Group,152,Group_144,Kitchen,Group Bulb Dimmer-2.1,,,,hubitat
+Laundry Room Group,Laundry Room Group,583,Group_740,Laundry Room,Group Bulb Dimmer-2.1,,,,hubitat
+Living Room Ambiance Group,Living Room Ambiance Group,74,Group_89,Living Room,Group Bulb Dimmer-2.1,,,,hubitat
+Living Room Group,Living Room Group,641,Group_797,Living Room,Group Bulb Dimmer-2.1,,,,hubitat
+Living Room Lights Group,Living Room Lights Group,640,Group_796,Living Room,Group Bulb Dimmer-2.1,,,,hubitat
+Mobile Pixel 9 Presence Sensor,Mobile Pixel 9 Presence,11,efef5e6ea12880bd,Office,Mobile App Device,,,,hubitat
+Office Lights Group,Office Lights Group,42,Group_37,Office,Group Bulb Dimmer-2.1,,,,hubitat
+Office Monitors Group,Office Monitors Group,175,Group_164,Office,Group Switch,,,,hubitat
+Patio Group,Patio Group,281,Group_374,Patio,Group Switch,,,,hubitat
+Patio Light Group,Patio Light Group,260,Group_330,Patio,Group Bulb Dimmer-2.1,,,,hubitat
+Patio Outlet Group,Patio Outlet Group,282,Group_375,Patio,Group Switch,,,,hubitat
+POE Outlets Group,POE Outlets Group,647,Group_815,Virtual,Group Switch,,,,hubitat
+Virtual Alexa Mode Voice Source Switch,Alexa Mode - Voice Source,1025,89222824-c933-4dcb-8b1f-ea5c25b961e2,Virtual,Virtual Switch,,,,hubitat
+Virtual Doorbell Trigger Switch,Doorbell Trigger,144,839aad48-30ae-4364-8c41-44d290c9caee,Virtual,Virtual Switch,,,,hubitat
+Virtual GDO Controller Switch,GDO Controller,444,eb973cd0-43f5-4094-baff-602d8b98a9d2,Virtual,Virtual Switch,,,,hubitat
+OwnTracks - Jim,OwnTracks - Jim Presence,404,546.1724006,Virtual,OwnTracks Driver,,,,ipekula
+Virtual Multibutton Plate Tile Device,Multibutton Plate Tile,54,009ede25-80c1-45dd-958f-6fa1df25f6be,Virtual,Virtual Button,,,,ipekula
+Virtual OwnTracks - Common Presence Sensor,OwnTracks - Common Presence,403,546.OwnTracks,Virtual,OwnTracks Common Driver,,,,ipekula
+Echos Speak All Over (WHA) Device,All Over (WHA),1064,d2d6b0c499994155a36905b7ce83fa07,House,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Bathroom Device w/Sensors,Bathroom Echo w/Sensors,1056,G6G22H0844270ECD,Bathroom,Echos Speak Advanced W/Sensors Device,,,,jshimota
+Echos Speak Bedroom Device  w/Clock/Sensors,Bedroom Echo w/Clock/Sensors,1055,G6G22N063493008N,Bedroom,Echos Speak Advanced W/Sensors Device,,,,jshimota
+Echos Speak Dining Room Device,Dining Room Echo,1054,G090VC0783960BL4,Dining Room,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Downstairs (WHA) Device,Downstairs (WHA),1062,75672f82ac5e444696c66757a6e89f1c,Downstairs,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Everywhere (WHA) Device,Everywhere (WHA),1063,ead18ddf95674ed7aa6145b4709a832b,Virtual,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Garage Device,Garage Echo,1051,G8M0XG111477089T,Garage,Echos Speak Advanced Device,,,,jshimota
+"Echos Speak Guest Bathroom Show 8"" Device","Guest Bathroom Echo Show 8""",1043,G0916D100067042U,Guest Bathroom,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Guest Bedroom Device w/Sensors,Guest Bedroom Echo w/Sensors,1052,G6G22H0844260LVW,Guest Bedroom,Echos Speak Advanced W/Sensors Device,,,,jshimota
+"Echos Speak Kitchen Show 11"" Device w/Sensors","Kitchen Echo Show 11"" w/Sensors",1060,GSM42807543705SM,Kitchen,Echos Speak Advanced W/Sensors Device,,,,jshimota
+Echos Speak Living Room Device,Living Room Echo,1053,G8M11M110474035L,Living Room,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Office (WHA) Device,Office (WHA),1057,d8b2a0cb0f9042378df86e1185b68ee3,Office,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Office Left Device w/Clock/Sensors,Office Echo Left w/Clock/Sensors,1050,G6G22N063482007T,Office,Echos Speak Advanced W/Sensors Device,,,,jshimota
+Echos Speak Office Right Device,Office Echo Right,1037,G090XG07939306XF,Office,Echos Speak Advanced Device,,,,jshimota
+Echos Speak Server Status Tile Driver,Echos Speak Server Status Tile,1040,ECHOS_SPEAK_SERVER_STATUS,Virtual,Echos Speak Server Status Tile Driver,,,,jshimota
+Echos Speak Upstairs (WHA) Device,Upstairs (WHA),1061,85b2af0654904aea8db544f06c20c513,Upstairs,Echos Speak Advanced Device,,,,jshimota
+Entryway THIPL Room State Device,Entryway THIPL Aggregator,955,892,Entryway,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Front Porch THIPL Room State Device,Front Porch THIPL Aggregator,974,909,Front Porch,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Garage THIPL Room State Device,Garage THIPL Aggregator,956,893,Garage,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Guest Bathroom THIPL Room State Device,Guest Bathroom THIPL Aggregator,957,894,Guest Bathroom,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Guest Bedroom THIPL Room State Device,Guest Bedroom THIPL Aggregator,958,895,Guest Bedroom,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Hallway THIPL Room State Device,Hallway THIPL Aggregator,959,896,Hallway,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+House THIPL Room State Device,House THIPL Aggregator,967,906,House,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Kitchen THIPL Room State Device,Kitchen THIPL Aggregator,960,897,Kitchen,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Laundry Room THIPL Room State Device,Laundry Room THIPL Aggregator,961,898,Laundry Room,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Living Room THIPL Room State Device,Living Room THIPL Aggregator,962,899,Living Room,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+MEM Tile Device,MEM - Living Room Tile,984,MEM_TILE_922,Virtual,MEM Dashboard Tile,,,,jshimota
+Office THIPL Room State Device,Office THIPL Aggregator,963,900,Office,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Outside THIPL Room State Device,Outside THIPL Aggregator,976,912,Outside,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Patio THIPL Room State Device,Patio THIPL Aggregator,975,910,Patio,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Stairwell THIPL Room State Device,Stairwell THIPL Aggregator,965,903,Stairwell,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Upstairs THIPL Room State Device,Upstairs THIPL Aggregator,966,904,Upstairs,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Virtual AirNow Air Quality Index Tile Device,AirNow AQI Tile,217,224e696f-d0f4-4d68-b5fa-4d73df7eebff,Virtual,Air Quality from AirNow Custom,,,,jshimota
+Virtual Alexa Mode - Awake Switch,Alexa Mode - Awake,1008,64134e44-712a-44bf-bca0-be8c4ac589a8,Virtual,Virtual Presence Contact and Switch,,,,jshimota
+Virtual Alexa Mode - Home Switch,Alexa Mode - Home,649,4a6165f8-33fd-48dc-9e0b-623e840f5adb,Virtual,Virtual Presence Contact and Switch,,,,jshimota
+Virtual Astro-Meteor Seasons Tile Device,Astro-Meteor Seasons Tile,682,48ed7823-a9eb-42ad-89ba-060dfb8e4fbd,Virtual,Astronomical & Meteorological Seasons,,,,jshimota
+Virtual Battery Monitor 2.0 Tile Device,Battery Monitor 2.0 Tile,681,51b5c85d-3c4e-4e65-ad8c-aea9f7ec8061,Virtual,Notification Tile (Custom),,,,jshimota
+Virtual Daily Device Cycle Tile Device,Daily Device Cycle Tile,677,bb355827-6ec9-4136-bdc0-d6a8449d46f4,Virtual,Notification Tile (Custom),,,,jshimota
+Virtual Date & Time Parser Storage Device,Date & Time Parser Storage,21,8b8213f0-87ba-450c-ab77-04067f2e32d5,Virtual,Date & Time Parser,,,,jshimota
+Virtual Garage Door Alexa Protocol Test Driver,Virtual Garage Door Alexa Protocol Test Device,1028,e591e121-7691-45c1-8406-d3ccfd199c44,Virtual,Virtual Garage Door Alexa Protocol Test Driver,,,,jshimota
+Virtual Guest Showering Switch,Guest Showering,644,539cfae8-a84d-4d5b-9575-4785aed7acce,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual iLife v5sPlus Vacuum Switch,ILife Vacuum,216,bdacf5af-d673-4cf9-8274-08d0ed957cc3,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Mode - Awake Switch,Mode - Awake,64,5afc91c1-b0ef-4596-8603-e4da055581f0,Virtual,Virtual Presence Contact and Switch,,,,jshimota
+Virtual Mode - Away Switch,Mode - Away,62,db8fc0a2-5bf9-4194-9be9-65ff92bf9dc4,Virtual,Virtual Presence Contact and Switch,,,,jshimota
+Virtual Mode - Day Switch,Mode - Day,58,d0734d06-7519-4667-9385-d9b277ed8729,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Mode - Early Morning Switch,Mode - Early Morning,56,173b9b12-7da6-41a3-9991-63d2b549ebcf,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Mode - Evening Switch,Mode - Evening,59,c92609dc-0786-49c2-844d-ce3713476a8c,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Mode - Home Switch,Mode - Home,63,125b4f7d-5c37-4d1e-9a5b-79f120357bfe,Virtual,Virtual Presence Contact and Switch,,,,jshimota
+Virtual Mode - Late Evening Switch,Mode - Late Evening,60,9d805a35-58f1-457e-b962-e50d5a5a74bc,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Mode - Morning Switch,Mode - Morning,57,f9dec524-525d-4098-972e-0ba4798c4ec0,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Mode - Sleeping Switch,Mode - Sleeping,61,1d2df393-2c6d-4c78-85fe-b8595b7f6ffa,Virtual,Virtual Presence Contact and Switch,,,,jshimota
+Virtual Mode - Wee Hours Switch,Mode - Wee Hours,676,3c172a97-c3fd-4337-8f61-f358fc707a9f,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Mode Status & State Tracker Tile Device,Virtual Mode Status Tracker Tile,1024,e8c60601-8162-4aa1-ba6e-90c09765783a,Virtual,Virtual Mode Status & State Tracker Tile Driver,,,,jshimota
+Virtual Motion While Sleeping Switch,Motion While Sleeping,263,aa214fd3-bf8c-4f37-8696-8a01420c4f3b,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual OWM 2.0 Weather Storage Device,OWM 2.0 Weather Storage,909,ab2e1275-50b7-47cc-99ba-4e9596cfe7d6,Virtual,OpenWeatherMap Multi-API Weather Driver,,,,jshimota
+Virtual OWM Air Quality Index Tile Device,OpenWeatherMap AQI Tile,224,5476d6e8-036c-452b-9156-f22bed058d9f,Virtual,OpenWeatherMap-Air Quality-custom,,,,jshimota
+Virtual Showering Switch,Showering,168,84b3c65e-758c-41b8-a0fa-1507c36c2ea3,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Speak Humidity Switch,Speak Humidity,150,b6676bfc-c555-4e22-a668-377a2715f654,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual State /Mode Recheck Trigger Device,State / Mode Recheck Trigger,1007,2535c34e-95e1-4ffd-8994-03d58d41528b,Virtual,Virtual Inverse-able Switch w-autoOff and Toggle,,,,jshimota
+Virtual Twilight Parser Storage Device,Twilight Parser Storage,312,360e6e5a-a25f-489e-ae32-3e6fd04e30a5,Virtual,Twilight Parser Driver,,,,jshimota
+WakeOnLan Win10 (Custom),WOL - Titbeast2,1049,WOL_CHILD_956,Office,WakeOnLan Win10 (Custom),,,,jshimota
+AVT - Office Thermostat (Custom),AVT - Office Thermostat (Custom),1030,avt-941,Virtual,Advanced vThermostat Device (Custom),,,,jshimota
+Bathroom THIPL Room State Device,Bathroom THIPL Aggregator,952,889,Bathroom,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Bedroom THIPL Room State Device,Bedroom THIPL Aggregator,953,890,Bedroom,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Dining Room THIPL Room State Device,Dining Room THIPL Aggregator,954,891,Dining Room,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Downstairs THIPL Room State Device,Downstairs THIPL Aggregator,964,902,Downstairs,Virtual THIPL Room State Aggregator Driver,,,,jshimota
+Virtual Influx Backlog Counter Notification Tile Device,Influx Backlog Counter Tile,939,0654793b-ac01-439d-a640-57adb15cbbdd,Virtual,Notification Tile (Custom),,,,jshimota
+Virtual Notifications Tile Device,Notifications Tile,49,486ac405-b683-4388-ba8d-ef2a60c7f97c,Virtual,Notification Tile (Custom),,,,jshimota
+Virtual Simple Garage Door Controller,Simple Garage Door Controller,439,fb35f238-94ad-42c1-b57c-eadaf0cc309d,Virtual,Virtual Simple Garage Door Controller (Custom),,,,jshimota
+Virtual Sun Notification Storage Device,Sun Notification Storage,458,39613401-d2ef-477f-a321-85d1462e0120,Virtual,Notification Tile (Custom),,,,jshimota
+Office Hubitat C7 Dundee-Home Hub,Office Hubitat Hub,146,f5c2feb7-16c7-4bf3-8f4f-4a74e477ba18,Office,Hub Information Driver v3,,,,thebearmay
+Dining Room TPLink Light Dimming Switch,Dining Room Dimmer,576,8C902D204456,Dining Room,TpLink Dimmer,,,,davegut
+File Manager+,File Manager+,593,FileManager+Device,Virtual,File Manager+ Device,,,,jpage4500
+Guest Bathroom TPLink Vanity Dimmer Light Switch,Guest Bathroom Vanity Dimmer,680,3068932CE2C1,Guest Bathroom,TpLink Dimmer,,,,davegut
+Laundry Room TPLink Vanity Dimming Switch,Laundry Room Vanity Dimmer,582,3068932CF434,Laundry Room,TpLink Dimmer,,,,davegut
+Virtual Zone Motion Bathroom Motion Sensor,ZM - Bathroom Motion,380,mZone_486,Bathroom,Motion Zone Motion Sensor,,,,hubitat
+Virtual Zone Motion Guest Bath Motion Sensor,ZM - Guest Bath Motion,474,mZone_607,Guest Bathroom,Motion Zone Motion Sensor,,,,hubitat
+Virtual Zone Motion Kitchen Motion Sensor,ZM - Kitchen Motion,465,mZone_603,Kitchen,Motion Zone Motion Sensor,,,,hubitat
+Virtual Zone Motion Office Motion Sensor,ZM - Office Motion,178,mZone_166,Office,Motion Zone Motion Sensor,,,,hubitat
+Virtual Zone Motion Stairwell Motion Sensor,ZM - Stairwell Motion,580,mZone_737,Stairwell,Motion Zone Motion Sensor,,,,hubitat
+Zigbee Map Helper,Zigbee Map Helper,824,ZMH-845,Virtual,Zigbee Map Helper,,,,dandanache

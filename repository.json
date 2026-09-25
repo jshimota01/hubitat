@@ -53,7 +53,7 @@
 		  {
 			"name": "Centralite Pearl Zigbee Thermostat",
 			"category": "Control",
-			"version": "0.7.8",
+			"version": "0.7.9",
 			"tags": [ "Dashboards", "Monitoring", "Thermostat", "Zigbee", "Driver", "Temperature & Humidity", "Climate Control" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/centralite_pearl_thermostat/packageManifest.json",
 			"description": "A Zigbee Thermostat driver specific to the Centralite Pearl Thermostat device, (aka Centralite model 3157100). Driver includes FanCirculate feature and accounts for thermostat hardware lack of Auto mode "
@@ -75,7 +75,7 @@
 			"description": "A Parent App with children to set two switches to always be inversed to each other.  Can be disabled with its own switch.  Useful for folks who hate boolean! "
 		  },
 		  {
-			"name": "OpenWeatherMap Multi-API Weather Driver ",
+			"name": "OpenWeatherMap Multi-API Weather Driver",
 			"category": "Control",
 			"version": "2.5.16",
 			"tags": [ "Weather", "Virtual", "Misc. Devices" ],

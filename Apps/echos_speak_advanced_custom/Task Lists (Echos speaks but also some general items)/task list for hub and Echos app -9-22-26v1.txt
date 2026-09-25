@@ -1,0 +1,26 @@
+Action Items
+A. Echos Speak Advanced
+ A1 — Command Rate Limiting
+Prevent rapid volume/media commands from flooding the bridge and causing timeouts.
+ A2 — WHA Group Dispatch
+Fix speak, playAnnouncement, and DND propagation to all group members.
+ A3 — Echo Show Display Power
+Investigate alternate Amazon endpoints/mechanisms for display power control.
+ A4 — Voice / Speak
+Determine why Voice does not work with speak and identify the failing command path.
+ A5 — Play / Pause / Stop Logging
+Remove routine info messages while retaining actual warning/error logging.
+ A6 — Command Guards
+Review Gemini's identified missing guards and prevent invalid/unsupported commands.
+ A7 — Synology Log Review
+Review current Docker/server logs for errors, timeouts, failed commands, and recurring issues.
+
+B. Hubitat
+ B1 — Thermostat / MEM
+Stop duplicate setpoint commands/events on dev:510.
+ B2 — Device Health
+Convert dev:622 / dev:498 from active polling to passive check-in tracking.
+ B3 — Stairwell Motion
+Increase re-arm time on dev:577 / dev:578 to 30–60 seconds.
+ B4 — Lighting Automation
+Remove redundant commands from app:500 → dev:638.

@@ -20,6 +20,10 @@
  **/
 /**
  * Changelog:
+ * v2.7.2    09/24/26    jshimota    Removed redundant refresh() call in setpointChangeHandler to prevent double-evaluation loops on MEM setpoint updates. Guarded evaluateOverallHealth to only push setHealthStatus when state changes.
+ * v2.7.1    09/24/26    jshimota    Standardized version update trace log line format across lifecycle methods.
+ * v2.7.0    09/24/26    jshimota    Decoupled thermostatOperatingState changes from updateAppLabel() to prevent routine heating/idle transitions from modifying app labels and triggering dashboard tile style/icon re-renders. Replaced debounced setpoint refresh timer with direct, synchronous driver refresh execution.
+ * v2.6.0    09/24/26    jshimota    Implemented Smart Dependency Health Engine evaluating bound temperature sources (virtual/physical) and outlets via healthStatus or getLastActivity fallback. Added debounced setpoint change handler using runIn(1) to eliminate event loop chatter.
  * v2.5.0    09/18/26    jshimota    Guarded setpointChangeHandler against virtual thermostat 'off' mode state to prevent background refresh loops during schedule changes.
  * v2.4.2    09/06/26    jshimota    Enforced explicit off command execution across setOutletsState when state is idle to ensure floor heaters shut off immediately on setpoint drop.
  * v2.4.1    09/05/26    jshimota    Aligned child app initial setpoint limits to support 90 °F (32.0 °C) maximum heating boundary.
@@ -39,8 +43,8 @@
  * v1.0.0    12/03/20    NelsonClark Initial public release of Advanced vThermostat Child App.
  **/
 
-static String version() { return '2.5.0' }
-def timeStamp() { return "2026/09/18 09:00 AM" }
+static String version() { return '2.7.2' }
+def timeStamp() { return "2026/09/24 02:20 PM" }
 
 definition(
     name: "Advanced vThermostat Child (Custom)",
@@ -108,7 +112,6 @@ def pageConfig() {
         /* Collapsible App Preferences & Logging Options */
         section("<b>App Preferences & Logging Options</b>", hideable: true, hidden: true) {
             input name: "showVersionInLabel", type: "bool", title: "Show Version in App Label?", defaultValue: true
-            input name: "showStatusInLabel", type: "bool", title: "Show Active Status in App Label?", defaultValue: true
 
             paragraph "<hr style='border:0; border-top:1px solid #E0E0E0; margin:8px 0;'/>"
 
@@ -131,7 +134,6 @@ private void checkAndLogVersionDemarcation() {
 
 private void updateAppLabel(String statusText = null) {
     Boolean showVersion = getSettingBool("showVersionInLabel", true)
-    Boolean showStatus  = getSettingBool("showStatusInLabel", true)
 
     String customLabel = app.getLabel() ?: "Advanced vThermostat Child"
     String baseLabel = customLabel
@@ -139,7 +141,7 @@ private void updateAppLabel(String statusText = null) {
     if (baseLabel.contains(" v2.")) baseLabel = baseLabel.substring(0, baseLabel.indexOf(" v2."))
     if (showVersion) baseLabel += " v${version()}"
 
-    if (showStatus && statusText) {
+    if (statusText != null) {
         baseLabel += " - [${statusText}]"
     }
 
@@ -209,9 +211,7 @@ void updated() {
         logDebug "Child app closed without setting or version changes. Skipping re-initialization."
     }
     
-    def thermostat = getThermostat()
-    String currentOpState = thermostat ? thermostat.currentValue("thermostatOperatingState") : "Idle"
-    updateAppLabel(currentOpState?.capitalize())
+    updateAppLabel()
 }
 
 void uninstalled() {
@@ -254,10 +254,16 @@ private void initialize(thermostatInstance = null, Boolean isInstall = false) {
     subscribe(thermostatInstance, "heatingSetpoint", setpointChangeHandler)
     subscribe(thermostatInstance, "coolingSetpoint", setpointChangeHandler)
 
-    updateTemperature()
+    subscribe(sensors, "healthStatus", dependencyHealthHandler)
+    if (heatOutlets) subscribe(heatOutlets, "healthStatus", dependencyHealthHandler)
+    if (coolOutlets) subscribe(coolOutlets, "healthStatus", dependencyHealthHandler)
 
-    String currentOpState = thermostatInstance.currentValue("thermostatOperatingState") ?: "Idle"
-    updateAppLabel(currentOpState?.capitalize())
+    runEvery30Minutes("evaluateOverallHealth")
+
+    updateTemperature()
+    evaluateOverallHealth()
+
+    updateAppLabel()
 
     if (isInstall) {
         app.updateSetting("logDebugEnable", [type: "bool", value: true])
@@ -289,19 +295,55 @@ def getThermostat() {
 def temperatureHandler(evt) {
     logDebug "Temperature changed to ${evt.value}"
     updateTemperature()
+    evaluateOverallHealth()
 }
 
 def setpointChangeHandler(evt) {
+    // Driver handles its own evaluation pass internally during setpoint updates.
+    // Redundant thermostat.refresh() call removed to eliminate duplicate execution pipelines.
+    logDebug "Setpoint change acknowledged from ${evt.device.displayName}: ${evt.name} = ${evt.value}"
+}
+
+private Boolean isDeviceHealthy(Object dev, Integer maxInactivityHours = 12) {
+    if (!dev) return true
+
+    def healthAttr = dev.currentValue("healthStatus")
+    if (healthAttr != null) {
+        return healthAttr.toString().toLowerCase() == "online"
+    }
+
+    Date lastAct = dev.getLastActivity()
+    if (lastAct != null) {
+        Long elapsedMs = now() - lastAct.getTime()
+        Long maxAllowedMs = maxInactivityHours * 3600000L
+        return elapsedMs <= maxAllowedMs
+    }
+
+    return true
+}
+
+def evaluateOverallHealth() {
     def thermostat = getThermostat()
-    if (thermostat) {
-        String pMode = thermostat.currentValue("physicalThermostatMode") ?: "off"
-        if (pMode != "off") {
-            logDebug "Setpoint changed on active virtual device (${evt.name} = ${evt.value}). Forcing evaluation pass."
-            thermostat.refresh()
-        } else {
-            logDebug "Setpoint changed on virtual device while OFF (${evt.name} = ${evt.value}). Skipping refresh."
+    if (!thermostat) return
+
+    Boolean sensorsHealthy = sensors?.every { s -> isDeviceHealthy(s, 12) } ?: false
+    Boolean heatOutletsHealthy = heatOutlets ? heatOutlets.every { o -> isDeviceHealthy(o, 12) } : true
+    Boolean coolOutletsHealthy = coolOutlets ? coolOutlets.every { o -> isDeviceHealthy(o, 12) } : true
+
+    Boolean overallHealthy = sensorsHealthy && heatOutletsHealthy && coolOutletsHealthy
+    String targetStatus = overallHealthy ? "online" : "offline"
+
+    if (state.lastHealthStatus != targetStatus) {
+        state.lastHealthStatus = targetStatus
+        if (thermostat.hasCommand("setHealthStatus")) {
+            thermostat.setHealthStatus(targetStatus)
         }
     }
+}
+
+def dependencyHealthHandler(evt) {
+    logDebug "Dependency health change event received from ${evt.device.displayName}: ${evt.value}"
+    evaluateOverallHealth()
 }
 
 def updateTemperature() {
@@ -339,7 +381,6 @@ def thermostatStateHandler(evt) {
     if (evt.value) {
         logInfo "Thermostat state changed to ${evt.value}"
         setOutletsState(evt.value)
-        updateAppLabel(evt.value?.capitalize())
     }
 }
 

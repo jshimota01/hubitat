@@ -5,7 +5,7 @@
  * Purpose:
  * Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
  * Features Thermostat Controller functionality, locked 'Auto' dashboard dual-setpoint display support,
- * passive temperature sensor health tracking, and maintenance routines.
+ * smart dependency health tracking, and maintenance routines.
  **/
 /**
  * Copyright 2026 James Shimota / Original 2020 Nelson Clark
@@ -24,6 +24,10 @@
  **/
 /**
  * Changelog:
+ * v2.9.2    09/24/26    jshimota    Updated sendIfChanged to evaluate args.isStateChange correctly. Standardized driverVersion attribute updates to use sendIfChanged across lifecycle methods.
+ * v2.9.1    09/24/26    jshimota    Added standard checkAndLogVersionDemarcation trace demarcation output across installed, updated, and configure lifecycle hooks.
+ * v2.9.0    09/24/26    jshimota    Enforced strict presentation locking under lockDashboardToAuto = true. Keeps thermostatMode statically locked to 'auto' across all internal physicalThermostatMode transitions, ensuring dashboard tiles retain constant dual-setpoint UI presentation without style flips.
+ * v2.8.0    09/24/26    jshimota    Purged 65-minute passive sensor watchdog timers and background scheduled loops. Added setHealthStatus command allowing the Child App Dependency Health Engine to push calculated online/offline health states directly.
  * v2.7.0    09/23/26    jshimota    Ripped out active scheduled health checks/Ping commands and converted healthStatus to a passive sensor update watchdog evaluated inside evaluateMode().
  * v2.6.0    09/18/26    jshimota    Prevented physical mode promotion to 'heat'/'auto' on setpoint commands received while OFF. Restricted sensor update timeout Emergency Stop enforcement strictly to active heating/cooling states to eliminate idle timeout loops and unwanted preEmergencyMode autorecovery cycles. Added enableEmergencyStopOnTimeout toggle preference.
  * v2.5.2    09/06/26    jshimota    Promoted physicalThermostatMode to 'heat' inside setHeatingSetpoint when mode is OFF to ensure manual setpoint changes drive outlets correctly.
@@ -35,7 +39,7 @@
  * v2.3.1    09/03/26    jshimota    Added lockDashboardToAuto preference and physicalThermostatMode tracking to preserve dual-setpoint dashboard tiles.
  * v2.3.0    09/01/26    jshimota    Updated with Thermostat Controller functionality.
  * v2.2.0    08/30/26    jshimota    Applied initial Driver Master Template architecture and updated attribute definitions.
- * v2.1.1    08/30/26    jshimota    Formatted display names to use (Custom) parenthetical naming standard.
+ * v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) parenthetical naming standard.
  * v2.1.0    08/30/26    jshimota    Removed v2 identifiers, updated namespace to jshimota, and corrected GitHub import URLs.
  * v2.0.0    08/22/26    jshimota    Forked and bumped definition name to v2 for Hubitat Elevation platform testing.
  * v1.1.0    04/15/21    NelsonClark Added support for threshold hysteresis buffers and multi-sensor temperature averaging.
@@ -45,8 +49,8 @@
 import groovy.json.JsonOutput
 import groovy.transform.Field
 
-static String version() { return '2.7.0' }
-def timeStamp() { return "2026/09/23 02:30 PM" }
+static String version() { return '2.9.2' }
+def timeStamp() { return "2026/09/24 02:20 PM" }
 
 metadata {
     definition (
@@ -70,33 +74,29 @@ metadata {
         attribute "maxHeatTemp", "number"
         attribute "minCoolTemp", "number"
         attribute "maxCoolTemp", "number"
-        attribute "lastTempUpdate", "number"
         attribute "supportedThermostatModes", "JSON_OBJECT"
-        attribute "maxUpdateInterval", "number"
         attribute "minCoolingSetpoint", "number"     
         attribute "maxCoolingSetpoint", "number"     
         attribute "minHeatingSetpoint", "number"     
         attribute "maxHeatingSetpoint", "number"     
         attribute "thermostatTemperatureSetpoint", "number"
-        attribute "preEmergencyMode", "string"
         attribute "controllerState", "string"
         attribute "physicalThermostatMode", "string"
 
         // Custom Commands
+        command "setHealthStatus", ["string"]
         command "heatUp"
         command "heatDown"
         command "coolUp"
         command "coolDown"
         command "controlHeat", ["string"]
         command "controlCool", ["string"]
-        command "setMaxUpdateInterval", ["number"]
         command "resetDriver"
         command "setLogLevel", ["number"]
     }
 
     preferences {
         input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i>When enabled, locks thermostatMode attribute to 'auto' so dashboard tiles preserve dual heat/cool setpoint controls.</i>", defaultValue: true, required: true
-        input name: "enableEmergencyStopOnTimeout", type: "bool", title: "<b>Enable Sensor Timeout Emergency Stop</b>", description: "<i>When enabled, shuts down active heating/cooling if temperature sensor updates stop for longer than Max Update Interval.</i>", defaultValue: true, required: true
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
@@ -126,16 +126,17 @@ void parse(String description) {
 void installed() {
     checkAndLogVersionDemarcation()
     logInfo "Installing driver v${version()} (${timeStamp()})..."
-    updateAttribute("driverVersion", version())
-    updateAttribute("healthStatus", "unknown")
-
+    sendIfChanged([name: "driverVersion", value: version()])
+    if (device.currentValue("healthStatus") == null) {
+        sendIfChanged([name: "healthStatus", value: "online"])
+    }
     initialize(true)
 }
 
 void updated() {
     checkAndLogVersionDemarcation()
     logInfo "Updating preferences..."
-    updateAttribute("driverVersion", version())
+    sendIfChanged([name: "driverVersion", value: version()])
     
     initialize(false)
     
@@ -148,7 +149,7 @@ void updated() {
 def configure() {
     checkAndLogVersionDemarcation()
     logInfo "Configuring device..."
-    updateAttribute("driverVersion", version())
+    sendIfChanged([name: "driverVersion", value: version()])
     
     initialize(false)
     sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["auto", "cool", "heat", "off"])])
@@ -163,14 +164,19 @@ def refresh() {
     return []
 }
 
+def setHealthStatus(String status) {
+    String normStatus = (status?.toLowerCase() == "offline") ? "offline" : "online"
+    sendIfChanged([name: "healthStatus", value: normStatus])
+}
+
 private void initialize(Boolean isInstall = false) {
     checkAndLogVersionDemarcation()
     unschedule("disableDebugLogging")
 
-    updateAttribute("driverVersion", version())
+    sendIfChanged([name: "driverVersion", value: version()])
 
     if (device.currentValue("healthStatus") == null) {
-        updateAttribute("healthStatus", "unknown")
+        sendIfChanged([name: "healthStatus", value: "online"])
     }
 
     def hubScale = getTemperatureScale()
@@ -206,7 +212,6 @@ private void initialize(Boolean isInstall = false) {
         }
         
         updateThermostatSetpoint(hubScale)
-        state.lastTempUpdate = now()
 
         if (getSettingBool("lockDashboardToAuto", true)) {
             sendIfChanged([name: "physicalThermostatMode", value: "off"])
@@ -218,8 +223,6 @@ private void initialize(Boolean isInstall = false) {
 
         sendIfChanged([name: "thermostatOperatingState", value: "idle"])
         sendIfChanged([name: "controllerState", value: "idle"])
-        sendIfChanged([name: "maxUpdateInterval", value: 65])
-        sendIfChanged([name: "preEmergencyMode", value: "none"])
         sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"])])
     } else {
         if (hubScale == "C") {
@@ -295,7 +298,6 @@ def updateThermostatSetpoint(String units = null) {
 
 def evaluateMode() {
     logTrace "evaluateMode() - START"
-    runIn(60, 'evaluateMode')
     
     def temp = device.currentValue("temperature")
     def heatingSetpoint = device.currentValue("heatingSetpoint")
@@ -303,44 +305,6 @@ def evaluateMode() {
     def threshold = device.currentValue("thermostatThreshold")
     def current = device.currentValue("thermostatOperatingState")
     def mode = device.currentValue("physicalThermostatMode") ?: "off"
-
-    def nowMs = now()
-    def lastUpdate = state.lastTempUpdate ?: nowMs
-    def maxInterval = (device.currentValue("maxUpdateInterval") ?: 180) as Long
-    if (maxInterval > 180) maxInterval = 180
-    if (maxInterval < 1) maxInterval = 1
-    
-    def maxIntervalMili = maxInterval * 60000
-    def preMode = device.currentValue("preEmergencyMode")
-    Boolean isSensorStale = (nowMs - lastUpdate >= maxIntervalMili)
-    Boolean eStopEnabled = getSettingBool("enableEmergencyStopOnTimeout", true)
-
-    if (isSensorStale) {
-        updateAttribute("healthStatus", "offline")
-        if (eStopEnabled && mode != "off" && current != "idle") {
-            logError "Temp sensor update timeout exceeded while active (${current}). Enforcing EMERGENCY STOP."
-            sendIfChanged([name: "preEmergencyMode", value: mode])
-            setThermostatMode("off")
-            sendIfChanged([name: "thermostatOperatingState", value: "idle"])
-            sendIfChanged([name: "controllerState", value: "idle"])
-            return
-        } else {
-            logDebug "Temp sensor update interval exceeded (${maxInterval} mins). Thermostat is idle or OFF; holding state without emergency stop."
-        }
-    } else {
-        updateAttribute("healthStatus", "online")
-        if (preMode && preMode != "none" && preMode != "" && preMode != "null") {
-            logWarn "Sensors reporting again. Clearing preEmergencyMode."
-            sendIfChanged([name: "preEmergencyMode", value: "none"])
-            if (mode == "off") {
-                logInfo "Physical thermostat mode is currently OFF. Autorecovery skipped."
-                return
-            } else {
-                setThermostatMode(preMode)
-                return
-            }
-        }
-    }
 
     if (mode == "off") {
         if (current != "idle") {
@@ -382,7 +346,6 @@ def evaluateMode() {
 }
 
 def emergencyStop() { 
-    sendIfChanged([name: "preEmergencyMode", value: device.currentValue("physicalThermostatMode")])
     setThermostatMode("off") 
 }
 
@@ -396,7 +359,7 @@ def setHeatingSetpoint(Object value) {
     Double newHeatingSetpoint = roundDegrees(dVal)
 
     if (newHeatingSetpoint == device.currentValue("heatingSetpoint")) {
-        runIn(1, 'evaluateMode')
+        evaluateMode()
         return
     }
 
@@ -428,7 +391,7 @@ def setHeatingSetpoint(Object value) {
         sendIfChanged([name: "coolingSetpoint", value: newCoolingSetpoint, unit: units])
     }
     updateThermostatSetpoint(units)
-    runIn(1, 'evaluateMode')
+    evaluateMode()
 }
 
 def setCoolingSetpoint(Object value) {
@@ -437,7 +400,7 @@ def setCoolingSetpoint(Object value) {
     Double newCoolingSetpoint = roundDegrees(dVal)
 
     if (newCoolingSetpoint == device.currentValue("coolingSetpoint")) {
-        runIn(1, 'evaluateMode')
+        evaluateMode()
         return
     }
 
@@ -468,7 +431,7 @@ def setCoolingSetpoint(Object value) {
         sendIfChanged([name: "heatingSetpoint", value: newHeatingSetpoint, unit: units])
     }
     updateThermostatSetpoint(units)
-    runIn(1, 'evaluateMode')
+    evaluateMode()
 }
 
 def setThermostatThreshold(Object value) {
@@ -480,19 +443,7 @@ def setThermostatThreshold(Object value) {
     }
     if (dVal != device.currentValue("thermostatThreshold")) {
         sendIfChanged([name: "thermostatThreshold", value: dVal, unit: getTemperatureScale()])
-        runIn(1, 'evaluateMode')
-    }
-}
-
-def setMaxUpdateInterval(BigDecimal minutes) {
-    if (minutes == null) return
-    BigDecimal clampedMins = minutes
-    if (clampedMins < 1) clampedMins = 1
-    if (clampedMins > 180) clampedMins = 180
-
-    if (clampedMins != device.currentValue("maxUpdateInterval")) {
-        sendIfChanged([name: "maxUpdateInterval", value: clampedMins])
-        runIn(1, 'evaluateMode')
+        evaluateMode()
     }
 }
 
@@ -515,14 +466,9 @@ def setThermostatMode(String value) {
     } else {
         sendIfChanged([name: "thermostatMode", value: normMode])
     }
-
-    if (device.currentValue("preEmergencyMode") != "none" && normMode != "off") {
-        logInfo "Manual thermostat mode change to '${normMode}' detected during offline emergency. Clearing preEmergencyMode."
-        sendIfChanged([name: "preEmergencyMode", value: "none"])
-    }
     
     updateThermostatSetpoint()
-    runIn(1, 'evaluateMode')
+    evaluateMode()
 }
 
 def off()  { setThermostatMode("off") }
@@ -548,9 +494,7 @@ def setTemperature(value) {
     Double dVal = value.toString().toDouble()
     def units = getTemperatureScale()
     sendIfChanged([name: "temperature", value: dVal, unit: units])
-    state.lastTempUpdate = now()
-    updateAttribute("healthStatus", "online")
-    runIn(1, 'evaluateMode')
+    evaluateMode()
 }
 
 def heatUp() {
@@ -672,7 +616,7 @@ private void sendIfChanged(Map args) {
     String oldVal = device.currentValue(nameStr)?.toString()
     String newVal = args.value != null ? args.value.toString() : ""
 
-    if (oldVal != newVal) {
+    if (oldVal != newVal || args.isStateChange == true) {
         String desc = args.descriptionText ?: "${nameStr} set to ${args.value}"
         Map eventMap = [
             name: nameStr, 
@@ -689,12 +633,7 @@ private void sendIfChanged(Map args) {
 }
 
 private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
-    final String currentVal = device.currentValue(attribute)?.toString()
-    if (currentVal == value?.toString()) return
-
-    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
-    logInfo descriptionText
-    sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
+    sendIfChanged([name: attribute, value: value, unit: unit, type: type])
 }
 
 private void logMessage(String level, String msg) {
