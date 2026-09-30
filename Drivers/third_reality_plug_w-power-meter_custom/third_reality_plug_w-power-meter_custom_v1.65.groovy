@@ -33,7 +33,6 @@
  **/
 /**
  * Changelog:
- * v1.66    09/27/26    jshimota    Removed artificial forced attribute zeroing in parseOnOffCluster on switch off; relying strictly on physical hardware ZCL cluster telemetry reporting.
  * v1.65    09/27/26    jshimota    Fixed parameter alignment in updateAttribute calls; removed ' Text' from display labels (Instantaneous Voltage, Cumulative Energy); updated log output wording to 'is now'.
  * v1.64    09/27/26    jshimota    Reassigned log levels (Amperage, Power, Energy, Power Factor -> debug; Amperage/Power Text -> info), dropped ' Text' from display labels (Instantaneous Current, Instantaneous Power), updated event description wording to 'is now'.
  * v1.63    09/24/26    jshimota    Decoupled configure() execution from updated() loop to prevent internal updateSetting calls from triggering full Zigbee configuration & health checks; demoted internal logging to logDebug and streamlined Health Check info output.
@@ -53,8 +52,8 @@
 **/
 // [KEEP-EXACT] See possible changelog.txt for past changelog history versions v0 - v1.49
 
-static String version() { return '1.66' }
-def timeStamp() { return "2026/09/27 10:15 AM" }
+static String version() { return '1.65' }
+def timeStamp() { return "2026/09/27 10:00 AM" }
 
 import groovy.transform.Field
 import hubitat.zigbee.zcl.DataType
@@ -670,8 +669,16 @@ void parseOnOffCluster(final Map descMap) {
             
             final Boolean isOn = (descMap.value == "01")
             updateAttribute("switch", isOn ? "on" : "off", null, type, "info")
+
+            if (!isOn && supportsPowerMeter()) {
+                logDebug "Switch reported off: Forcing instantaneous power and amperage attributes to zero..."
+                updateAttribute("power", 0.0G, "W", type, "debug")
+                updateAttribute("powerText", "0.0 Watts", null, type, "info", "Instantaneous Power")
+                updateAttribute("amperage", 0.0G, "A", type, "debug")
+                updateAttribute("amperageText", "0.0 A", null, type, "info", "Instantaneous Current")
+                updateAttribute("powerFactor", 0.0G, null, type, "debug")
+            }
             break
-            
         case POWER_RESTORE_ID:
             final Map<Integer, String> options = PowerRestoreOpts.options as Map<Integer, String>
             final Integer value = hexStrToUnsignedInt(descMap.value)
@@ -683,7 +690,6 @@ void parseOnOffCluster(final Map descMap) {
                 device.updateSetting("powerRestore", valStr)
             }
             break
-            
         default:
             logWarn "Unknown On/Off cluster attribute: ${descMap}"
             break

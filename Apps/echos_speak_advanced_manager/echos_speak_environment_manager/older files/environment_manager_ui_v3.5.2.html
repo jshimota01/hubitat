@@ -1,0 +1,539 @@
+<!--
+ * Application Name: Echos Speak Environment Manager UI (SPA)
+ * Platform: Hubitat Elevation (C-7 / OS 2.4.4.156)
+ * Notes: Standalone HTML5/JS Single-Page Application (SPA) for live status dashboard monitoring and 5-section matrix management.
+ * Category: Utility / Convenience / Environmental
+ -->
+<!--
+ * Copyright 2026 James Shimota
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ -->
+<!--
+ * Purpose:
+ * Provides central 5-Section Shared Settings Matrix state management (DND, Mute, Volume Level, Display Brightness, Display Power) per Hubitat Mode + Sleeping/Away.
+ * Uses local REST API endpoints to serve a standalone HTML/JS Single Page Application (SPA) dashboard and matrix editor.
+ *
+ * Changelog:
+ * v3.5.2 - 2026/09/28 - Cleaned up some basic colorization.
+ * v3.5.1 - 2026/09/28 - HTML Comment Header & Version Alignment:
+ *                         - Replaced Groovy/C-style comment syntax (/** ... */) with standard HTML comment blocks (< ! -- ... -- > ) to eliminate raw text rendering on UI load.
+ *                         - Synchronized SPA file versioning baseline to v3.5.1 alongside backend application changes.
+ * v3.5.0 - 2026/09/28 - Standalone Local REST/SPA Architecture Migration:
+ *                         - Added oauth:true and defined REST API mappings (/ui.html, /api/state, /api/matrix, /api/matrix/save, /api/matrix/apply, /api/refresh).
+ *                         - Added automatic local access token generation lifecycle via ensureAccessToken().
+ *                         - Added file-serving handler serveUI() to stream environment_manager_ui.html from Hubitat File Manager with variable interpolation.
+ *                         - Added JSON REST endpoints for live state monitoring, matrix payload persistence, and mode execution.
+ *                         - Retained existing command queuing, mode tracking, and getDeviceProfile() capability verification engine.
+ -->
+<!--
+ * Application Name: Echos Speak Environment Manager UI (SPA)
+ * Platform: Hubitat Elevation (C-7 / OS 2.4.4.156)
+ * Notes: Standalone HTML5/JS Single-Page Application (SPA) for live status dashboard monitoring and 5-section matrix management.
+ * Category: Utility / Convenience / Environmental
+ -->
+<!--
+ * Copyright 2026 James Shimota
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ -->
+<!--
+ * Purpose:
+ * Provides central 5-Section Shared Settings Matrix state management (DND, Mute, Volume Level, Display Brightness, Display Power) per Hubitat Mode + Sleeping/Away.
+ * Uses local REST API endpoints to serve a standalone HTML/JS Single Page Application (SPA) dashboard and matrix editor.
+ *
+ * Changelog:
+ * v3.5.1 - 2026/09/28 - HTML Comment Header & Version Alignment:
+ *                         - Replaced Groovy/C-style comment syntax (/** ... */) with standard HTML comment blocks (< ! -- ... -- > ) to eliminate raw text rendering on UI load.
+ *                         - Synchronized SPA file versioning baseline to v3.5.1 alongside backend application changes.
+ * v3.5.0 - 2026/09/28 - Standalone Local REST/SPA Architecture Migration:
+ *                         - Added oauth:true and defined REST API mappings (/ui.html, /api/state, /api/matrix, /api/matrix/save, /api/matrix/apply, /api/refresh).
+ *                         - Added automatic local access token generation lifecycle via ensureAccessToken().
+ *                         - Added file-serving handler serveUI() to stream environment_manager_ui.html from Hubitat File Manager with variable interpolation.
+ *                         - Added JSON REST endpoints for live state monitoring, matrix payload persistence, and mode execution.
+ *                         - Retained existing command queuing, mode tracking, and getDeviceProfile() capability verification engine.
+ -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echos Speak Environment Manager</title>
+    <style>
+        :root {
+            --bg-color: #12181f;
+            --card-bg: #1a252f;
+            --card-sub-bg: #22303c;
+            --accent-color: #3498db;
+            --text-color: #ecf0f1;
+            --text-muted: #95a5a6;
+            --border-color: #2c3e50;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --bright-blue: #38bdf8;
+            --bright-red: #ff4d4d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header-title { font-size: 1.5rem; font-weight: bold; margin: 0; color: #fff; }
+        .mode-badge { background-color: var(--accent-color); padding: 5px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; color: #fff; }
+
+        /* TAB NAVIGATION */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { color: var(--text-color); }
+        .tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); font-weight: bold; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* METRIC CARDS */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .metric-title { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #fff; }
+
+        /* TABLES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+        }
+
+        th { background-color: #16202a; font-weight: 600; color: var(--text-muted); }
+        th.dev-col, td.dev-name { text-align: left; width: 25%; font-weight: bold; background-color: var(--card-sub-bg); }
+
+        /* BADGES & CONTROLS */
+        .status-pill {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .pill-success { background-color: rgba(39, 174, 96, 0.2); color: var(--success-color); border: 1px solid var(--success-color); }
+        .pill-warning { background-color: rgba(243, 156, 18, 0.2); color: var(--warning-color); border: 1px solid var(--warning-color); }
+
+        /* COLOR UTILITIES FOR LIVE TABLE */
+        .text-dnd-on { color: var(--bright-blue) !important; font-weight: bold; }
+        .text-mute-on { color: var(--bright-red) !important; font-weight: bold; }
+        .text-power-off { color: var(--bright-red) !important; font-weight: bold; }
+
+        .cell-bool { cursor: pointer; user-select: none; font-weight: bold; padding: 6px 0; border-radius: 4px; }
+        .cell-bool.on { background-color: rgba(39, 174, 96, 0.25); color: #2ecc71; border: 1px solid #27ae60; }
+        .cell-bool.off { background-color: #22303c; color: var(--text-muted); border: 1px solid var(--border-color); }
+
+        .cell-mute { cursor: pointer; user-select: none; font-weight: bold; padding: 6px 0; border-radius: 4px; }
+        .cell-mute.on { background-color: rgba(231, 76, 60, 0.25); color: #e74c3c; border: 1px solid #c0392b; }
+        .cell-mute.off { background-color: #22303c; color: var(--text-muted); border: 1px solid var(--border-color); }
+
+        input[type="number"] {
+            width: 55px;
+            background: #12181f;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        select {
+            background: #12181f;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 4px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 4px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .btn-primary { background-color: var(--accent-color); color: white; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-success:hover { background-color: #219150; }
+        .btn-secondary { background-color: #34495e; color: white; }
+        .btn-secondary:hover { background-color: #2c3e50; }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h1 class="header-title">Echos Speak Environment Manager</h1>
+        <div>
+            Active Column: <span id="active-column" class="mode-badge">Loading...</span>
+        </div>
+    </div>
+
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('dashboard')">1. Dashboard</button>
+        <button class="tab-btn" onclick="switchTab('dnd')">2. DND</button>
+        <button class="tab-btn" onclick="switchTab('mute')">3. Mute</button>
+        <button class="tab-btn" onclick="switchTab('volume')">4. Volume</button>
+        <button class="tab-btn" onclick="switchTab('brightness')">5. Brightness</button>
+        <button class="tab-btn" onclick="switchTab('power')">6. Display Power</button>
+    </div>
+
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Managed Fleet</div>
+                <div id="metric-total" class="metric-value">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Fleet Sync Status</div>
+                <div id="metric-sync" class="metric-value">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Command Queue</div>
+                <div id="metric-queue" class="metric-value">0</div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 20px; color: #fff;">Fleet Live Status</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="dev-col">Device Name</th>
+                    <th>DND (Act/Des)</th>
+                    <th>Mute (Act/Des)</th>
+                    <th>Volume (Act/Des)</th>
+                    <th>Brightness (Act/Des)</th>
+                    <th>Display Power (Act/Des)</th>
+                    <th>Sync State</th>
+                </tr>
+            </thead>
+            <tbody id="live-table-body">
+                <tr><td colspan="7">Loading live fleet status...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- TABS 2-6: EDITABLE MATRICES GENERATED DYNAMICALLY -->
+    <div id="tab-dnd" class="tab-content"><div id="matrix-dnd-container"></div></div>
+    <div id="tab-mute" class="tab-content"><div id="matrix-mute-container"></div></div>
+    <div id="tab-volume" class="tab-content"><div id="matrix-volume-container"></div></div>
+    <div id="tab-brightness" class="tab-content"><div id="matrix-brightness-container"></div></div>
+    <div id="tab-power" class="tab-content"><div id="matrix-power-container"></div></div>
+
+    <div style="height: 80px;"></div> <!-- Bottom spacer for action bar -->
+
+    <div class="action-bar">
+        <button class="btn btn-secondary" onclick="fetchLiveData()">🔄 Refresh Fleet</button>
+        <button class="btn btn-primary" onclick="saveMatrixData()">💾 Save Matrix</button>
+        <button class="btn btn-success" onclick="applyMatrixData()">⚡ Save & Apply Now</button>
+    </div>
+
+    <script>
+        /*
+         * Application Name: Echos Speak Environment Manager UI (SPA)
+         * Changelog:
+         * v3.5.2 - 2026/09/28 - Dashboard UI Colorization & Blank Formatting Refactor:
+         *                       - Replaced empty field capability placeholders (---- / ----) with clean blank space.
+         *                       - Mapped DND/Mute status displays to On/Off.
+         *                       - Added bright blue text formatting for DND On and bright red text formatting for Mute On / Display Power Off.
+         * v3.5.1 - 2026/09/28 - Header clean-up & active column binding fix.
+         * v3.5.0 - 2026/09/28 - Initial Local REST/SPA dashboard & 5-section matrix release.
+         */
+
+        const ACCESS_TOKEN = "${access_token}";
+        const API_BASE = "${api_base}";
+
+        let appState = {};
+        let workingMatrix = {};
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const url = `${API_BASE}${endpoint}?access_token=${ACCESS_TOKEN}`;
+                const options = { method, headers: { 'Content-Type': 'application/json' } };
+                if (body) options.body = JSON.stringify(body);
+                const res = await fetch(url, options);
+                return await res.json();
+            } catch (err) {
+                console.error(`API Call failed for ${endpoint}:`, err);
+                return {};
+            }
+        }
+
+        async function fetchLiveData() {
+            appState = await apiCall('/api/state');
+            
+            const currentMode = appState.activeColumn || appState.activeMode || appState.activePresence || 'Unknown';
+            document.getElementById('active-column').innerText = currentMode;
+            
+            renderDashboard();
+        }
+
+        async function fetchMatrixData() {
+            const data = await apiCall('/api/matrix');
+            workingMatrix = data || { modes: [], matrices: {} };
+            renderMatrixEditors();
+        }
+
+        function renderDashboard() {
+            if (!appState.devices) return;
+
+            document.getElementById('metric-total').innerText = appState.devices.length;
+            const inSync = appState.devices.filter(d => d.synced).length;
+            document.getElementById('metric-sync').innerText = `${inSync} / ${appState.devices.length} Synced`;
+            document.getElementById('metric-queue').innerText = `${appState.queueDepth || 0} Items`;
+
+            const tbody = document.getElementById('live-table-body');
+            tbody.innerHTML = appState.devices.map(dev => {
+                // Volume Column
+                const actVol = dev.actual.volume !== null && dev.actual.volume !== undefined ? `${dev.actual.volume}%` : '';
+                const desVol = dev.desired.volume !== undefined && dev.desired.volume !== null ? `${dev.desired.volume}%` : '';
+                const volCell = (actVol || desVol) ? `${actVol} / ${desVol}` : '';
+
+                // DND Column (On/Off + Bright Blue for On)
+                let actDnd = dev.actual.dnd === 'enabled' || dev.actual.dnd === 'true' || dev.actual.dnd === true ? 'On' : (dev.actual.dnd ? 'Off' : '');
+                let desDnd = dev.desired.dnd !== undefined ? (dev.desired.dnd ? 'On' : 'Off') : '';
+                
+                let actDndHtml = actDnd === 'On' ? `<span class="text-dnd-on">On</span>` : actDnd;
+                let desDndHtml = desDnd === 'On' ? `<span class="text-dnd-on">On</span>` : desDnd;
+                const dndCell = (actDnd || desDnd) ? `${actDndHtml} / ${desDndHtml}` : '';
+
+                // Mute Column (On/Off + Bright Red for On)
+                let actMute = dev.actual.mute === 'muted' || dev.actual.mute === 'true' || dev.actual.mute === true ? 'On' : (dev.actual.mute ? 'Off' : '');
+                let desMute = dev.desired.mute !== undefined ? (dev.desired.mute ? 'On' : 'Off') : '';
+                
+                let actMuteHtml = actMute === 'On' ? `<span class="text-mute-on">On</span>` : actMute;
+                let desMuteHtml = desMute === 'On' ? `<span class="text-mute-on">On</span>` : desMute;
+                const muteCell = (actMute || desMute) ? `${actMuteHtml} / ${desMuteHtml}` : '';
+
+                // Brightness Column
+                let dispCell = '';
+                if (dev.capabilities.brightness) {
+                    const actDisp = dev.actual.brightness !== null && dev.actual.brightness !== undefined ? `${dev.actual.brightness}%` : '';
+                    const desDisp = dev.desired.brightness !== undefined && dev.desired.brightness !== null ? `${dev.desired.brightness}%` : '';
+                    dispCell = (actDisp || desDisp) ? `${actDisp} / ${desDisp}` : '';
+                }
+
+                // Display Power Column (Off in Bright Red)
+                let pwrCell = '';
+                if (dev.capabilities.power) {
+                    let actPwr = dev.actual.power ? (dev.actual.power.toLowerCase() === 'on' ? 'On' : 'Off') : '';
+                    let desPwr = dev.desired.power !== undefined ? (dev.desired.power ? 'On' : 'Off') : '';
+
+                    let actPwrHtml = actPwr === 'Off' ? `<span class="text-power-off">Off</span>` : actPwr;
+                    let desPwrHtml = desPwr === 'Off' ? `<span class="text-power-off">Off</span>` : desPwr;
+                    pwrCell = (actPwr || desPwr) ? `${actPwrHtml} / ${desPwrHtml}` : '';
+                }
+
+                return `
+                    <tr>
+                        <td class="dev-name">${dev.label}</td>
+                        <td>${dndCell}</td>
+                        <td>${muteCell}</td>
+                        <td>${volCell}</td>
+                        <td>${dispCell}</td>
+                        <td>${pwrCell}</td>
+                        <td>
+                            <span class="status-pill ${dev.synced ? 'pill-success' : 'pill-warning'}">
+                                ${dev.synced ? '✔ Synced' : '⚠ Pending'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderMatrixEditors() {
+            if (!workingMatrix.modes || !appState.devices) return;
+
+            ['dnd', 'mute', 'volume', 'brightness', 'power'].forEach(type => {
+                const container = document.getElementById(`matrix-${type}-container`);
+                let html = `<table><thead><tr><th class="dev-col">Managed Device</th>`;
+                workingMatrix.modes.forEach(m => html += `<th>${m}</th>`);
+                html += `</tr></thead><tbody>`;
+
+                appState.devices.forEach(dev => {
+                    if ((type === 'brightness' && !dev.capabilities.brightness) || (type === 'power' && !dev.capabilities.power)) {
+                        return;
+                    }
+
+                    html += `<tr><td class="dev-name">${dev.label}</td>`;
+                    workingMatrix.modes.forEach(m => {
+                        const val = ((workingMatrix.matrices && workingMatrix.matrices[type] && workingMatrix.matrices[type][dev.id]) || {})[m];
+                        html += `<td>${buildCellInput(type, dev.id, m, val)}</td>`;
+                    });
+                    html += `</tr>`;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            });
+        }
+
+        function buildCellInput(type, devId, mode, value) {
+            if (type === 'volume' || type === 'brightness') {
+                return `<input type="number" min="0" max="100" value="${value ?? (type === 'brightness' ? 50 : '')}" onchange="updateWorkingCell('${type}', '${devId}', '${mode}', this.value !== '' ? parseInt(this.value) : null)">`;
+            } else if (type === 'dnd') {
+                const isOn = value === true || value === 'true';
+                return `<div class="cell-bool ${isOn ? 'on' : 'off'}" onclick="toggleWorkingBool(this, '${type}', '${devId}', '${mode}')">${isOn ? '☑ ON' : '☐ OFF'}</div>`;
+            } else if (type === 'mute') {
+                const isOn = value === true || value === 'true' || value === 'muted';
+                return `<div class="cell-mute ${isOn ? 'on' : 'off'}" onclick="toggleWorkingMute(this, '${type}', '${devId}', '${mode}')">${isOn ? '☑ ON' : '☐ OFF'}</div>`;
+            } else if (type === 'power') {
+                const isOn = value === null || value === true || value === 'true' || value === 'on';
+                return `
+                    <select onchange="updateWorkingCell('${type}', '${devId}', '${mode}', this.value === 'true')" style="width: 100%;">
+                        <option value="true" ${isOn ? 'selected' : ''}>ON</option>
+                        <option value="false" ${!isOn ? 'selected' : ''}>OFF</option>
+                    </select>`;
+            }
+        }
+
+        function toggleWorkingBool(el, type, devId, mode) {
+            const currentVal = ((workingMatrix.matrices[type] && workingMatrix.matrices[type][devId]) || {})[mode] === true;
+            const newVal = !currentVal;
+            updateWorkingCell(type, devId, mode, newVal);
+            el.className = `cell-bool ${newVal ? 'on' : 'off'}`;
+            el.innerHTML = newVal ? '☑ ON' : '☐ OFF';
+        }
+
+        function toggleWorkingMute(el, type, devId, mode) {
+            const currentVal = ((workingMatrix.matrices[type] && workingMatrix.matrices[type][devId]) || {})[mode] === true;
+            const newVal = !currentVal;
+            updateWorkingCell(type, devId, mode, newVal);
+            el.className = `cell-mute ${newVal ? 'on' : 'off'}`;
+            el.innerHTML = newVal ? '☑ ON' : '☐ OFF';
+        }
+
+        function updateWorkingCell(type, devId, mode, value) {
+            if (!workingMatrix.matrices) workingMatrix.matrices = {};
+            if (!workingMatrix.matrices[type]) workingMatrix.matrices[type] = {};
+            if (!workingMatrix.matrices[type][devId]) workingMatrix.matrices[type][devId] = {};
+            workingMatrix.matrices[type][devId][mode] = value;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        async function saveMatrixData() {
+            await apiCall('/api/matrix/save', 'POST', workingMatrix);
+            alert('Matrix settings saved.');
+        }
+
+        async function applyMatrixData() {
+            await apiCall('/api/matrix/apply', 'POST', workingMatrix);
+            alert('Matrix saved and active settings applied to Echo devices.');
+            fetchLiveData();
+        }
+
+        (async () => {
+            await fetchLiveData();
+            await fetchMatrixData();
+        })();
+    </script>
+</body>
+</html>

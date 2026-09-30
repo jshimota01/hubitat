@@ -1,0 +1,1364 @@
+const alexaWrapper = require('./alexaWrapper');
+const logger = require('./logger');
+
+class CommandDispatcher {
+
+  getDevices(callback) {
+    const alexa = alexaWrapper.alexa;
+
+    if (!alexa || !alexa.serialNumbers) {
+      return callback(
+        new Error('Alexa instance not initialized or no devices loaded.')
+      );
+    }
+
+    try {
+      const deviceMap = Object.values(alexa.serialNumbers)
+        .filter((dev) => dev.deviceFamily !== 'VOX')
+        .map((dev) => ({
+          ...dev,
+          accountName:
+            dev.accountName ||
+            dev.displayName ||
+            'Echo Device',
+          deviceFamily:
+            dev.deviceFamily ||
+            'UNKNOWN',
+          deviceType:
+            dev.deviceType ||
+            'UNKNOWN',
+          online:
+            dev.online !== undefined
+              ? dev.online
+              : true,
+          currentVolume:
+            dev.volume !== undefined
+              ? dev.volume
+              : null,
+        }));
+
+      callback(null, deviceMap);
+
+    } catch (err) {
+      logger.error('[CommandDispatcher] Error mapping devices:', {
+        error: err.message,
+      });
+
+      callback(err);
+    }
+  }
+
+
+  getDeviceFeatures(serialNumber, callback) {
+    const alexa = alexaWrapper.alexa;
+
+    if (!alexa || !alexa.serialNumbers) {
+      return callback(new Error('Alexa instance not initialized.'));
+    }
+
+    const targetDevice =
+      alexa.serialNumbers[serialNumber] ||
+      Object.values(alexa.serialNumbers).find(
+        (device) => device.serialNumber === serialNumber
+      );
+
+    if (!targetDevice) {
+      return callback(
+        new Error(`Device with serialNumber '${serialNumber}' not found.`)
+      );
+    }
+
+    const caps = Array.isArray(targetDevice.capabilities)
+      ? targetDevice.capabilities
+      : [];
+
+    const result = {
+      serialNumber: targetDevice.serialNumber,
+      displayBrightness: null,
+      displayPower: null,
+      adaptiveBrightness: null,
+      temperature: null,
+      temperatureScale: null,
+      motion: null,
+    };
+
+    const errors = {};
+
+    const getSetting = (capability, methodName, propertyName, transform, next) => {
+      if (!caps.includes(capability)) {
+        return next();
+      }
+
+      if (typeof alexa[methodName] !== 'function') {
+        errors[propertyName] = `Installed alexa-remote2 does not expose ${methodName}().`;
+        return next();
+      }
+
+      try {
+        alexa[methodName](serialNumber, (err, value) => {
+          if (err) {
+            errors[propertyName] = err.message || String(err);
+          } else {
+            result[propertyName] = transform ? transform(value) : value;
+          }
+          next();
+        });
+      } catch (err) {
+        errors[propertyName] = err.message || String(err);
+        next();
+      }
+    };
+
+    const finish = () => {
+      if (Object.keys(errors).length > 0) {
+        result.errors = errors;
+      }
+      callback(null, result);
+    };
+
+    const readSensors = () => {
+      const wantsTemperature = caps.includes('TEMPERATURE_SENSOR');
+      const wantsMotion = caps.includes('MOTION_DETECTION');
+
+      if (!wantsTemperature && !wantsMotion) {
+        return finish();
+      }
+
+      this.getSensorState(targetDevice, (err, sensorState) => {
+        if (err) {
+          if (wantsTemperature) errors.temperature = err.message || String(err);
+          if (wantsMotion) errors.motion = err.message || String(err);
+          return finish();
+        }
+
+        if (wantsTemperature) {
+          result.temperature = sensorState.temperature;
+          result.temperatureScale = sensorState.temperatureScale;
+        }
+
+        if (wantsMotion) {
+          result.motion = sensorState.motion;
+        }
+
+        finish();
+      });
+    };
+
+    getSetting(
+      'DISPLAY_BRIGHTNESS_ADJUST',
+      'getBrightnessSetting',
+      'displayBrightness',
+      (value) => value == null ? null : Number(value),
+      () => getSetting(
+        'DISPLAY_POWER_TOGGLE',
+        'getDisplayPowerSetting',
+        'displayPower',
+        (value) => value == null ? null : !!value,
+        () => getSetting(
+          'DISPLAY_ADAPTIVE_BRIGHTNESS',
+          'getAdaptiveBrightnessSetting',
+          'adaptiveBrightness',
+          (value) => value == null ? null : !!value,
+          readSensors
+        )
+      )
+    );
+  }
+
+
+  getSensorState(targetDevice, callback) {
+    const alexa = alexaWrapper.alexa;
+
+    if (!alexa || typeof alexa.querySmarthomeDevices !== 'function') {
+      return callback(
+        new Error('Installed alexa-remote2 library does not expose querySmarthomeDevices().')
+      );
+    }
+
+    const endpoints =
+      alexa.endpoints?.endpoints?.items ||
+      alexa.endpoints?.items ||
+      [];
+
+    const endpoint = endpoints.find((item) => {
+      const serial =
+        item.serialNumber?.value?.text ||
+        item.serialNumber ||
+        item.legacyAppliance?.alexaDeviceIdentifierList?.find(
+          (entry) => entry.dmsDeviceSerialNumber === targetDevice.serialNumber
+        )?.dmsDeviceSerialNumber;
+
+      return serial === targetDevice.serialNumber;
+    });
+
+    const legacy = endpoint?.legacyAppliance || {};
+    const candidateIds = [];
+
+    const addCandidate = (value) => {
+      if (typeof value === 'string' && value && !candidateIds.includes(value)) {
+        candidateIds.push(value);
+      }
+    };
+
+    addCandidate(legacy.applianceId);
+    if (Array.isArray(legacy.mergedApplianceIds)) {
+      legacy.mergedApplianceIds.forEach(addCandidate);
+    }
+    addCandidate(legacy.entityId);
+    addCandidate(endpoint?.entityId);
+
+    if (candidateIds.length === 0) {
+      return callback(
+        new Error(
+          `No Alexa Smart Home entity was found for serialNumber '${targetDevice.serialNumber}'.`
+        )
+      );
+    }
+
+    const queryCandidate = (index) => {
+      if (index >= candidateIds.length) {
+        return callback(
+          new Error(
+            `Alexa Smart Home state was not available for serialNumber '${targetDevice.serialNumber}'.`
+          )
+        );
+      }
+
+      const entityId = candidateIds[index];
+
+      try {
+        alexa.querySmarthomeDevices(
+          [{
+            entityId,
+            entityType: 'APPLIANCE'
+          }],
+          'APPLIANCE',
+          15000,
+          (err, response) => {
+            if (err) {
+              return queryCandidate(index + 1);
+            }
+
+            const state = {
+            temperature: null,
+            temperatureScale: null,
+            motion: null
+          };
+
+          const visit = (node) => {
+            if (node === null || node === undefined) return;
+
+            if (Array.isArray(node)) {
+              node.forEach(visit);
+              return;
+            }
+
+            if (typeof node !== 'object') return;
+
+            const name =
+              typeof node.name === 'string'
+                ? node.name
+                : null;
+
+            if (name === 'temperature' && node.value !== undefined) {
+              const value = node.value;
+              if (value && typeof value === 'object' && value.value !== undefined) {
+                state.temperature = Number(value.value);
+                state.temperatureScale = value.scale || null;
+              } else if (typeof value === 'number' || typeof value === 'string') {
+                const numeric = Number(value);
+                if (!Number.isNaN(numeric)) {
+                  state.temperature = numeric;
+                }
+              }
+            }
+
+            if (
+              [
+                'humanPresenceDetectionState',
+                'motionDetectionState',
+                'detectionState'
+              ].includes(name) &&
+              node.value !== undefined
+            ) {
+              const value =
+                node.value && typeof node.value === 'object' && node.value.value !== undefined
+                  ? node.value.value
+                  : node.value;
+
+              if (typeof value === 'string' || typeof value === 'boolean') {
+                state.motion = value;
+              }
+            }
+
+            Object.keys(node).forEach((key) => visit(node[key]));
+          };
+
+            visit(response);
+
+            if (state.temperature !== null || state.motion !== null) {
+              return callback(null, state);
+            }
+
+            queryCandidate(index + 1);
+          }
+        );
+      } catch (err) {
+        queryCandidate(index + 1);
+      }
+    };
+
+    queryCandidate(0);
+  }
+
+
+  setDeviceFeature(serialNumber, capability, methodName, value, callback) {
+    const alexa = alexaWrapper.alexa;
+
+    if (!alexa || !alexa.serialNumbers) {
+      return callback(new Error('Alexa instance not initialized.'));
+    }
+
+    const targetDevice =
+      alexa.serialNumbers[serialNumber] ||
+      Object.values(alexa.serialNumbers).find(
+        (device) => device.serialNumber === serialNumber
+      );
+
+    if (!targetDevice) {
+      return callback(
+        new Error(`Device with serialNumber '${serialNumber}' not found.`)
+      );
+    }
+
+    const caps = Array.isArray(targetDevice.capabilities)
+      ? targetDevice.capabilities
+      : [];
+
+    if (!caps.includes(capability)) {
+      return callback(
+        new Error(
+          `Device '${targetDevice.accountName || serialNumber}' does not advertise capability '${capability}'.`
+        )
+      );
+    }
+
+    if (typeof alexa[methodName] !== 'function') {
+      return callback(
+        new Error(`Installed alexa-remote2 library does not expose ${methodName}().`)
+      );
+    }
+
+    try {
+      alexa[methodName](serialNumber, value, callback);
+    } catch (err) {
+      callback(err);
+    }
+  }
+
+
+  getPlaybackState(serialNumber, callback) {
+    const alexa = alexaWrapper.alexa;
+
+    if (!alexa || !alexa.serialNumbers) {
+      return callback(new Error('Alexa instance not initialized.'));
+    }
+
+    const targetDevice =
+      alexa.serialNumbers[serialNumber] ||
+      Object.values(alexa.serialNumbers).find(
+        (device) => device.serialNumber === serialNumber
+      );
+
+    if (!targetDevice) {
+      return callback(
+        new Error(`Device with serialNumber '${serialNumber}' not found.`)
+      );
+    }
+
+    if (typeof alexa.getPlayerInfo !== 'function') {
+      return callback(
+        new Error(
+          'Installed alexa-remote2 library does not expose getPlayerInfo().'
+        )
+      );
+    }
+
+    const startedAt = Date.now();
+
+    logger.info(
+      `[CommandDispatcher] START 'getPlaybackState' for serial [${serialNumber}]`
+    );
+
+    try {
+      alexa.getPlayerInfo(serialNumber, (err, response) => {
+        const durationMs = Date.now() - startedAt;
+
+        if (err) {
+          logger.error(
+            `[CommandDispatcher] CALLBACK ERROR 'getPlaybackState' for serial [${serialNumber}] after ${durationMs}ms`,
+            {
+              errorCode: err.code || null,
+              errorMessage: err.message || String(err)
+            }
+          );
+
+          return callback(err);
+        }
+
+        const playerInfo = response?.playerInfo || {};
+
+        const state =
+          typeof playerInfo.state === 'string'
+            ? playerInfo.state.toUpperCase()
+            : null;
+
+        const result = {
+          serialNumber: targetDevice.serialNumber,
+          deviceType: targetDevice.deviceType || null,
+          state,
+          playing: state === 'PLAYING',
+
+          title: playerInfo.infoText?.title || null,
+
+          artist: playerInfo.infoText?.subText1 || null,
+
+          album: playerInfo.infoText?.subText2 || null,
+
+          progressSeconds:
+            playerInfo.progress?.mediaProgress != null
+              ? Number(playerInfo.progress.mediaProgress) / 1000
+              : null,
+
+          mediaLengthSeconds:
+            playerInfo.progress?.mediaLength != null
+              ? Number(playerInfo.progress.mediaLength) / 1000
+              : null,
+
+          muted:
+            playerInfo.volume?.muted !== undefined
+              ? !!playerInfo.volume.muted
+              : null,
+
+          volume:
+            playerInfo.volume?.volume !== undefined
+              ? playerInfo.volume.volume
+              : null,
+
+          playerInfo,
+        };
+
+        logger.info(
+          `[CommandDispatcher] CALLBACK SUCCESS 'getPlaybackState' for serial [${serialNumber}] after ${durationMs}ms`,
+          {
+            state: result.state,
+            playing: result.playing
+          }
+        );
+
+        callback(null, result);
+      });
+
+    } catch (err) {
+      logger.error(
+        `[CommandDispatcher] EXCEPTION 'getPlaybackState' for serial [${serialNumber}]`,
+        {
+          error: err.message || String(err)
+        }
+      );
+
+      callback(err);
+    }
+  }
+
+
+  /*
+   * Issue play/pause and verify the resulting player state.
+   *
+   * alexa-remote2 can execute sendCommand() successfully on the Echo
+   * without invoking its completion callback.  Therefore play/pause
+   * cannot use the normal callback timeout wrapper as proof of success.
+   *
+   * We issue the command, then poll the authoritative player state.
+   */
+  playPauseAndVerify(serialNumber, command, callback) {
+    const alexa = alexaWrapper.alexa;
+
+    if (!alexa || !alexa.serialNumbers) {
+      return callback(new Error('Alexa instance not initialized.'));
+    }
+
+    const expectedState =
+      command === 'pause'
+        ? 'PAUSED'
+        : 'PLAYING';
+
+    const startedAt = Date.now();
+
+    logger.info(
+      `[CommandDispatcher] START '${command}/verify' for serial [${serialNumber}]`,
+      {
+        expectedState
+      }
+    );
+
+    let commandIssued = false;
+    let completed = false;
+    let pollTimer = null;
+    let hardTimeout = null;
+
+    const cleanup = () => {
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+
+      if (hardTimeout) {
+        clearTimeout(hardTimeout);
+        hardTimeout = null;
+      }
+    };
+
+    const finish = (err, result) => {
+      if (completed) {
+        return;
+      }
+
+      completed = true;
+      cleanup();
+
+      const durationMs = Date.now() - startedAt;
+
+      if (err) {
+        logger.error(
+          `[CommandDispatcher] '${command}/verify' FAILED for serial [${serialNumber}] after ${durationMs}ms`,
+          {
+            errorCode: err.code || null,
+            errorMessage: err.message || String(err)
+          }
+        );
+      } else {
+        logger.info(
+          `[CommandDispatcher] '${command}/verify' SUCCESS for serial [${serialNumber}] after ${durationMs}ms`,
+          {
+            state: result?.state || null,
+            playing: result?.playing
+          }
+        );
+      }
+
+      callback(err, result);
+    };
+
+    const pollState = () => {
+      if (completed) {
+        return;
+      }
+
+      try {
+        alexa.getPlayerInfo(serialNumber, (err, response) => {
+          if (completed) {
+            return;
+          }
+
+          if (!err) {
+            const playerInfo = response?.playerInfo || {};
+
+            const state =
+              typeof playerInfo.state === 'string'
+                ? playerInfo.state.toUpperCase()
+                : null;
+
+            if (state === expectedState) {
+              const targetDevice =
+                alexa.serialNumbers[serialNumber] ||
+                Object.values(alexa.serialNumbers).find(
+                  (device) => device.serialNumber === serialNumber
+                );
+
+              const result = {
+                serialNumber,
+                deviceType: targetDevice?.deviceType || null,
+                state,
+                playing: state === 'PLAYING',
+
+                title: playerInfo.infoText?.title || null,
+                artist: playerInfo.infoText?.subText1 || null,
+                album: playerInfo.infoText?.subText2 || null,
+
+                progressSeconds:
+                  playerInfo.progress?.mediaProgress != null
+                    ? Number(playerInfo.progress.mediaProgress) / 1000
+                    : null,
+
+                mediaLengthSeconds:
+                  playerInfo.progress?.mediaLength != null
+                    ? Number(playerInfo.progress.mediaLength) / 1000
+                    : null,
+
+                muted:
+                  playerInfo.volume?.muted !== undefined
+                    ? !!playerInfo.volume.muted
+                    : null,
+
+                volume:
+                  playerInfo.volume?.volume !== undefined
+                    ? playerInfo.volume.volume
+                    : null,
+
+                playerInfo,
+              };
+
+              return finish(null, result);
+            }
+          }
+
+          pollTimer = setTimeout(pollState, 500);
+        });
+
+      } catch (err) {
+        pollTimer = setTimeout(pollState, 500);
+      }
+    };
+
+    /*
+     * Do not wait for sendCommand()'s callback.
+     *
+     * The callback has already been demonstrated to be unreliable
+     * for pause on this server: the Echo paused but the callback
+     * never arrived.
+     */
+    try {
+      alexa.sendCommand(
+        serialNumber,
+        command,
+        () => {
+          logger.info(
+            `[CommandDispatcher] '${command}' Alexa callback received for serial [${serialNumber}]`
+          );
+        }
+      );
+
+      commandIssued = true;
+
+      logger.info(
+        `[CommandDispatcher] '${command}' issued to serial [${serialNumber}]; verifying player state`
+      );
+
+      pollState();
+
+    } catch (err) {
+      return finish(err);
+    }
+
+    /*
+     * Five seconds is enough for the Echo state to propagate.
+     * This is NOT the old 15-second command callback timeout.
+     */
+    hardTimeout = setTimeout(() => {
+      if (completed) {
+        return;
+      }
+
+      const err = new Error(
+        `Alexa command '${command}' was issued but the player state did not reach '${expectedState}' within 5000ms.`
+      );
+
+      err.code = 'PLAYBACK_VERIFY_TIMEOUT';
+
+      finish(err);
+
+    }, 5000);
+  }
+
+
+  dispatch(serialNumber, command, payload = {}, callback) {
+    const alexa = alexaWrapper.alexa;
+
+    if (!alexa || !alexa.serialNumbers) {
+      return callback(new Error('Alexa instance not initialized.'));
+    }
+
+    if (command === 'debugSmarthomeV2') {
+  const alexa = alexaWrapper.alexa;
+
+  if (!alexa || typeof alexa.getSmarthomeDevicesV2 !== 'function') {
+    return callback(
+      new Error(
+        'Installed alexa-remote2 does not expose getSmarthomeDevicesV2().'
+      )
+    );
+  }
+
+  try {
+    alexa.getSmarthomeDevicesV2((err, data) => {
+      if (err) {
+        return callback(err);
+      }
+
+      callback(null, data);
+    });
+  } catch (err) {
+    callback(err);
+  }
+
+  return;
+}
+
+if (command === 'debugDeviceStatus') {
+  const alexa = alexaWrapper.alexa;
+  const targetSerial = payload?.serialNumber || 'G6G22N063482007T';
+
+  if (!alexa || typeof alexa.getDeviceStatusList !== 'function') {
+    return callback(
+      new Error(
+        'Installed alexa-remote2 does not expose getDeviceStatusList().'
+      )
+    );
+  }
+
+  try {
+    alexa.getDeviceStatusList((err, data) => {
+      if (err) {
+        return callback(err);
+      }
+
+      callback(null, {
+        targetSerial,
+        status: data
+      });
+    });
+  } catch (err) {
+    callback(err);
+  }
+
+  return;
+}
+
+if (command === 'getDeviceFeatures') {
+      if (!serialNumber) {
+        return callback(
+          new Error(
+            "Missing 'serialNumber' for getDeviceFeatures command."
+          )
+        );
+      }
+
+      return this.getDeviceFeatures(serialNumber, callback);
+    }
+
+    if (command === 'getPlaybackState') {
+      if (!serialNumber) {
+        return callback(
+          new Error(
+            "Missing 'serialNumber' for getPlaybackState command."
+          )
+        );
+      }
+
+      return this.getPlaybackState(serialNumber, callback);
+    }
+
+    const targetDevice =
+      alexa.serialNumbers[serialNumber] ||
+      Object.values(alexa.serialNumbers).find(
+        (device) => device.serialNumber === serialNumber
+      );
+
+    if (!targetDevice && command !== 'announceAll') {
+      return callback(
+        new Error(
+          `Device with serialNumber '${serialNumber}' not found.`
+        )
+      );
+    }
+
+    const invokeAlexa = (operation, send) => {
+      const startedAt = Date.now();
+      let finished = false;
+
+      logger.info(
+        `[CommandDispatcher] START '${operation}' for serial [${serialNumber}]`,
+        {
+          payload
+        }
+      );
+
+      const finish = (err, result) => {
+        const durationMs = Date.now() - startedAt;
+
+        if (finished) {
+          logger.warn(
+            `[CommandDispatcher] LATE CALLBACK '${operation}' for serial [${serialNumber}] after timeout`,
+            {
+              durationMs,
+              error: err ? (err.message || String(err)) : null
+            }
+          );
+
+          return;
+        }
+
+        finished = true;
+        clearTimeout(timeoutHandle);
+
+        if (err) {
+          logger.error(
+            `[CommandDispatcher] CALLBACK ERROR '${operation}' for serial [${serialNumber}] after ${durationMs}ms`,
+            {
+              errorType: typeof err,
+              errorName: err.name || null,
+              errorCode: err.code || null,
+              errorMessage: err.message || String(err)
+            }
+          );
+
+        } else {
+          logger.info(
+            `[CommandDispatcher] CALLBACK SUCCESS '${operation}' for serial [${serialNumber}] after ${durationMs}ms`,
+            {
+              resultType:
+                result === null
+                  ? 'null'
+                  : typeof result,
+
+              hasResult:
+                result !== undefined &&
+                result !== null
+            }
+          );
+        }
+
+        callback(err, result);
+      };
+
+      const timeoutHandle = setTimeout(() => {
+        const durationMs = Date.now() - startedAt;
+
+        const err = new Error(
+          `Alexa command '${operation}' did not complete within 15000ms.`
+        );
+
+        err.code = 'COMMAND_TIMEOUT';
+
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+
+        logger.error(
+          `[CommandDispatcher] TIMEOUT '${operation}' for serial [${serialNumber}] after ${durationMs}ms`,
+          {
+            errorCode: err.code
+          }
+        );
+
+        callback(err);
+
+      }, 15000);
+
+      try {
+        send(finish);
+
+      } catch (err) {
+        finish(err);
+      }
+    };
+
+
+    switch (command) {
+
+      case 'speak':
+
+        if (!payload.text) {
+          return callback(
+            new Error(
+              "Missing 'text' in payload for speak command."
+            )
+          );
+        }
+
+        invokeAlexa('speak', (done) => {
+          alexa.sendSequenceCommand(
+            serialNumber,
+            'speak',
+            payload.text,
+            done
+          );
+        });
+
+        break;
+
+
+      case 'announce':
+
+        if (!payload.text) {
+          return callback(
+            new Error(
+              "Missing 'text' in payload for announcement."
+            )
+          );
+        }
+
+        invokeAlexa('announce', (done) => {
+          alexa.sendSequenceCommand(
+            serialNumber,
+            'announcement',
+            payload.text,
+            done
+          );
+        });
+
+        break;
+
+
+      case 'stop':
+
+        // Proper Alexa device stop. Do not alias Stop to Pause.
+        invokeAlexa('stop/deviceStop', (done) => {
+          alexa.sendSequenceCommand(
+            serialNumber,
+            'deviceStop',
+            null,
+            done
+          );
+        });
+
+        break;
+
+
+      case 'announceAll': {
+
+        if (!payload.text) {
+          return callback(
+            new Error(
+              "Missing 'text' in payload for announceAll."
+            )
+          );
+        }
+
+        const allSerials =
+          Object.keys(alexa.serialNumbers);
+
+        if (allSerials.length === 0) {
+          return callback(
+            new Error(
+              'No Alexa devices are available.'
+            )
+          );
+        }
+
+        let completed = 0;
+        const errors = [];
+
+        allSerials.forEach((sNum) => {
+
+          alexa.sendSequenceCommand(
+            sNum,
+            'announcement',
+            payload.text,
+            (err) => {
+
+              if (err) {
+                errors.push({
+                  serialNumber: sNum,
+                  error: err.message,
+                });
+              }
+
+              completed++;
+
+              if (
+                completed ===
+                allSerials.length
+              ) {
+
+                if (errors.length > 0) {
+                  return callback(null, {
+                    status: 'partial_success',
+                    errors,
+                  });
+                }
+
+                callback(null, {
+                  status: 'success',
+                });
+              }
+            }
+          );
+        });
+
+        break;
+      }
+
+
+      case 'volume': {
+
+        if (payload.level === undefined) {
+          return callback(
+            new Error(
+              "Missing 'level' (0-100) in payload."
+            )
+          );
+        }
+
+        const vol =
+          parseInt(payload.level, 10);
+
+        if (
+          Number.isNaN(vol) ||
+          vol < 0 ||
+          vol > 100
+        ) {
+          return callback(
+            new Error(
+              "Invalid 'level'. Volume must be a number from 0 to 100."
+            )
+          );
+        }
+
+        // Use Alexa Device Controls sequence rather than
+        // the /api/np/command VolumeLevelCommand endpoint.
+        invokeAlexa('volume', (done) => {
+
+          alexa.sendSequenceCommand(
+            serialNumber,
+            'volume',
+            vol,
+            done
+          );
+
+        });
+
+        break;
+      }
+
+
+      case 'volumeUp': {
+
+        const currentVol =
+          targetDevice.volume !== undefined &&
+          targetDevice.volume !== null
+
+            ? parseInt(
+                targetDevice.volume,
+                10
+              )
+
+            : 30;
+
+        const newVol =
+          Math.min(
+            100,
+            (
+              Number.isNaN(currentVol)
+                ? 30
+                : currentVol
+            ) + 5
+          );
+
+        // Use the same Alexa Device Controls
+        // sequence path as direct volume setting.
+        invokeAlexa('volumeUp', (done) => {
+
+          alexa.sendSequenceCommand(
+            serialNumber,
+            'volume',
+            newVol,
+            done
+          );
+
+        });
+
+        break;
+      }
+
+
+      case 'volumeDown': {
+
+        const currentVol =
+          targetDevice.volume !== undefined &&
+          targetDevice.volume !== null
+
+            ? parseInt(
+                targetDevice.volume,
+                10
+              )
+
+            : 30;
+
+        const newVol =
+          Math.max(
+            0,
+            (
+              Number.isNaN(currentVol)
+                ? 30
+                : currentVol
+            ) - 5
+          );
+
+        // Use the same Alexa Device Controls
+        // sequence path as direct volume setting.
+        invokeAlexa('volumeDown', (done) => {
+
+          alexa.sendSequenceCommand(
+            serialNumber,
+            'volume',
+            newVol,
+            done
+          );
+
+        });
+
+        break;
+      }
+
+
+      case 'play':
+      case 'pause':
+
+        /*
+         * Do NOT use invokeAlexa() here.
+         *
+         * alexa-remote2 may execute the command on the Echo
+         * without invoking its completion callback.
+         *
+         * Instead, issue the command and verify the resulting
+         * player state through getPlayerInfo().
+         */
+        return this.playPauseAndVerify(
+          serialNumber,
+          command,
+          callback
+        );
+
+
+      case 'nextTrack':
+
+        invokeAlexa('nextTrack/next', (done) => {
+
+          alexa.sendCommand(
+            serialNumber,
+            'next',
+            done
+          );
+
+        });
+
+        break;
+
+
+      case 'previousTrack':
+
+        invokeAlexa(
+          'previousTrack/previous',
+          (done) => {
+
+            alexa.sendCommand(
+              serialNumber,
+              'previous',
+              done
+            );
+
+          }
+        );
+
+        break;
+
+
+      case 'getDisplayBrightness':
+        if (!targetDevice.capabilities?.includes('DISPLAY_BRIGHTNESS_ADJUST')) {
+          return callback(new Error(`Device '${targetDevice.accountName || serialNumber}' does not advertise DISPLAY_BRIGHTNESS_ADJUST.`));
+        }
+        invokeAlexa('getDisplayBrightness', (done) => {
+          alexa.getBrightnessSetting(serialNumber, done);
+        });
+        break;
+
+
+      case 'setDisplayBrightness': {
+        if (payload.level === undefined) {
+          return callback(new Error("Missing 'level' (0-100) in payload for setDisplayBrightness."));
+        }
+
+        const brightness = Number(payload.level);
+        if (!Number.isFinite(brightness) || brightness < 0 || brightness > 100) {
+          return callback(new Error("Invalid 'level'. Display brightness must be a number from 0 to 100."));
+        }
+
+        invokeAlexa('setDisplayBrightness', (done) => {
+          this.setDeviceFeature(
+            serialNumber,
+            'DISPLAY_BRIGHTNESS_ADJUST',
+            'setBrightnessSetting',
+            brightness,
+            done
+          );
+        });
+        break;
+      }
+
+
+      case 'getDisplayPower':
+        if (!targetDevice.capabilities?.includes('DISPLAY_POWER_TOGGLE')) {
+          return callback(new Error(`Device '${targetDevice.accountName || serialNumber}' does not advertise DISPLAY_POWER_TOGGLE.`));
+        }
+        invokeAlexa('getDisplayPower', (done) => {
+          alexa.getDisplayPowerSetting(serialNumber, done);
+        });
+        break;
+
+
+      case 'setDisplayPowerOn':
+        invokeAlexa('setDisplayPowerOn', (done) => {
+          this.setDeviceFeature(
+            serialNumber,
+            'DISPLAY_POWER_TOGGLE',
+            'setDisplayPowerSetting',
+            true,
+            done
+          );
+        });
+        break;
+
+
+      case 'setDisplayPowerOff':
+        invokeAlexa('setDisplayPowerOff', (done) => {
+          this.setDeviceFeature(
+            serialNumber,
+            'DISPLAY_POWER_TOGGLE',
+            'setDisplayPowerSetting',
+            false,
+            done
+          );
+        });
+        break;
+
+
+      case 'getAdaptiveBrightness':
+        if (!targetDevice.capabilities?.includes('DISPLAY_ADAPTIVE_BRIGHTNESS')) {
+          return callback(new Error(`Device '${targetDevice.accountName || serialNumber}' does not advertise DISPLAY_ADAPTIVE_BRIGHTNESS.`));
+        }
+        invokeAlexa('getAdaptiveBrightness', (done) => {
+          alexa.getAdaptiveBrightnessSetting(serialNumber, done);
+        });
+        break;
+
+
+      case 'setAdaptiveBrightnessOn':
+        invokeAlexa('setAdaptiveBrightnessOn', (done) => {
+          this.setDeviceFeature(
+            serialNumber,
+            'DISPLAY_ADAPTIVE_BRIGHTNESS',
+            'setAdaptiveBrightnessSetting',
+            true,
+            done
+          );
+        });
+        break;
+
+
+      case 'setAdaptiveBrightnessOff':
+        invokeAlexa('setAdaptiveBrightnessOff', (done) => {
+          this.setDeviceFeature(
+            serialNumber,
+            'DISPLAY_ADAPTIVE_BRIGHTNESS',
+            'setAdaptiveBrightnessSetting',
+            false,
+            done
+          );
+        });
+        break;
+
+
+      case 'dnd': {
+
+        const dndState =
+          payload.state === true ||
+          payload.state === 'true';
+
+        invokeAlexa('dnd', (done) => {
+
+          alexa.setDoNotDisturb(
+            serialNumber,
+            dndState,
+            done
+          );
+
+        });
+
+        break;
+      }
+
+
+      case 'voiceCmdAsText':
+
+        if (!payload.text) {
+          return callback(
+            new Error(
+              "Missing 'text' in payload for voiceCmdAsText command."
+            )
+          );
+        }
+
+        // Public Echos Speak API command is voiceCmdAsText.
+        // alexa-remote2 internally calls this sequence operation textCommand.
+        invokeAlexa(
+          'voiceCmdAsText/textCommand',
+          (done) => {
+
+            alexa.sendSequenceCommand(
+              serialNumber,
+              'textCommand',
+              payload.text,
+              done
+            );
+
+          }
+        );
+
+        break;
+
+
+      case 'raw':
+
+        if (!payload.rawCommand) {
+          return callback(
+            new Error(
+              "Missing 'rawCommand' in payload for raw execution."
+            )
+          );
+        }
+
+        invokeAlexa(
+          `raw/${payload.rawCommand}`,
+          (done) => {
+
+            alexa.sendSequenceCommand(
+              serialNumber,
+              payload.rawCommand,
+              payload.rawPayload || null,
+              done
+            );
+
+          }
+        );
+
+        break;
+
+
+      default:
+
+        callback(
+          new Error(
+            `Command '${command}' is not supported by the bridge dispatcher.`
+          )
+        );
+
+        break;
+    }
+  }
+}
+
+module.exports = new CommandDispatcher();

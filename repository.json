@@ -30,7 +30,7 @@
 			"name": "Zigbee eWeLink-CMARS-Seedan Outlet",
 			"category": "Control",
 			"version": "0.1.2.4",
-			"tags": [ "Dashboards", "Monitoring", "Lights & Switches", "Misc. Devices" ],
+			"tags": [ "Zigbee", "Driver", "Dashboards", "Monitoring", "Lights & Switches", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/ewelink_outlet/packageManifest.json",
 			"description": "Zigbee eWeLink-CMARS-Seedan Outlet is a driver that is modified from the great code of Markus Liljergren of *OhLa Lab* fame -see https://oh-lalabs.com/. Modifications include ewelink fingerprint and more "
 		  },
@@ -85,7 +85,7 @@
 		  {
 			"name": "Third Reality Custom Drivers",
 			"category": "Control",
-			"version": "1.0.12",
+			"version": "1.0.13",
 			"tags": [ "Zigbee", "Driver", "Sensors", "Lights & Switches", "Temperature & Humidity", "Motion", "Presence", "Open/Closed", "Misc. Devices" ],
 			"location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_custom_drivers_packaging/packageManifest.json",
 			"description": "A collection of production-grade custom drivers for Third Reality Zigbee devices. Select and install only the drivers you need (Contact, Motion, Night Light, Power Plug with Metering, and Temp/Humidity Display/Non-Display sensors, RGBW bulb)."

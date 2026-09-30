@@ -1,0 +1,47 @@
+/**
+ * Application Name: Echos Speak Environment Manager
+ * Platform: Hubitat Elevation (C-7 / OS 2.4.4.156)
+ * Notes: Centralized environmental state matrix (Do Not Disturb, Mute, Volume, Display Brightness, Display Power), mode reconciliation, and command pacing for Echo Speaks devices.
+ * Category: Utility / Convenience / Environmental
+ **/
+/**
+ * Copyright 2026 James Shimota
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ **/
+/**
+ *  Purpose:
+ *  Provides central 5-Section Shared Settings Matrix state management (DND, Mute, Volume Level, Display Brightness, Display Power) per Hubitat Mode + Sleeping/Away.
+ *  Uses local REST API endpoints to serve a standalone HTML/JS Single Page Application (SPA) dashboard and matrix editor.
+ *
+ *  Changelog:
+ *  v3.5.0 - 2026/09/28 - Standalone Local REST/SPA Architecture Migration:
+ *                          - Added oauth:true and defined REST API mappings (/ui.html, /api/state, /api/matrix, /api/matrix/save, /api/matrix/apply, /api/refresh).
+ *                          - Added automatic local access token generation lifecycle via ensureAccessToken().
+ *                          - Added file-serving handler serveUI() to stream environment_manager_ui.html from Hubitat File Manager with variable interpolation.
+ *                          - Added JSON REST endpoints for live state monitoring, matrix payload persistence, and mode execution.
+ *                          - Retained existing command queuing, mode tracking, and getDeviceProfile() capability verification engine.
+ *  v3.4.7 - 2026/09/28 - Matrix Persistence Engine & Live Volume Refactor
+ *  v3.4.6 - 2026/09/28 - Authoritative Capabilities Map Display Filtering Refactor
+ *  v3.4.5 - 2026/09/28 - Expanded Logging & Matrix State Cleanup Refactor
+ *  v3.4.4 - 2026/09/28 - Capability Map Precision & State Normalization Refactor
+ *  v3.4.3 - 2026/09/28 - Live Matrix UI Refinement & Refresh Trigger
+ *  v3.4.2 - 2026/09/28 - Desired-State & Sync Status Architecture Correction
+ *  v3.4.1 - 2026/09/28 - GUI Cleanup & Architectural Refactor
+ *  v3.4.0 - 2026/09/27 - Section-Specific 'Apply Now' Integration
+ *  v3.3.0 - 2026/09/27 - Architectural Hardening & Matrix Isolation Refactor
+ *  v3.2.0 - 2026/09/27 - UI Persistence, Section Structuring & Collapsible Refactor
+ *  v3.1.0 - 2026/09/26 - Restored complete changelog history
+ *  v3.0.0 - 2026/08/15 - Initial release under Echos Speak Advanced suite.
+ **/

@@ -1,0 +1,580 @@
+<!--
+ * Application Name: Echos Speak Environment Manager UI (SPA)
+ * Platform: Hubitat Elevation (C-7 / OS 2.4.4.156)
+ * Notes: Standalone HTML5/JS Single-Page Application (SPA) for live status dashboard monitoring and 5-section matrix management.
+ * Category: Utility / Convenience / Environmental
+ -->
+<!--
+ * Copyright 2026 James Shimota
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ -->
+<!--
+ * Purpose:
+ * Provides central 5-Section Shared Settings Matrix state management (DND, Mute, Volume Level, Display Brightness, Display Power) per Hubitat Mode + Sleeping/Away.
+ * Uses local REST API endpoints to serve a standalone HTML/JS Single Page Application (SPA) dashboard and matrix editor.
+ *
+ * Changelog:
+ * v3.5.9 - 2026/09/28 - Robust Mute Normalization in SPA Cell Handlers:
+ *                         - Updated toggleWorkingMute to recognize true, "true", and "muted" string representations.
+ *                         - Ensured toggle state reliably flips boolean state back and forth in workingMatrix.
+ * v3.5.8 - 2026/09/28 - Dual-Setting Adaptive Matrix UI Integration.
+ -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echos Speak Environment Manager</title>
+    <style>
+        :root {
+            --bg-color: #12181f;
+            --card-bg: #1a252f;
+            --card-sub-bg: #22303c;
+            --accent-color: #3498db;
+            --text-color: #ecf0f1;
+            --text-muted: #95a5a6;
+            --border-color: #2c3e50;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --bright-blue: #38bdf8;
+            --bright-red: #ff4d4d;
+            --bright-green: #2ecc71;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header-title { font-size: 1.5rem; font-weight: bold; margin: 0; color: #fff; }
+        .mode-badge { background-color: var(--accent-color); padding: 5px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; color: #fff; }
+
+        /* TAB NAVIGATION */
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { color: var(--text-color); }
+        .tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); font-weight: bold; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* METRIC CARDS */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .metric-title { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #fff; }
+        .metric-subtext { font-size: 0.85rem; font-weight: bold; margin-top: 4px; color: var(--bright-red); }
+
+        /* TABLES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+        }
+
+        th { background-color: #16202a; font-weight: 600; color: var(--text-muted); }
+        th.dev-col, td.dev-name { text-align: left; width: 25%; font-weight: bold; background-color: var(--card-sub-bg); }
+
+        .select-all-btn {
+            margin-top: 4px;
+            padding: 2px 6px;
+            font-size: 0.72rem;
+            border-radius: 3px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            border: 1px solid #34495e;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .select-all-btn:hover {
+            background-color: var(--accent-color);
+            color: #ffffff;
+        }
+
+        /* COLOR UTILITIES FOR LIVE TABLE */
+        .text-dnd-on { color: var(--bright-blue) !important; font-weight: bold; }
+        .text-mute-on { color: var(--bright-red) !important; font-weight: bold; }
+        .text-power-off { color: var(--bright-red) !important; font-weight: bold; }
+        .text-adaptive-on { color: var(--bright-green) !important; font-weight: bold; }
+        .text-brightness-manual { color: #ffffff !important; font-weight: bold; }
+
+        .cell-bool { cursor: pointer; user-select: none; font-weight: bold; padding: 6px 0; border-radius: 4px; }
+        .cell-bool.on { background-color: rgba(39, 174, 96, 0.25); color: #2ecc71; border: 1px solid #27ae60; }
+        .cell-bool.off { background-color: #22303c; color: var(--text-muted); border: 1px solid var(--border-color); }
+
+        .cell-mute { cursor: pointer; user-select: none; font-weight: bold; padding: 6px 0; border-radius: 4px; }
+        .cell-mute.on { background-color: rgba(231, 76, 60, 0.25); color: #e74c3c; border: 1px solid #c0392b; }
+        .cell-mute.off { background-color: #22303c; color: var(--text-muted); border: 1px solid var(--border-color); }
+
+        .adapt-btn {
+            padding: 2px 6px;
+            font-size: 0.72rem;
+            border-radius: 3px;
+            background-color: #22303c;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            margin-left: 4px;
+            font-weight: bold;
+        }
+
+        .adapt-btn.active {
+            background-color: var(--bright-green);
+            color: #12181f;
+            border-color: var(--bright-green);
+        }
+
+        input[type="number"] {
+            width: 55px;
+            background: #12181f;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        select {
+            background: #12181f;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 4px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 4px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .btn-primary { background-color: var(--accent-color); color: white; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-success:hover { background-color: #219150; }
+        .btn-secondary { background-color: #34495e; color: white; }
+        .btn-secondary:hover { background-color: #2c3e50; }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h1 class="header-title">Echos Speak Environment Manager</h1>
+        <div>
+            Active Column: <span id="active-column" class="mode-badge">Loading...</span>
+        </div>
+    </div>
+
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('dashboard')">DASHBOARD</button>
+        <button class="tab-btn" onclick="switchTab('dnd')">1. DND</button>
+        <button class="tab-btn" onclick="switchTab('mute')">2. Mute</button>
+        <button class="tab-btn" onclick="switchTab('volume')">3. Volume</button>
+        <button class="tab-btn" onclick="switchTab('brightness')">4. Display Brightness</button>
+        <button class="tab-btn" onclick="switchTab('power')">5. Display Power</button>
+    </div>
+
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Managed Fleet</div>
+                <div id="metric-total" class="metric-value">0 Physical Devices</div>
+                <div id="metric-unmanaged" class="metric-subtext">0 Unmanaged (WHA/Groups)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Fleet Sync Status</div>
+                <div id="metric-sync" class="metric-value">-</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Command Queue</div>
+                <div id="metric-queue" class="metric-value">0</div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 20px; color: #fff;">Fleet Live Status</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="dev-col">Device Name</th>
+                    <th>DND</th>
+                    <th>Mute</th>
+                    <th>Volume</th>
+                    <th>Display Brightness</th>
+                    <th>Display Power</th>
+                    <th>Sync State</th>
+                </tr>
+            </thead>
+            <tbody id="live-table-body">
+                <tr><td colspan="7">Loading live fleet status...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- TABS 2-6: EDITABLE MATRICES GENERATED DYNAMICALLY -->
+    <div id="tab-dnd" class="tab-content"><div id="matrix-dnd-container"></div></div>
+    <div id="tab-mute" class="tab-content"><div id="matrix-mute-container"></div></div>
+    <div id="tab-volume" class="tab-content"><div id="matrix-volume-container"></div></div>
+    <div id="tab-brightness" class="tab-content"><div id="matrix-brightness-container"></div></div>
+    <div id="tab-power" class="tab-content"><div id="matrix-power-container"></div></div>
+
+    <div style="height: 80px;"></div> <!-- Bottom spacer for action bar -->
+
+    <div class="action-bar">
+        <button class="btn btn-secondary" onclick="fetchLiveData()">🔄 Refresh Fleet</button>
+        <button class="btn btn-primary" onclick="saveMatrixData()">💾 Save Matrix</button>
+        <button class="btn btn-success" onclick="applyMatrixData()">⚡ Save & Apply Now</button>
+    </div>
+
+    <script>
+        const ACCESS_TOKEN = "${access_token}";
+        const API_BASE = "${api_base}";
+
+        let appState = {};
+        let workingMatrix = {};
+
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            try {
+                const url = `${API_BASE}${endpoint}?access_token=${ACCESS_TOKEN}`;
+                const options = { method, headers: { 'Content-Type': 'application/json' } };
+                if (body) options.body = JSON.stringify(body);
+                const res = await fetch(url, options);
+                return await res.json();
+            } catch (err) {
+                console.error(`API Call failed for ${endpoint}:`, err);
+                return {};
+            }
+        }
+
+        async function fetchLiveData() {
+            appState = await apiCall('/api/state');
+            
+            const currentMode = appState.activeColumn || appState.activeMode || appState.activePresence || 'Unknown';
+            document.getElementById('active-column').innerText = currentMode;
+            
+            renderDashboard();
+        }
+
+        async function fetchMatrixData() {
+            const data = await apiCall('/api/matrix');
+            workingMatrix = data || { modes: [], matrices: {} };
+            renderMatrixEditors();
+        }
+
+        function formatDeduplicatedCell(actVal, desVal, actHtml, desHtml) {
+            if (!actVal && !desVal) return '';
+            if (actVal && desVal && actVal === desVal) return actHtml;
+            if (actVal && desVal) return `${actHtml} / ${desHtml}`;
+            return actVal ? actHtml : desHtml;
+        }
+
+        function renderDashboard() {
+            if (!appState.devices) return;
+
+            const totalDevs = appState.devices.length;
+            const unmanagedCount = appState.unmanagedCount || 0;
+
+            document.getElementById('metric-total').innerText = `${totalDevs} Physical Devices`;
+            document.getElementById('metric-unmanaged').innerText = `${unmanagedCount} Unmanaged (WHA/Groups)`;
+
+            const inSync = appState.devices.filter(d => d.synced).length;
+            document.getElementById('metric-sync').innerText = `${inSync} / ${totalDevs} Synced`;
+            document.getElementById('metric-queue').innerText = `${appState.queueDepth || 0} Items`;
+
+            const tbody = document.getElementById('live-table-body');
+            tbody.innerHTML = appState.devices.map(dev => {
+                const actVol = dev.actual.volume !== null && dev.actual.volume !== undefined ? `${dev.actual.volume}%` : '';
+                const desVol = dev.desired.volume !== undefined && dev.desired.volume !== null ? `${dev.desired.volume}%` : '';
+                const volCell = formatDeduplicatedCell(actVol, desVol, actVol, desVol);
+
+                let actDnd = dev.actual.dnd === 'enabled' || dev.actual.dnd === 'true' || dev.actual.dnd === true ? 'On' : (dev.actual.dnd ? 'Off' : '');
+                let desDnd = dev.desired.dnd !== undefined ? (dev.desired.dnd ? 'On' : 'Off') : '';
+                let actDndHtml = actDnd === 'On' ? `<span class="text-dnd-on">On</span>` : actDnd;
+                let desDndHtml = desDnd === 'On' ? `<span class="text-dnd-on">On</span>` : desDnd;
+                const dndCell = formatDeduplicatedCell(actDnd, desDnd, actDndHtml, desDndHtml);
+
+                let actMute = dev.actual.mute === 'muted' || dev.actual.mute === 'true' || dev.actual.mute === true ? 'On' : (dev.actual.mute ? 'Off' : '');
+                let desMute = dev.desired.mute !== undefined ? (dev.desired.mute ? 'On' : 'Off') : '';
+                let actMuteHtml = actMute === 'On' ? `<span class="text-mute-on">On</span>` : actMute;
+                let desMuteHtml = desMute === 'On' ? `<span class="text-mute-on">On</span>` : desMute;
+                const muteCell = formatDeduplicatedCell(actMute, desMute, actMuteHtml, desMuteHtml);
+
+                let dispCell = '';
+                if (dev.capabilities.brightness) {
+                    let actDispVal = dev.actual.adaptive === 'on' ? 'Adaptive' : (dev.actual.brightness !== null && dev.actual.brightness !== undefined ? `${dev.actual.brightness}%` : '');
+                    let desDispVal = dev.desired.adaptive === true ? 'Adaptive' : (dev.desired.brightness !== undefined && dev.desired.brightness !== null ? `${dev.desired.brightness}%` : '');
+
+                    let actDispHtml = actDispVal === 'Adaptive' ? `<span class="text-adaptive-on">Adaptive</span>` : `<span class="text-brightness-manual">${actDispVal}</span>`;
+                    let desDispHtml = desDispVal === 'Adaptive' ? `<span class="text-adaptive-on">Adaptive</span>` : `<span class="text-brightness-manual">${desDispVal}</span>`;
+
+                    dispCell = formatDeduplicatedCell(actDispVal, desDispVal, actDispHtml, desDispHtml);
+                }
+
+                let pwrCell = '';
+                if (dev.capabilities.power) {
+                    let actPwr = dev.actual.power ? (dev.actual.power.toLowerCase() === 'on' ? 'On' : 'Off') : '';
+                    let desPwr = dev.desired.power !== undefined ? (dev.desired.power ? 'On' : 'Off') : '';
+                    let actPwrHtml = actPwr === 'Off' ? `<span class="text-power-off">Off</span>` : actPwr;
+                    let desPwrHtml = desPwr === 'Off' ? `<span class="text-power-off">Off</span>` : desPwr;
+                    pwrCell = formatDeduplicatedCell(actPwr, desPwr, actPwrHtml, desPwrHtml);
+                }
+
+                return `
+                    <tr>
+                        <td class="dev-name">${dev.label}</td>
+                        <td>${dndCell}</td>
+                        <td>${muteCell}</td>
+                        <td>${volCell}</td>
+                        <td>${dispCell}</td>
+                        <td>${pwrCell}</td>
+                        <td>
+                            <span class="status-pill ${dev.synced ? 'pill-success' : 'pill-warning'}">
+                                ${dev.synced ? '✔ Synced' : '⚠ Pending'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderMatrixEditors() {
+            if (!workingMatrix.modes || !appState.devices) return;
+
+            ['dnd', 'mute', 'volume', 'brightness', 'power'].forEach(type => {
+                const container = document.getElementById(`matrix-${type}-container`);
+                let html = `<table><thead><tr><th class="dev-col">Managed Device</th>`;
+                
+                workingMatrix.modes.forEach(m => {
+                    const btnText = (type === 'volume' || type === 'brightness') ? 'Set All' : 'Select All';
+                    html += `
+                        <th>
+                            <div>${m}</div>
+                            <button class="select-all-btn" onclick="toggleColumnAll('${type}', '${m}')">${btnText}</button>
+                        </th>`;
+                });
+                
+                html += `</tr></thead><tbody>`;
+
+                appState.devices.forEach(dev => {
+                    if ((type === 'brightness' && !dev.capabilities.brightness) || (type === 'power' && !dev.capabilities.power)) {
+                        return;
+                    }
+
+                    html += `<tr><td class="dev-name">${dev.label}</td>`;
+                    workingMatrix.modes.forEach(m => {
+                        const val = ((workingMatrix.matrices && workingMatrix.matrices[type] && workingMatrix.matrices[type][dev.id]) || {})[m];
+                        html += `<td>${buildCellInput(type, dev.id, m, val, dev)}</td>`;
+                    });
+                    html += `</tr>`;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            });
+        }
+
+        function toggleColumnAll(type, mode) {
+            const applicableDevs = appState.devices.filter(dev => {
+                if (type === 'brightness') return dev.capabilities.brightness;
+                if (type === 'power') return dev.capabilities.power;
+                return true;
+            });
+
+            if (type === 'volume' || type === 'brightness') {
+                const targetVal = prompt(`Enter ${type} level (0-100) for all devices in mode '${mode}':`, type === 'brightness' ? '50' : '30');
+                if (targetVal === null || targetVal.trim() === '') return;
+                
+                const numVal = parseInt(targetVal);
+                if (isNaN(numVal) || numVal < 0 || numVal > 100) {
+                    alert('Please enter a valid number between 0 and 100.');
+                    return;
+                }
+                applicableDevs.forEach(dev => updateWorkingCell(type, dev.id, mode, numVal));
+            } else {
+                let allOn = true;
+                applicableDevs.forEach(dev => {
+                    const val = ((workingMatrix.matrices[type] && workingMatrix.matrices[type][dev.id]) || {})[mode];
+                    const isOn = (val === true || val === 'true' || val === 'on' || val === 'muted');
+                    if (!isOn) allOn = false;
+                });
+
+                const targetVal = !allOn;
+                applicableDevs.forEach(dev => updateWorkingCell(type, dev.id, mode, targetVal));
+            }
+
+            renderMatrixEditors();
+        }
+
+        function buildCellInput(type, devId, mode, value, dev) {
+            if (type === 'brightness') {
+                const isAdaptive = ((workingMatrix.matrices['adaptive'] && workingMatrix.matrices['adaptive'][devId]) || {})[mode] === true;
+                const numVal = value ?? 50;
+                return `
+                    <div style="display: flex; align-items: center; justify-content: center;">
+                        <input type="number" min="0" max="100" value="${numVal}" ${isAdaptive ? 'disabled' : ''} onchange="updateWorkingCell('brightness', '${devId}', '${mode}', this.value !== '' ? parseInt(this.value) : 50)">
+                        ${dev.capabilities.adaptive ? `<button class="adapt-btn ${isAdaptive ? 'active' : ''}" title="Toggle Adaptive Display" onclick="toggleAdaptiveCell('${devId}', '${mode}')">A</button>` : ''}
+                    </div>`;
+            } else if (type === 'volume') {
+                return `<input type="number" min="0" max="100" value="${value ?? ''}" onchange="updateWorkingCell('${type}', '${devId}', '${mode}', this.value !== '' ? parseInt(this.value) : null)">`;
+            } else if (type === 'dnd') {
+                const isOn = value === true || value === 'true';
+                return `<div class="cell-bool ${isOn ? 'on' : 'off'}" onclick="toggleWorkingBool(this, '${type}', '${devId}', '${mode}')">${isOn ? '☑ ON' : '☐ OFF'}</div>`;
+            } else if (type === 'mute') {
+                const isOn = value === true || value === 'true' || value === 'muted';
+                return `<div class="cell-mute ${isOn ? 'on' : 'off'}" onclick="toggleWorkingMute(this, '${type}', '${devId}', '${mode}')">${isOn ? '☑ ON' : '☐ OFF'}</div>`;
+            } else if (type === 'power') {
+                const isOn = value === null || value === true || value === 'true' || value === 'on';
+                return `
+                    <select onchange="updateWorkingCell('${type}', '${devId}', '${mode}', this.value === 'true')" style="width: 100%;">
+                        <option value="true" ${isOn ? 'selected' : ''}>ON</option>
+                        <option value="false" ${!isOn ? 'selected' : ''}>OFF</option>
+                    </select>`;
+            }
+        }
+
+        function toggleAdaptiveCell(devId, mode) {
+            const isCurrentlyAdaptive = ((workingMatrix.matrices['adaptive'] && workingMatrix.matrices['adaptive'][devId]) || {})[mode] === true;
+            const newAdaptiveState = !isCurrentlyAdaptive;
+            
+            updateWorkingCell('adaptive', devId, mode, newAdaptiveState);
+            renderMatrixEditors();
+        }
+
+        function toggleWorkingBool(el, type, devId, mode) {
+            const val = ((workingMatrix.matrices[type] && workingMatrix.matrices[type][devId]) || {})[mode];
+            const currentVal = val === true || val === 'true';
+            const newVal = !currentVal;
+            updateWorkingCell(type, devId, mode, newVal);
+            el.className = `cell-bool ${newVal ? 'on' : 'off'}`;
+            el.innerHTML = newVal ? '☑ ON' : '☐ OFF';
+        }
+
+        function toggleWorkingMute(el, type, devId, mode) {
+            const val = ((workingMatrix.matrices[type] && workingMatrix.matrices[type][devId]) || {})[mode];
+            const currentVal = val === true || val === 'true' || val === 'muted';
+            const newVal = !currentVal;
+            updateWorkingCell(type, devId, mode, newVal);
+            el.className = `cell-mute ${newVal ? 'on' : 'off'}`;
+            el.innerHTML = newVal ? '☑ ON' : '☐ OFF';
+        }
+
+        function updateWorkingCell(type, devId, mode, value) {
+            if (!workingMatrix.matrices) workingMatrix.matrices = {};
+            if (!workingMatrix.matrices[type]) workingMatrix.matrices[type] = {};
+            if (!workingMatrix.matrices[type][devId]) workingMatrix.matrices[type][devId] = {};
+            workingMatrix.matrices[type][devId][mode] = value;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        async function saveMatrixData() {
+            await apiCall('/api/matrix/save', 'POST', workingMatrix);
+            alert('Matrix settings saved.');
+        }
+
+        async function applyMatrixData() {
+            await apiCall('/api/matrix/apply', 'POST', workingMatrix);
+            alert('Matrix saved and active settings applied to Echo devices.');
+            fetchLiveData();
+        }
+
+        (async () => {
+            await fetchLiveData();
+            await fetchMatrixData();
+        })();
+    </script>
+</body>
+</html>
