@@ -23,69 +23,15 @@
  *  Child Device Driver for managing standard audio Amazon Echo devices bridged via Echos Speak Device Manager.
  *
  *  Changelog:
- *  v3.2.0 - 2026/09/27 - UI Parameter Streamlining:
- *                          - Stripped ignoreDnd parameter from speak(), playAnnouncement(), and playAnnouncementAndRestore() command signatures to clean up device UI.
- *                          - Preserved core speech, announcement, voice selection, and volume parameters.
- *  v3.1.9 - 2026/09/27 - WHA Server Payload Isolation Fix:
- *                          - Updated parseDeviceData() to isolate WHA devices from devData.currentVolume and devData.volume server payloads.
- *                          - Prevents server-pushed dummy 50% fallback values from overwriting state.whaPseudoVolume or emitting false 50% volume events.
- *                          - Retained standard live volume parsing for non-WHA physical hardware.
- *  v3.1.8 - 2026/09/27 - WHA Initialization Volume Guard Fix:
- *                          - Updated initializeDriverLifecycle() to eliminate the 50% default volume fallback exclusively for WHA devices.
- *                          - Preserved state.whaPseudoVolume restoration on null attribute checks for WHA devices while retaining the hard-coded 50% default for non-WHA hardware.
- *  v3.1.7 - 2026/09/27 - Volume No-Op Guard & Log/Server Spam Prevention:
- *                          - Added early exit guard to setVolume() when requested target matches current volume attribute.
- *                          - Prevents duplicate HTTP network calls to bridge server, eliminates redundant sendEvent emissions, and suppresses log chatter.
- *  v3.1.6 - 2026/09/27 - WHA Pseudo-Volume State Fix:
- *                          - Added state.whaPseudoVolume to retain commanded volume levels for WHA endpoints where server reports null currentVolume.
- *                          - Updated setVolume() to store commanded volume level into state.whaPseudoVolume for WHA devices.
- *                          - Updated parseDeviceData() to fall back to state.whaPseudoVolume when server returns null volume data, eliminating 50% state resets.
- *  v3.1.5 - 2026/09/27 - WHA Group-Targeted Music Voice Routing:
- *                          - Refactored sendWhaMusicCommand() to resolve existing amazonDeviceName attribute and dynamically construct group voice commands.
- *                          - Updated play, pause, stop, nextTrack, and previousTrack WHA voice text patterns to target "<actionVerb> on the <Amazon Device Name>".
- *                          - Preserved togglePlayback() authoritative media state delegation and exact non-WHA native behavior.
- *  v3.1.4 - 2026/09/27 - WHA Target Self-Healing & Upgrade Reconciliation:
- *                          - Added automatic resolveWhaCommandTarget() execution during driver installation, preference updates, lifecycle initialization, and manual refresh.
- *                          - Enables self-healing target resolution for WHA devices upgraded in place from v3.1.2 without requiring device deletion/recreation.
- *                          - Added safe diagnostic logging when WHA target cannot be resolved due to missing/empty clusterMembers.
- *  v3.1.3 - 2026/09/27 - WHA Music Control Enhancement:
- *                          - Implemented WHA voiceCmdAsText routing for play, pause, stop, nextTrack, and previousTrack.
- *                          - Added resolveWhaCommandTarget() helper to extract the first valid physical member from clusterMembers.
- *                          - Added state.whaCommandTarget and state.whaCommandTargetName diagnostic tracking.
- *                          - Preserved native musicPlayer execution for non-WHA devices and maintained existing togglePlayback() media-state checking.
- *  v3.1.2 - 2026/09/26 - Driver Hardening & Race Mitigation:
- *                          - Updated parseDeviceFeatures() to validate payload structures and preserve last-known-good state on malformed HTTP responses.
- *                          - Added state.lastCapabilityTimestamp out-of-order response filtering.
- *                          - Streamlined driver initialization lifecycle to eliminate redundant duplicate feature queries.
- *  v3.1.1 - 2026/09/26 - Capability pipeline refactor: removed bogus all-true fallbacks and duplicate capability parsing; restored strict capability map state lookup while preserving WHA capability override auditing and execution bypass.
- *  v3.1.0 - 2026/09/26 - Restored complete changelog history; added capability map fallback and getter for downstream parent app queries.
- *  v3.0.9 - 2026/09/26 - Integrated transient volume transaction protocol, explicit logging, and capability map safeguards.
- *  v3.0.8 - 2026/09/25 - Refactored capability map processing and added WHA speech command overrides.
- *  v3.0.0 - 2026/08/15 - Initial architectural restructuring for Echos Speak Advanced suite.
- *  v3.0.0 (2026-09-26) - Driver Standardization & Driver Renaming Alignment:
- *                          - Renamed driver definition name to 'Echos Speak Device Standard'.
- *                          - Promoted version baseline to v3.0.0 across all drivers and parent applications.
- *  v2.4.1 (2026-09-25) - WHA Speech Capability Override Handling:
- *                          - Preserved the server/Amazon capability map as authoritative; WHA speech is not globally faked as supported.
- *                          - Added a WHA-specific speak() execution bypass when Amazon reports speechSynthesis=false for a Whole Home Audio group.
- *                          - Added state.capabilityMapOverrides audit tracking so capability exceptions are visible without altering the underlying capability map.
- *                          - WHA override is recorded as "speechSynthesis false>true" only when the native capability is false.
- *  v2.4.0 (2026-09-25) - Capability Contract Refactor & Display Stripping:
- *                          - Added capability "SwitchLevel" declaration to satisfy Hubitat contract.
- *                          - Stripped all display-specific command definitions (setDisplayBrightness, setDisplayPowerOn, setDisplayPowerOff, setAdaptiveBrightnessOn, setAdaptiveBrightnessOff) and implementation logic.
- *                          - Removed display-specific attributes (displayBrightness, displayPower, adaptiveBrightness, switch).
- *                          - Simplified setLevel() to map exclusively to setVolume(level) without display branching.
- *  v2.3.0 (2026-09-22) - Task A4 SSML Voice Selection & Command Parameter Enhancements:
- *                          - Updated speak command voice parameter from STRING to ENUM dropdown featuring supported US-English Alexa voices.
- *                          - Added optional voice and volume parameters to playText and playTextAndRestore commands.
- *                          - Ensured blank/default voice selections evaluate to null payload to maintain original speech behavior.
- *  v2.2.0 (2026-09-22) - Task A6 & A8 Command Guards and Level Capability Alignment.
- *  v2.1.9 (2026-09-22) - Metadata Parity Sync & Version Alignment.
- *  v2.1.7 (2026-09-22) - Toggle Playback Trace & Parent Guard Alignment (A5).
- *  v2.1.6 (2026-09-22) - Playback Command Hardening (A5).
- *  v2.1.5 (2026-09-22) - Direct Volume Command Target Transaction Logging.
+ *  v3.8.1 - 2026/09/30 - Standard Driver Cleanup:
+ *                          - Removed redundant display and switch attribute deletion logic from initializeDriverLifecycle().
+ *                          - Aligned version tracking across the Echos Speak suite.
+ *  v3.8.0 - 2026/09/30 - Ecosystem Version Alignment & Code Optimization:
+ *                          - Promoted version baseline to 3.8.0 across the Echos Speak suite.
+ *                          - Optimized setVolume no-op comparisons and WHA command target handling.
+ *                          - Refactored internal state validation routines.
  *
- *                [KEEP] Prior change history is found in changelog_device.txt (v0.0.0 - v2.0.9)
+ *                [KEEP] Prior change history is found in changelog_device.txt (v0.0.0 - v3.2.0)
  **/
 
 import groovy.transform.Field
@@ -174,8 +120,8 @@ import groovy.transform.Field
     [deviceType: "A3C9PE6TNYLTCH", family: "WHA", generation: "N/A", modelName: "Multiroom", imageFilename: "echo_wha", validated: true]
 ]
 
-static String version() { return '3.2.0' }
-def timeStamp() { return "2026/09/27 6:10 PM" }
+static String version() { return '3.8.1' }
+def timeStamp() { return "2026/09/30 9:15 AM" }
 
 metadata {
     definition (
@@ -318,10 +264,6 @@ private void initializeDriverLifecycle(Boolean isInstall = false) {
 
     device.deleteCurrentState("deviceStatus")
     device.deleteCurrentState("transportStatus")
-    device.deleteCurrentState("displayBrightness")
-    device.deleteCurrentState("displayPower")
-    device.deleteCurrentState("adaptiveBrightness")
-    device.deleteCurrentState("switch")
 
     if (device.currentValue("serialNumber") == null) sendEvent(name: "serialNumber", value: device.deviceNetworkId)
     if (device.currentValue("family") == null) sendEvent(name: "family", value: "ECHO")
@@ -1047,7 +989,6 @@ void parseDeviceFeatures(Map resp) {
     logTrace "--> parseDeviceFeatures() Processing server feature payload for ${device.displayName}: ${payload}"
 
     Map caps  = payload.capabilities as Map
-    Map st    = (payload.state instanceof Map)  ? payload.state  : [:]
     Map errs  = (payload.errors instanceof Map) ? payload.errors : [:]
 
     state.capabilitiesMap = [

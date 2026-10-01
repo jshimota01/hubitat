@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  echos-speak:
+    build: .
+    container_name: echos-speak
+    restart: unless-stopped
+    ports:
+      - "4000:4000"   # REST API Port
+      - "4001:4001"   # Amazon Proxy Login Port (Changed from 3001 to 4001)
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=4000
+      - PROXY_PORT=4001
+      - PROXY_PUBLIC_HOST=192.168.1.12
+      - AMAZON_PAGE=amazon.com
+      - LOG_LEVEL=INFO

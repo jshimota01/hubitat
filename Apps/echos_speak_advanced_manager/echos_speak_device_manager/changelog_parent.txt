@@ -1,4 +1,57 @@
- *  v1.8.14 (2026-09-21) - Architectural Driver-Selection Refactor:
+ *  v3.1.4 (2026-09-28) - Complete Echo Inventory Proxy & Authoritative Family Synchronization:
+ *                          - Added public getManagedEchoDeviceInventory() to expose complete Echo child device inventory (DNI, label, driver type, family).
+ *                          - Updated updatePhysicalDevicesRegistryCache() to prioritize state.discoveredDeviceCache authoritative family first before fallback to driver attributes.
+ *  v3.1.3 (2026-09-27) - WHA Cluster Membership Data-Flow Fix:
+ *                          - Preserved raw dev.clusterMembers in state.discoveredDeviceCache within getRawAmazonEndpointMap().
+ *                          - Added targeted debug diagnostic logging when caching WHA device endpoints to verify clusterMembers presence and member count.
+ *  v3.1.2 (2026-09-26) - Bridge Load Optimization & Fetch De-Duplication:
+ *                          - Removed fetchDeviceFeatures() from syncDeviceStates() routine polling loop.
+ *                          - Added 60-second cooldown and in-flight locking inside fetchDeviceFeatures() to prevent duplicate requests.
+ *                          - Kept public fetchDeviceFeatures() for explicit driver initialization and manual refresh calls.
+ *  v3.1.1 (2026-09-26) - Scope Alignment: Promoted fetchDeviceFeatures() to public.
+ *  v3.0.0 (2026-09-26) - Application Renaming & Driver Standardization.
+ *  v3.1.1 (2026-09-26) - Capability Initialization Contract Restoration:
+ *                          - Promoted fetchDeviceFeatures(String serialNumber) to public scope.
+ *                          - Integrated fetchDeviceFeatures(dni) into syncDeviceStates() reconciliation loop to ensure capabilities stay updated during polling.
+ *  v3.0.0 (2026-09-26) - Application Renaming, Ecosystem Container Binding & Driver Standardization:
+ *                          - Renamed core application to 'Echos Speak Device Manager'.
+ *                          - Bound as child app to 'Echos Speak Advanced Manager'.
+ *                          - Updated child driver binding targets to 'Echos Speak Device Standard' and 'Echos Speak Device W/Sensors'.
+ *                          - Added legacy driver type checking for backward compatibility during syncChildDevices().
+ *                          - Kept version baseline locked at v3.0.0.
+ *  v2.4.1 (2026-09-26) - Physical Device Registry Cache Engine:
+ *                          - Added state.echosSpeakPhysicalDevices registry builder inside syncChildDevices() and syncDeviceStates().
+ *                          - Added public getManagedPhysicalEchoDevices() method to expose authoritative registry to downstream apps.
+ *  v2.4.0 (2026-09-25) - Capability Contract & Legacy Child Driver Alignment:
+ *                          - Preserved capability-based child driver routing in syncChildDevices().
+ *                          - Added legacy child validation check to warn if an existing Standard driver child possesses extended display capabilities.
+ *  v2.1.9 (2026-09-24) - Diagnostic Suite Async Callback & UI State Refresh Refactor:
+ *                          - Converted btnTestWatchdog inside appButtonHandler() to execute a direct self-contained httpGet() call to /auth/status rather than relying on fetchAuthStatusData().
+ *                          - Refactored httpGet() response handlers for both REST and Watchdog test buttons to ensure state properties are updated prior to mainPage() rendering.
+ *                          - Added explicit completion and exception log messages inside both diagnostic HTTP response closures.
+ *  v2.1.8 (2026-09-24) - GUI Section 1B Diagnostic Button Binding Fix:
+ *                          - Added submitOnChange: true to btnTestBridge and btnTestWatchdog inputs to ensure button clicks trigger appButtonHandler() and update the UI in real time.
+ *  v2.1.7 (2026-09-22) - Authoritative & Asynchronous Volume State Preservation Refactor:
+ *                          - Refactored getRawAmazonEndpointMap() cache builder block to preserve currentVolume, volume, and volumeCommandTarget alongside transaction metadata.
+ *  v2.1.6 (2026-09-22) - Asynchronous Transaction State Preservation Fix:
+ *                          - Updated getRawAmazonEndpointMap() cache builder to preserve volumeCommandId, volumeCommandState, and volumeCommandError.
+ *                          - Ensures asynchronous server-side volume transaction completion metadata reaches child drivers during trailing reconciliation polls.
+ *  v2.1.5 (2026-09-22) - Log Demotion Optimization:
+ *                          - Demoted bridge command acceptance messages from logInfo to logDebug to keep runtime info logs clean during rapid volume adjustments.
+ *  v2.1.4 (2026-09-22) - Explicit Scheduler Wrapper & 5000 ms Window Alignment:
+ *                          - Added dedicated public scheduledTrailingSync() method for clean Hubitat quartz scheduler binding.
+ *                          - Set trailing reconciliation delay to 5000 ms (runIn(5, ...)) to guarantee Amazon API callbacks complete on the server before Hubitat executes GET /api/devices.
+ *  v2.1.3 (2026-09-22) - Trailing Asynchronous State Reconciliation:
+ *                          - Added automatic trailing syncDeviceStates() trigger inside sendBridgeCommand() when commands are accepted as PENDING.
+ *  v2.1.2 (2026-09-22) - Asynchronous Server Volume Transaction Sync:
+ *                          - Updated sendBridgeCommand() to recognize { success: true, status: "pending" } HTTP responses as valid bridge acceptances.
+ *  v2.1.0 (2026-09-21) - Direct Playback Track Artwork Bridge Integration:
+ *                          - Updated fetchDeviceMediaState() response mapping pipeline to consume server normalized trackImage and trackImageHtml fields from getPlaybackState().
+ *                          - Preserved historical changelog entries and master sync schedules.
+ *  v2.0.0 (2026-09-21) - Major Architecture Version Release & Driver Naming Standardization:
+ *                          - Promoted major version baseline to v2.0.0 across Parent and Child drivers following completion of core validation suite.
+ *                          - Renamed child driver targets to 'Echos Speak Advanced Standard Device' and 'Echos Speak Advanced W/Sensors Device'.
+ *                          - Retained complete historical changelog entries without deletion or consolidation. *  v1.8.14 (2026-09-21) - Architectural Driver-Selection Refactor:
  *                          - Expanded parent driver selection logic to evaluate Temperature, Motion, AND Display capabilities.
  *                          - Routes devices exposing Temperature, Motion, OR Display capabilities to the extended Sensors driver.
  *                          - Preserved raw server capability contract and historical changelog entries.

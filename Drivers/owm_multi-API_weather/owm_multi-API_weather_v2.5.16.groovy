@@ -30,6 +30,7 @@
 	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
 	
 	VERSIONS:
+	v2.5.16 09/30/26	jshimota	didn't change version - had a small letter m in the moonphase icons.
 	v2.5.16	09/20/26	jshimota	Refactored text formatting: aligned currentWeatherSummaryText with selected humidity unit preference and fixed illuminanceUnit "none" display behavior.
 	v2.5.15	09/20/26	jshimota	Production merge release. Integrated minutely precip routines (from dev branch v2.5.14-v2.5.28-Dev), depth unit selectors, and humidity zero-division guard while maintaining v2.5.13 CIE illuminance math and fixed moon emojis.
 	v2.5.14	08/19/26	jshimota	Development branch: Minutely short-term precipitation analysis, precipNextHr attributes, and depth unit selector updates.
@@ -1654,7 +1655,7 @@ private String calcWinDirImagePath(String altWDLoc) {
 Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
     logDebug "Calculating moon phase icons, text names, and emojis from API payload maps..."
     
-    List<String> emojis = ["🌑", "🌒", "🌓", "m🌔", "🌕", "🌖", "🌗", "🌘"]
+    List<String> emojis = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"]
     
     def phases = [
         [sourceMap: todayData, apiKey: "moon_phase", valAttr: "todayMoonPhase", pngAttr: "todayMoonPhasePngImageUrl", textAttr: "todayMoonPhaseText", emojiAttr: "todayMoonPhaseEmojiIcon"],

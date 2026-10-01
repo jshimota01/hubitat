@@ -1,0 +1,36 @@
+ *  v3.8.0 - 2026/09/30 - Platform Sandbox Optimization & Full Suite Refactor:
+ *                          - Updated version to v3.8.0 across all components.
+ *                          - Refactored serveUI() file loading to handle File Manager fallbacks gracefully.
+ *                          - Converted template token injection to literal macros (__ACCESS_TOKEN__, __API_BASE__) to prevent JS template literal collisions.
+ *                          - Optimized setting removal in apiSaveMatrix() to eliminate orphaned Hubitat AppSettings.
+ *                          - Refactored command pacing queue for Hubitat Sandbox 2.4.4.156 timer stability.
+ *  v3.7.9 - 2026/09/29 - Targeted Code Cleanup & Logging Refactor[cite: 1]:
+ *                          - Promoted version to v3.7.9[cite: 1].
+ *                          - Shifted operational logs from INFO to DEBUG[cite: 1].
+ *                          - Cleaned up ternary redundancies in Adaptive Brightness command fallback[cite: 1].
+ *                          - Added explicit comments documenting matrix defaults, capability contracts, and "no_change" sentinel handling[cite: 1].
+ *                          - Streamlined parent reference checking and error logging[cite: 1].
+ *  v3.7.8 - 2026/09/29 - State-Backed Persistence Refactor[cite: 1]:
+ *                          - Migrated matrix storage from app settings[] to state.matrixSettings map[cite: 1].
+ *                          - Bypassed Hubitat AppSettings "no_change" key rejection for dynamic Mute settings[cite: 1].
+ *  v3.7.7 - 2026/09/29 - Added Diagnostic DND vs Mute Persistence Tracing[cite: 1].
+ *  v3.7.6 - 2026/09/29 - Settings Persistence "no_change" Sanitization Fix[cite: 1].
+ *  v3.7.5 - 2026/09/29 - Added Diagnostic REST Mute Endpoint Tracing[cite: 1].
+ *  v3.7.4 - 2026/09/29 - Mute Matrix REST Payload Normalization Fix[cite: 1].
+ *  v3.7.3 - 2026/09/29 - Muted Device Volume Sync State Resolution[cite: 1].
+ *  v3.7.2 - 2026/09/29 - REST Apply Payload Evaluation Bug Fix[cite: 1].
+ *  v3.7.1 - 2026/09/29 - Delay Removal & Clean Logging Refactor[cite: 1].
+ *  v3.7.0 - 2026/09/29 - Section-Isolated Persistence & Dynamic Tab Action Bar Refactor[cite: 1].
+ *  v3.6.9 - 2026/09/29 - UI Layout, Table Styling & Version Sync Refactor[cite: 1].
+ *  v3.6.8 - 2026/09/28 - Simplified Mute State Matching to Mirror DND Logic[cite: 1].
+ *  v3.6.7 - 2026/09/28 - REST Boundary Diagnostic Logging & Mute Normalization[cite: 1].
+ *  v3.6.6 - 2026/09/28 - Mute Engine Command Dispatch Alignment[cite: 1].
+ *  v3.6.5 - 2026/09/28 - Explicit Dual-Setting Adaptive Display Engine[cite: 1].
+ *  v3.6.4 - 2026/09/28 - Adaptive Brightness Command Routing & SPA Payload Alignment[cite: 1].
+ *  v3.6.3 - 2026/09/28 - Application Layer Ownership Correction & Adaptive Brightness Attribute Alignment[cite: 1].
+ *  v3.6.2 - 2026/09/28 - Corrected unmanaged WHA calculation by inspecting parent.getChildDevices()[cite: 1].
+ *  v3.6.1 - 2026/09/28 - Added unmanaged WHA device calculation to REST API state payload[cite: 1].
+ *  v3.6.0 - 2026/09/28 - Adaptive Display Brightness Engine & Matrix Refactor[cite: 1].
+ *  v3.5.1 - 2026/09/28 - Encoding Sanitization & Button Style Refactor[cite: 1].
+ *  v3.5.0 - 2026/09/28 - Standalone Local REST/SPA Architecture Migration[cite: 1].
+ *  v3.0.0 - 2026/08/15 - Initial release under Echos Speak Advanced suite[cite: 1].

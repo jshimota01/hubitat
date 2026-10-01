@@ -1,0 +1,16 @@
+
+
+cd /volume1/docker/echos-speak-plex-bridge
+
+cat > data/config.json <<'EOF'
+{
+  "plexUrl": "http://192.168.1.20:32400",
+  "plexToken": "PASTE_YOUR_TOKEN_HERE"
+}
+EOF
+
+chmod 600 data/config.json
+
+cat data/config.json
+GET
+	http://127.0.0.1:32400/photo/:/transcode?url=/library/metadata/242341/thumb/1783939859?X-Plex-Token=33SWkGkggsLXMGy83NGm&X-Plex-Token=33SWkGkggsLXMGy83NGm&width=96&height=96&minSize=1
