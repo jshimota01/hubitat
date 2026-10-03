@@ -1,0 +1,367 @@
+/**
+ * Zone Motion Advanced Child Device (Virtual Motion Driver)
+ * Platform: Hubitat Elevation (v2.4.4.156)
+ * Purpose: Virtual Motion Sensor driver used by Zone Motion Advanced Child App.
+ *
+ * Notes:
+ * Custom Health Check Implementation
+ * - Intentionally NOT using Hubitat's native 'Health Check' capability.
+ * - Hubitat's native capability exposes an unwanted "Ping" UI control button
+ *   and does not provide the phase-anchored scheduling, timeout guards, or trace 
+ *   logging behavior required by this driver architecture.
+ **/
+/**
+ * Copyright 2026 James Shimota
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+/**
+ * Purpose:
+ * Represents the aggregated virtual motion status for a Zone Motion Advanced zone.
+ *
+ * Changelog:
+ *  v1.0.2    10/02/26    jshimota    Fixed Groovy compilation errors by separating capability initialize() from private helper routine.
+ *  v1.0.1    10/02/26    jshimota    Standardized to custom driver template (added Refresh, Initialize, Configuration, Health Check, resetDriver, sendIfChanged, version attributes, healthStatus, lastActivity, and independent logging switches).
+ *  v1.0.0    10/01/26    jshimota    Initial release.
+ **/
+
+static String version() { return '1.0.2' }
+def timeStamp() { return "2026/10/02 01:25 PM" }
+
+import groovy.transform.Field
+
+metadata {
+    definition(
+        name: "Zone Motion Advanced Child Device",
+        namespace: "jshimota",
+        author: "James Shimota",
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/zone_motion_advanced_child_device/zone_motion_advanced_child_device.groovy"
+    ) {
+        capability "Motion Sensor"
+        capability "Sensor"
+        capability "Actuator"
+        capability "Configuration"
+        capability "Initialize"
+        capability "Refresh"
+
+        // Attributes
+        attribute "healthStatus", "enum", ["unknown", "offline", "online"]
+        attribute "lastActivity", "string"
+        attribute "driverVersion", "string"
+
+        // Custom Commands
+        command "setActive"
+        command "setInactive"
+        command "Health Check"
+        command "resetDriver"
+    }
+
+    preferences {
+        input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
+
+        // Independent Logging Switches
+        input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", description: "Enable to output normal activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
+        input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", description: "Enable to output error activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
+        input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", description: "Enable to output warning activity to log<br>Default: <b>On</b>", defaultValue: true, required: true
+        input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", description: "Enable to output debugging activity to log<br>Default: <b>Off</b><br>(Is turned on for 30 minutes after Initialized or first installed)", defaultValue: false, required: true
+        input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", description: "Enable to output tracing activity to log<br>Default: <b>Off</b>", defaultValue: false, required: true
+    }
+}
+
+// Single-Shot Version Demarcation Trace Logging Helper Routine
+private void checkAndLogVersionDemarcation() {
+    String currentVer = version()
+    if (state.driverVersion != currentVer) {
+        logTrace "=================== DRIVER VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
+        state.driverVersion = currentVer
+        sendIfChanged("driverVersion", currentVer)
+    }
+}
+
+void parse(String description) {
+    logDebug "parse(): ${description}"
+}
+
+def refresh() {
+    logInfo "refresh() requested"
+    markHealthCheckSuccess(null)
+    return []
+}
+
+/* =========================================================================================
+   HUBITAT LIFECYCLE ROUTINES
+   ========================================================================================= */
+
+void installed() {
+    checkAndLogVersionDemarcation()
+    logInfo "Installing driver v${version()} (${timeStamp()})..."
+    
+    initializeHealthCheckPhase()
+    sendIfChanged("healthStatus", "unknown")
+    sendIfChanged("motion", "inactive")
+
+    initializeRoutine(true)
+}
+
+void updated() {
+    checkAndLogVersionDemarcation()
+    logInfo "Preferences updated"
+    
+    initializeRoutine(false)
+}
+
+def configure() {
+    checkAndLogVersionDemarcation()
+    logInfo "Configuring device..."
+    
+    initializeRoutine(false)
+    
+    List<String> cmds = []
+    cmds += executeHealthCheck()
+    
+    return cmds
+}
+
+void initialize() {
+    logInfo "Initialize capability command triggered"
+    initializeRoutine(false)
+}
+
+private void initializeRoutine(Boolean isInstall) {
+    checkAndLogVersionDemarcation()
+    unschedule("disableDebugLogging")
+
+    // Ensure state attributes exist
+    if (device.currentValue("healthStatus") == null) {
+        sendIfChanged("healthStatus", "unknown")
+    }
+    sendIfChanged("driverVersion", version())
+
+    // Centralized Health Check Scheduler
+    final int interval = settings.HealthCheckInterval != null ? settings.HealthCheckInterval.toInteger() : 480
+    if (interval > 0) {
+        scheduleHealthCheck("executeHealthCheckScheduled", interval)
+    } else {
+        unschedule("executeHealthCheckScheduled")
+    }
+
+    if (isInstall) {
+        device.updateSetting("logDebugEnable", [type: "bool", value: true])
+        logInfo "Debug logging enabled for 30 minutes."
+        runIn(1800, "disableDebugLogging")
+    } else if (getSettingBool("logDebugEnable", false)) {
+        logInfo "Debug logging enabled. Will automatically turn off in 30 minutes."
+        runIn(1800, "disableDebugLogging", [overwrite: false])
+    } else {
+        unschedule("disableDebugLogging")
+    }
+
+    markHealthCheckSuccess(null)
+}
+
+/* =========================================================================================
+   MOTION COMMAND ROUTINES
+   ========================================================================================= */
+
+void setActive() {
+    if (device.currentValue("motion") != "active") {
+        logInfo "${device.displayName} motion is active"
+        sendIfChanged("motion", "active", null, null, true)
+    }
+    updateLastActivity()
+}
+
+void setInactive() {
+    if (device.currentValue("motion") != "inactive") {
+        logInfo "${device.displayName} motion is inactive"
+        sendIfChanged("motion", "inactive", null, null, true)
+    }
+    updateLastActivity()
+}
+
+private void updateLastActivity() {
+    String nowFormatted = new Date().format("yyyy-MM-dd HH:mm:ss", location.timeZone)
+    sendIfChanged("lastActivity", nowFormatted)
+}
+
+/* =========================================================================================
+   HEALTH CHECK ROUTINE TEMPLATE (CUSTOM HEALTH CHECK ARCHITECTURE)
+   ========================================================================================= */
+
+List<String> "Health Check"() {
+    return executeHealthCheck()
+}
+
+void executeHealthCheckScheduled() {
+    List<String> cmds = executeHealthCheck()
+    if (cmds) sendHubCommand(new hubitat.device.HubMultiAction(cmds, hubitat.device.Protocol.ZIGBEE))
+}
+
+private List<String> executeHealthCheck() {
+    logDebug "Executing Health Check..."
+    state.healthCheckPending = true
+    scheduleCommandTimeoutCheck(COMMAND_TIMEOUT)
+    markHealthCheckSuccess(null)
+    return []
+}
+
+private void markHealthCheckSuccess(String clusterHex) {
+    if (state.healthCheckPending == true) {
+        String clusterMsg = clusterHex ? " on cluster 0x${clusterHex}" : ""
+        logDebug "Valid Health Check response verified${clusterMsg}"
+        state.healthCheckPending = false
+        unschedule("deviceCommandTimeout")
+    }
+    
+    sendIfChanged("healthStatus", "online", null, null, false, "${device.displayName} health check verified online")
+    updateLastActivity()
+}
+
+private void initializeHealthCheckPhase() {
+    if (state.healthCheckStartHour == null) state.healthCheckStartHour = new Random().nextInt(24)
+    if (state.healthCheckStartMinute == null) state.healthCheckStartMinute = new Random().nextInt(60)
+}
+
+private void scheduleHealthCheck(String methodToSchedule, int intervalMin) {
+    unschedule(methodToSchedule)
+    initializeHealthCheckPhase()
+
+    final int h = state.healthCheckStartHour as Integer
+    final int m = state.healthCheckStartMinute as Integer
+
+    logInfo "Scheduling Health Check every ${intervalMin} minutes anchored at ${String.format('%02d:%02d', h, m)} daily"
+
+    switch (intervalMin) {
+        case 60:
+            schedule("0 ${m} * ? * * *", methodToSchedule)
+            break
+        case 240:
+            String h4 = [0, 4, 8, 12, 16, 20].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h4} ? * * *", methodToSchedule)
+            break
+        case 480:
+            String h8 = [0, 8, 16].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h8} ? * * *", methodToSchedule)
+            break
+        case 720:
+            String h12 = [0, 12].collect { (it + h) % 24 }.sort().join(",")
+            schedule("0 ${m} ${h12} ? * * *", methodToSchedule)
+            break
+        case 1440:
+            schedule("0 ${m} ${h} ? * * *", methodToSchedule)
+            break
+        default:
+            if (intervalMin >= 60) {
+                int hours = intervalMin / 60
+                schedule("0 ${m} */${hours} ? * * *", methodToSchedule)
+            } else {
+                schedule("0 */${intervalMin} * ? * * *", methodToSchedule)
+            }
+            break
+    }
+}
+
+private void scheduleCommandTimeoutCheck(int delay) {
+    runIn(delay, "deviceCommandTimeout", [overwrite: true])
+}
+
+void deviceCommandTimeout() {
+    logWarn "No Health Check response received (device offline?)"
+    state.healthCheckPending = false
+    sendIfChanged("healthStatus", "offline")
+}
+
+/* =========================================================================================
+   MASTER UTILITY ROUTINES & LOGGING ENGINE
+   ========================================================================================= */
+
+void disableDebugLogging() {
+    if (getSettingBool("logDebugEnable", false)) {
+        logWarn "30 minutes have elapsed. Automatically disabling debug logging."
+        device.updateSetting("logDebugEnable", [type: "bool", value: false])
+    }
+}
+
+void resetDriver() {
+    logInfo "Starting full driver reset..."
+    
+    Object savedHour = state.healthCheckStartHour
+    Object savedMinute = state.healthCheckStartMinute
+
+    clearAllSchedules()
+    clearAllAttributes()
+    clearAllDriverStates()
+
+    if (savedHour != null) state.healthCheckStartHour = savedHour
+    if (savedMinute != null) state.healthCheckStartMinute = savedMinute
+
+    initializeRoutine(false)
+    logInfo "Driver reset process completed and re-initialized."
+}
+
+void clearAllDriverStates() {
+    logInfo "Clearing all driver states..."
+    state.clear()
+    logInfo "All states have been cleared."
+}
+
+void clearAllAttributes() {
+    logInfo "Clearing all attributes..."
+    device.properties.supportedAttributes.each { device.deleteCurrentState("$it") }
+    logInfo "All attributes have been cleared."
+}
+
+void clearAllSchedules() {
+    logInfo "Clearing all scheduled jobs (including orphaned schedules)..."
+    unschedule()
+    logInfo "All scheduled jobs have been successfully cleared."
+}
+
+private void sendIfChanged(String name, Object value, String unit = null, String type = null, Boolean isStateChange = false, String desc = null) {
+    String currentVal = device.currentValue(name)?.toString()
+    if (currentVal != value?.toString() || isStateChange) {
+        String descriptionText = desc ?: "${device.displayName} - ${name} was set to ${value}${unit ?: ''}"
+        logInfo descriptionText
+        sendEvent(name: name, value: value, unit: unit, type: type, isStateChange: isStateChange, descriptionText: descriptionText)
+    }
+}
+
+private void logMessage(String level, String msg) {
+    String lowerLevel = level?.toLowerCase() ?: "info"
+    String devName = device.displayName ?: "Device Driver"
+    
+    String settingKey = "log${lowerLevel.capitalize()}Enable"
+    Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
+
+    if (getSettingBool(settingKey, defaultEnabled)) {
+        log."${lowerLevel}" "${devName}: ${msg}"
+    }
+}
+
+private void logInfo(String msg)  { logMessage("info", msg) }
+private void logDebug(String msg) { logMessage("debug", msg) }
+private void logTrace(String msg) { logMessage("trace", msg) }
+private void logWarn(String msg)  { logMessage("warn", msg) }
+private void logError(String msg) { logMessage("error", msg) }
+
+private Boolean getSettingBool(String key, Boolean defaultVal = false) {
+    return settings[key] != null ? settings[key] as Boolean : defaultVal
+}
+
+// Constants
+@Field static final Map HealthCheckIntervalOpts = [
+    defaultValue: 480,
+    options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
+]
+
+@Field static final int COMMAND_TIMEOUT = 10
