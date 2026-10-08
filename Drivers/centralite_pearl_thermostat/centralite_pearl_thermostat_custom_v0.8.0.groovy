@@ -40,7 +40,6 @@
  **/
 /**
  * Changelog:
- * v0.8.1    10/08/26    jshimota    Setpoint Precision & Boundary Hardening Refactor: Decoupled setpoint parsing from tempPrecision by implementing getSetpointTemperature() (locked to 2 decimal places) to preserve exact setpoint reporting. Hardened processSetpoint to enforce 2.0°F setpoint separation after applying min/max hardware clamps.
  * v0.8.0    10/08/26    jshimota    Setpoint Precision Refactor: Preserved BigDecimal setpoint precision in processSetpoint without integer truncation. Converted setpoint commands to precise Zigbee 0.01°C raw integer writes to support decimal precision contracts with external controllers like MEM.
  * v0.7.9    09/25/26    jshimota    Setpoint Log Disambiguation Refactor: Updated all setpoint log messages, descriptionText entries, and processSetpoint dispatches to explicitly state 'Heating setpoint' and 'Cooling setpoint' instead of generic 'thermostatSetpoint' or camelCase attribute keys.
  * v0.7.8    09/14/26    jshimota    Optimized markHealthCheckSuccess to emit isStateChange: false to refresh lastActivity without event history log clutter.
@@ -65,8 +64,8 @@
  * v0.5.0    08/31/26    jshimota    Applied Driver Template v1.0.10: Standardized logging engine, phase-anchored custom Health Check, single-shot version demarcation, master utility routines, and updated GUI controls.
  **/
  
-static String version() { return '0.8.1' }
-def timeStamp() { return "2026/10/08 08:34 AM" }
+static String version() { return '0.8.0' }
+def timeStamp() { return "2026/10/08 08:14 AM" }
 
 import hubitat.zigbee.zcl.DataType
 import groovy.transform.Field
@@ -180,9 +179,9 @@ void initialize(Boolean isInstall = false) {
     if (device.currentValue("powerSource") == null) sendEvent(name: "powerSource", value: "unknown") 
     if (device.currentValue("thermostatOperatingState") == null) sendEvent(name: "thermostatOperatingState", value: "idle")
     if (device.currentValue("temperature") == null) sendEvent(name: "temperature", value: 70, unit: getTemperatureScale())
-    if (device.currentValue("heatingSetpoint") == null) updateAttribute("heatingSetpoint", 68.00g, getTemperatureScale(), "digital", "Heating setpoint")
-    if (device.currentValue("coolingSetpoint") == null) updateAttribute("coolingSetpoint", 74.00g, getTemperatureScale(), "digital", "Cooling setpoint")
-    if (device.currentValue("thermostatSetpoint") == null) updateAttribute("thermostatSetpoint", 68.00g, getTemperatureScale(), "digital", "Heating setpoint")
+    if (device.currentValue("heatingSetpoint") == null) updateAttribute("heatingSetpoint", 68, getTemperatureScale(), "digital", "Heating setpoint")
+    if (device.currentValue("coolingSetpoint") == null) updateAttribute("coolingSetpoint", 74, getTemperatureScale(), "digital", "Cooling setpoint")
+    if (device.currentValue("thermostatSetpoint") == null) updateAttribute("thermostatSetpoint", 68, getTemperatureScale(), "digital", "Heating setpoint")
 
     if (getSettingBool("lockDashboardToAuto", true)) {
         updateAttribute("thermostatMode", "auto")
@@ -268,7 +267,7 @@ void raiseCoolingSetpointLevel() { changeSetpoint("coolingSetpoint", 1) }
 void lowerCoolingSetpointLevel() { changeSetpoint("coolingSetpoint", -1) }
 
 private void changeSetpoint(String attributeName, int delta) {
-    def currentVal = device.currentValue(attributeName) ?: (attributeName == "heatingSetpoint" ? 68.00g : 74.00g)
+    def currentVal = device.currentValue(attributeName) ?: (attributeName == "heatingSetpoint" ? 68 : 74)
     BigDecimal nextLevel = (currentVal as BigDecimal) + delta
     if (attributeName == "heatingSetpoint") setHeatingSetpoint(nextLevel) else setCoolingSetpoint(nextLevel)
 }
@@ -342,9 +341,9 @@ List<String> auto() {
     logInfo "Setting thermostat mode to Auto"
     updateModeState("auto")
     
-    def temp = device.currentValue("temperature") ?: 70.00g
-    def hSp = device.currentValue("heatingSetpoint") ?: 68.00g
-    def cSp = device.currentValue("coolingSetpoint") ?: 74.00g
+    def temp = device.currentValue("temperature") ?: 70
+    def hSp = device.currentValue("heatingSetpoint") ?: 68
+    def cSp = device.currentValue("coolingSetpoint") ?: 74
     def targetSp = (temp >= cSp) ? cSp : hSp
     String spLabel = (temp >= cSp) ? "Cooling setpoint" : "Heating setpoint"
     updateAttribute("thermostatSetpoint", targetSp, getTemperatureScale(), "digital", spLabel)
@@ -441,43 +440,29 @@ private List<String> processSetpoint(degrees, int attributeId) {
     if (degrees == null || !degrees.toString().isNumber()) return []
     
     boolean isC = (getTemperatureScale() == "C") 
-    BigDecimal maxTemp = isC ? 44.00g : 86.00g 
-    BigDecimal minTemp = isC ? 7.00g : 30.00g 
+    BigDecimal maxTemp = isC ? 44.0g : 86.0g 
+    BigDecimal minTemp = isC ? 7.0g : 30.0g 
     
     BigDecimal numDegrees = new BigDecimal(degrees.toString()).setScale(2, RoundingMode.HALF_UP)
     if (numDegrees < minTemp) numDegrees = minTemp
     if (numDegrees > maxTemp) numDegrees = maxTemp
     
-    String attrName = (attributeId == 0x12) ? "heatingSetpoint" : "coolingSetpoint" 
-    String setpointLabel = (attributeId == 0x12) ? "Heating setpoint" : "Cooling setpoint"
-
-    // Hardened Post-Clamp Setpoint Separation Enforcement
-    BigDecimal currentCooling = (attrName == "heatingSetpoint") ? (device.currentValue("coolingSetpoint") as BigDecimal) : null
-    BigDecimal currentHeating = (attrName == "coolingSetpoint") ? (device.currentValue("heatingSetpoint") as BigDecimal) : null
-
-    if (attrName == "heatingSetpoint" && currentCooling != null) {
-        if (currentCooling - numDegrees < 2.00g) {
-            BigDecimal adjCooling = numDegrees + 2.00g
-            if (adjCooling <= maxTemp) {
-                updateAttribute("coolingSetpoint", adjCooling, getTemperatureScale(), "digital", "Cooling setpoint")
-            }
-        }
-    } else if (attrName == "coolingSetpoint" && currentHeating != null) {
-        if (numDegrees - currentHeating < 2.00g) {
-            BigDecimal adjHeating = numDegrees - 2.00g
-            if (adjHeating >= minTemp) {
-                updateAttribute("heatingSetpoint", adjHeating, getTemperatureScale(), "digital", "Heating setpoint")
-            }
-        }
-    }
-
     double celsius = isC ? numDegrees.doubleValue() : fahrenheitToCelsius(numDegrees.doubleValue()) 
     int finalValue = Math.round(celsius * 100).toInteger() 
+    
+    String attrName = (attributeId == 0x12) ? "heatingSetpoint" : "coolingSetpoint" 
+    String setpointLabel = (attributeId == 0x12) ? "Heating setpoint" : "Cooling setpoint"
 
     logInfo "Setting ${setpointLabel} to ${numDegrees} °${getTemperatureScale()}"
     
     updateAttribute(attrName, numDegrees, getTemperatureScale(), "digital", setpointLabel)
     updateAttribute("thermostatSetpoint", numDegrees, getTemperatureScale(), "digital", setpointLabel)
+    
+    if (attrName == "heatingSetpoint" && device.currentValue("coolingSetpoint") == null) {
+        updateAttribute("coolingSetpoint", (numDegrees + 5.0g), getTemperatureScale(), "digital", "Cooling setpoint")
+    } else if (attrName == "coolingSetpoint" && device.currentValue("heatingSetpoint") == null) {
+        updateAttribute("heatingSetpoint", (numDegrees - 5.0g), getTemperatureScale(), "digital", "Heating setpoint")
+    }
     
     return zigbee.writeAttribute(0x0201, attributeId, DataType.INT16, finalValue) 
 }
@@ -564,11 +549,11 @@ void parse(String description) {
                         BigDecimal temp = getTemperature(descMap.value)
                         updateAttribute("temperature", temp, getTemperatureScale(), "physical")
                     } else if (attrInt == 0x0011) {
-                        BigDecimal temp = getSetpointTemperature(descMap.value)
+                        BigDecimal temp = getTemperature(descMap.value)
                         updateAttribute("coolingSetpoint", temp, getTemperatureScale(), "physical", "Cooling setpoint")
                         updateAttribute("thermostatSetpoint", temp, getTemperatureScale(), "physical", "Cooling setpoint")
                     } else if (attrInt == 0x0012) {
-                        BigDecimal temp = getSetpointTemperature(descMap.value)
+                        BigDecimal temp = getTemperature(descMap.value)
                         updateAttribute("heatingSetpoint", temp, getTemperatureScale(), "physical", "Heating setpoint")
                         updateAttribute("thermostatSetpoint", temp, getTemperatureScale(), "physical", "Heating setpoint")
                     } else if (attrInt == 0x001C) {
@@ -662,20 +647,6 @@ private BigDecimal getTemperature(String value) {
     
     int precision = settings?.tempPrecision != null ? settings.tempPrecision.toInteger() : 1
     return BigDecimal.valueOf(tempVal).setScale(precision, RoundingMode.HALF_UP)
-}
-
-/**
- * Isolated setpoint temperature parser.
- * Always preserves 2 decimal places regardless of ambient display precision preferences.
- */
-private BigDecimal getSetpointTemperature(String value) {
-    if (value == null) return null
-    int raw = Integer.parseInt(value, 16)
-    if (raw > 0x7FFF) raw -= 0x10000
-    double celsius = raw / 100.0
-    double tempVal = (getTemperatureScale() == "C") ? celsius : celsiusToFahrenheit(celsius)
-    
-    return BigDecimal.valueOf(tempVal).setScale(2, RoundingMode.HALF_UP)
 }
 
 private Integer getBatteryLevel(String rawValue) {
