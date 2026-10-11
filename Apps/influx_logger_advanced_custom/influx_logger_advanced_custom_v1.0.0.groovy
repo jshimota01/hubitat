@@ -1,0 +1,1262 @@
+/* groovylint-disable LineLength, MethodParameterTypeRequired, MethodReturnTypeRequired, MethodSize, NestedBlockDepth, NoDef, ParameterReassignment, PublicMethodsBeforeNonPublicMethods, UnnecessaryGString, UnnecessaryGetter, UnnecessaryObjectReferences, UnusedMethodParameter, VariableTypeRequired */
+/*****************************************************************************************************************
+ *  Application Name: InfluxDB Logger Advanced (Custom)
+ *  Platform: Hubitat Elevation
+ *
+ *  Source: https://github.com/HubitatCommunity/InfluxDB-Logger
+ *  Forked from: https://github.com/codersaur/SmartThings/tree/master/smartapps/influxdb-logger
+ *  Original Author: David Lomas (codersaur)
+ *  Previous Author: Joshua Marker (tooluser)
+ *  Hubitat Elevation version maintained by HubitatCommunity (https://github.com/HubitatCommunity/InfluxDB-Logger)
+ *  Custom Refactor Maintainer: James Shimota
+ *
+ *  License:
+ *   Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *   in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *   for the specific language governing permissions and limitations under the License.
+ *
+ *  Modification History:
+ *  Date       Name            Change
+ *  2019-02-02 Dan Ogorchock   Use asynchttpPost() instead of httpPost() call
+ *  2019-09-09 Caleb Morse     Support deferring writes and doing bulk writes to influxdb
+ *  2022-06-20 Denny Page      Remove nested sections for device selection.
+ *  2023-01-08 Denny Page      Address whitespace related lint issues. No functional changes.
+ *  2023-01-09 Craig King      Added InfluxDb2.x support.
+ *  2023-01-12 Denny Page      Automatic migration of Influx 1.x settings.
+ *  2023-01-15 Denny Page      Clean up various things:
+ *                             Remove Group ID/Name which are not supported on Hubitat.
+ *                             Remove Location ID and Hub ID which are not supported on Hubitat (always 1).
+ *                             Remove blocks of commented out code.
+ *                             Don't set page sections hidden to false where hideable is false.
+ *                             Remove state.queuedData.
+ *  2023-01-22 PJ              Add filterEvents option for subscribe.
+ *                             Fix event timestamps.
+ *  2023-01-23 Denny Page      Allow multiple instances of the application to be installed.
+ *                             NB: This requires Hubitat 2.2.9 or above.
+ *  2023-01-25 Craig King      Updated Button selection to valid capability for Hubitat
+ *  2023-02-16 PJ              Add error message to log for http response >= 400
+ *                             Allow ssl cert verification to be disabled (self signed certificates)
+ *  2023-02-26 Denny Page      Cleanup and rationalize UI
+ *                             Use time since first data value to trigger post rather than periodic timer
+ *                             Only create a keep alive event (softpoll) when no real event has been seen
+ *                             Cleanup and rationalize logging
+ *                             Further code cleanup
+ *  2023-02-28 Denny Page      Retry failed posts
+ *                             Enhance post logging
+ *                             Allow Hub Name and Location tags to be disabled for device events
+ *                             Further code cleanup
+ *  2023-03-04 Denny Page      Clean up event processing code
+ *                             Fix button event handling
+ *                             Fix thermostat fan mode event handling
+ *                             Fix threeAxis event encoding
+ *                             Add device event handling for filters, gas detectors, power source
+ *                             Remove handling for non-existent device capabilities
+ *                             Move unnecessary info messages to debug
+ *                             Disable debug logging of post data which drives hubs into the ground
+ *                             Provide info logging of event data to replace post data logging
+ *                             Allow backlog to be set as low as 1, allowing bad records to be cleared
+ *  2023-03-12 Denny Page      Use a unified device type / attribute map (deviceTypeMap)
+ *                             Unify advanced and non-advanced device selection processing
+ *                             Move device event encoding out to a separate function
+ *                             Enhance queueToInfluxDb to accept a list of events
+ *                             Complete rewrite of softpoll (take advantage of queueToInfluxDb lists)
+ *                             Remove unnecessary state variables
+ *                             Don't re-schedule batch post based on batch size, wait for existing timer
+ *                             Improve backlog warnings
+ *                             Lower backlog limits to prevent issues with app database size
+ *                             Normalize Hub information logging
+ *  2023-03-14 Denny Page      If post of size one fails, log the actual failed record
+ *                             Ignore momentary attributes for keep alive
+ *                             Display full uri in config page for convenience
+ *  2023-03-15 Denny Page      Always treat valid numbers (such as buttons) as numeric values for InfluxDB
+ *  2023-03-16 Denny Page      Fix issue of quotes surrounding hub name
+ *                             Fix issue of invalid three axis values being posted as a string
+ *  2023-03-18 Denny Page      Fix valve attribute
+ *                             Clean up logging
+ *  2023-04-24 Denny Page      Don't send null units to InfluxDB
+ *  2023-10-26 Denny Page      Add support for publishing queue length as a hub variable
+ *                             Add support for publishing hub variable events (idea from Scott Chen)
+ *  2023-11-14 Denny Page      Remove default values for Influx Version and Authorization Type
+ *  2023-11-17 Denny Page      Add warning about special characters in Database, Org and Bucket names
+ *  2024-03-17 Denny Page      Add failsafe call to writeQueuedDataToInfluxDb when new events are queued
+ *                             Remove old migration items
+ *  2025-03-13 Denny Page      When debugging, log individual fields of device and variable events
+ *  2025-04-30 Denny Page      Clarify InfluxDB Version as referring to Write Protocol Version
+ *  2025-08-30 Denny Page      Address softpoll issue with boolean system variables
+ *  2025-12-21 Denny Page      Lower default values
+ *  2026-03-17 Denny Page      Add InfluxDB V3 support (Thanks to mavrrick58)
+ *  2026-04-03 Denny Page      Add Integrations menu support
+ *  2026-10-11 jshimota        v1.0.0 Refactor to 'jshimota' namespace and author James Shimota.
+ *                             Added standard versioning, title banner, showVersionInLabel toggle, 
+ *                             version update trace demarcation, out-of-scope ${data} fix in HTTP handler, 
+ *                             closure-isolated postCount for async callbacks, and null guards for device/variable encoders.
+ *****************************************************************************************************************/
+
+static String version() { return '1.0.0' }
+def timeStamp() { return "2026/10/11 10:30 AM" }
+
+definition(
+    name: "InfluxDB Logger Advanced (Custom)",
+    namespace: "jshimota",
+    author: "James Shimota",
+    description: "Log device states to InfluxDB with advanced queuing and custom status options",
+    category: "Utility",
+    iconUrl: "",
+    iconX2Url: "",
+    iconX3Url: "",
+    menu: "Integrations",
+    singleThreaded: true
+)
+
+import groovy.transform.Field
+
+// Device type list
+@Field static final Map<String,Map> deviceTypeMap = [
+    'accelerometers': [ title: 'Accelerometers', capability: 'accelerationSensor', attributes: ['acceleration'] ],
+    'alarms': [ title: 'Alarms', capability: 'alarm', attributes: ['alarm'] ],
+    'batteries': [ title: 'Batteries', capability: 'battery', attributes: ['battery'] ],
+    'beacons': [ title: 'Beacons', capability: 'beacon', attributes: ['presence'] ],
+    'buttons': [ title: 'Buttons', capability: 'pushableButton', attributes: ['pushed', 'doubleTapped', 'held', 'released'] ],
+    'cos': [ title: 'Carbon Monoxide Detectors', capability: 'carbonMonoxideDetector', attributes: ['carbonMonoxide'] ],
+    'co2s': [ title: 'Carbon Dioxide Detectors', capability: 'carbonDioxideMeasurement', attributes: ['carbonDioxide'] ],
+    'colors': [ title: 'Color Controllers', capability: 'colorControl', attributes: ['hue', 'saturation', 'color'] ],
+    'consumables': [ title: 'Consumables', capability: 'consumable', attributes: ['consumableStatus'] ],
+    'contacts': [ title: 'Contact Sensors', capability: 'contactSensor', attributes: ['contact'] ],
+    'currentMeters': [ title: 'Current Meters', capability: 'currentMeter', attributes: ['amperage'] ],
+    'doorsControllers': [ title: 'Door Controllers', capability: 'doorControl', attributes: ['door'] ],
+    'energyMeters': [ title: 'Energy Meters', capability: 'energyMeter', attributes: ['energy'] ],
+    'filters': [ title: 'Filters', capability: 'filterStatus', attributes: ['filterStatus'] ],
+    'gasDetectors': [ title: 'Gas Detectors', capability: 'gasDetector', attributes: ['naturalGas'] ],
+    'humidities': [ title: 'Humidity Meters', capability: 'relativeHumidityMeasurement', attributes: ['humidity'] ],
+    'illuminances': [ title: 'Illuminance Meters', capability: 'illuminanceMeasurement', attributes: ['illuminance'] ],
+    'liquidFlowMeters': [ title: 'Liquid Flow Meters', capability: 'liquidFlowRate', attributes: ['rate'] ],
+    'locks': [ title: 'Locks', capability: 'lock', attributes: ['lock'] ],
+    'motions': [ title: 'Motion Sensors', capability: 'motionSensor', attributes: ['motion'] ],
+    'musicPlayers': [ title: 'Music Players', capability: 'musicPlayer', attributes: ['status', 'level', 'trackDescription', 'trackData', 'mute'] ],
+    'peds': [ title: 'Pedometers', capability: 'stepSensor', attributes: ['steps', 'goal'] ],
+    'phMeters': [ title: 'pH Meters', capability: 'pHMeasurement', attributes: ['pH'] ],
+    'powerMeters': [ title: 'Power Meters', capability: 'powerMeter', attributes: ['power'] ],
+    'powerSources': [ title: 'Power Sources', capability: 'powerSource', attributes: ['powerSource'] ],
+    'presences': [ title: 'Presence Sensors', capability: 'presenceSensor', attributes: ['presence'] ],
+    'pressures': [ title: 'Pressure Sensors', capability: 'pressureMeasurement', attributes: ['pressure'] ],
+    'shockSensors': [ title: 'Shock Sensors', capability: 'shockSensor', attributes: ['shock'] ],
+    'signalStrengthMeters': [ title: 'Signal Strength Meters', capability: 'signalStrength', attributes: ['lqi', 'rssi'] ],
+    'sleepSensors': [ title: 'Sleep Sensors', capability: 'sleepSensor', attributes: ['sleeping'] ],
+    'smokeDetectors': [ title: 'Smoke Detectors', capability: 'smokeDetector', attributes: ['smoke'] ],
+    'soundSensors': [ title: 'Sound Sensors', capability: 'soundSensor', attributes: ['sound'] ],
+    'spls': [ title: 'Sound Pressure Level Sensors', capability: 'soundPressureLevel', attributes: ['soundPressureLevel'] ],
+    'switches': [ title: 'Switches', capability: 'switch', attributes: ['switch'] ],
+    'switchLevels': [ title: 'Switch Levels', capability: 'switchLevel', attributes: ['level'] ],
+    'tamperAlerts': [ title: 'Tamper Alerts', capability: 'tamperAlert', attributes: ['tamper'] ],
+    'temperatures': [ title: 'Temperature Sensors', capability: 'temperatureMeasurement', attributes: ['temperature'] ],
+    'thermostats': [ title: 'Thermostats', capability: 'thermostat', attributes: ['temperature', 'heatingSetpoint', 'coolingSetpoint', 'thermostatSetpoint', 'thermostatMode', 'thermostatFanMode', 'thermostatOperatingState', 'thermostatSetpointMode', 'scheduledSetpoint'] ],
+    'threeAxis': [ title: 'Three-axis (Orientation) Sensors', capability: 'threeAxis', attributes: ['threeAxis'] ],
+    'touchs': [ title: 'Touch Sensors', capability: 'touchSensor', attributes: ['touch'] ],
+    'uvs': [ title: 'UV Sensors', capability: 'ultravioletIndex', attributes: ['ultravioletIndex'] ],
+    'valves': [ title: 'Valves', capability: 'valve', attributes: ['valve'] ],
+    'volts': [ title: 'Voltage Meters', capability: 'voltageMeasurement', attributes: ['voltage'] ],
+    'waterSensors': [ title: 'Water Sensors', capability: 'waterSensor', attributes: ['water'] ],
+    'windowShades': [ title: 'Window Shades', capability: 'windowShade', attributes: ['windowShade'] ]
+]
+
+// Momentary attributes that should be ignored for keep alive
+@Field static final List<String> momentaryAttributes = [
+    'pushed', 'doubleTapped', 'held', 'released'
+]
+
+@Field static final Map<Integer,String> logOptions = [
+    0 : "None",
+    1 : "Error",
+    2 : "Warning",
+    3 : "Info",
+    4 : "Debug"
+]
+@Field static final Integer logNone  = 0
+@Field static final Integer logError = 1
+@Field static final Integer logWarn  = 2
+@Field static final Integer logInfo  = 3
+@Field static final Integer logDebug = 4
+
+preferences {
+    page(name: "setupMain")
+    page(name: "connectionPage")
+}
+
+def setupMain() {
+    dynamicPage(name: "setupMain", title: "", install: true, uninstall: true) {
+        String currentVersion = version()
+
+        /* Styled App Header Banner */
+        section() {
+            paragraph "<div style='background-color:#1A252F; color:#FFFFFF; padding:12px; border-radius:6px; text-align:center; margin-bottom:10px;'>" +
+                      "<h2 style='color:#FFFFFF; margin:0; font-size:20px; font-weight:600;'>InfluxDB Logger Advanced (Custom)</h2>" +
+                      "<span style='font-size:12px; opacity:0.8;'>Version ${currentVersion} (${timeStamp()})</span></div>"
+        }
+
+        section("<h3>General Settings:</h3>") {
+            input(
+                name: "configLoggingLevelIDE",
+                title: "System log level - messages with this level and higher will be sent to the system log",
+                type: "enum",
+                options: logOptions,
+                defaultValue: "${logWarn}",
+                required: false
+            )
+            input(
+                name: "showVersionInLabel",
+                type: "bool",
+                title: "Show Version in App Label?",
+                defaultValue: true,
+                submitOnChange: true
+            )
+        }
+
+        section("<h3>InfluxDB Settings:</h3>") {
+            href(
+                name: "href",
+                title: "InfluxDB connection",
+                description: prefDatabaseHost == null ? "Configure database connection parameters" : uriString(),
+                required: true,
+                page: "connectionPage"
+            )
+            input(
+                name: "prefBatchTimeLimit",
+                title: "Batch time limit - maximum number of seconds before writing a batch to InfluxDB (range 1-300)",
+                type: "number",
+                range: "1..300",
+                defaultValue: "15",
+                required: true
+            )
+            input(
+                name: "prefBatchSizeLimit",
+                title: "Batch size limit - maximum number of events in a batch to InfluxDB (range 1-250)",
+                type: "number",
+                range: "1..250",
+                defaultValue: "50",
+                required: true
+            )
+            input(
+                name: "prefBacklogLimit",
+                title: "Backlog size limit - maximum number of queued events before dropping failed posts (range 1-5000)",
+                type: "number",
+                range: "1..5000",
+                defaultValue: "500",
+                required: true
+            )
+            input(
+                name: "prefQueueSizeVariable",
+                title: "Record InfluxDB backlog size in hub variable (optional, off by default)",
+                type: "enum",
+                required: false,
+                options: getGlobalVarsByType("integer").keySet().sort(){ it.capitalize() }
+            )
+            paragraph "Notes: Queue size variable must be type integer (Number), and is updated following each post to InfluxDB."
+        }
+
+        section("<h3>Event Handling:</h3>") {
+            input(
+                name: "prefSoftPollingInterval",
+                title: "Post keep alive events (aka softpoll) - check every softpoll interval and re-post last value if a new event has not occurred in this time",
+                type: "enum",
+                options: [
+                    "0" : "disabled",
+                    "1" : "1 minute (not recommended)",
+                    "5" : "5 minutes",
+                    "10" : "10 minutes",
+                    "15" : "15 minutes",
+                    "30" : "30 minutes",
+                    "60" : "60 minutes",
+                    "180" : "3 hours"
+                ],
+                defaultValue: "15",
+                submitOnChange: true,
+                required: true
+            )
+            if (prefSoftPollingInterval?.toInteger()) {
+                input(
+                    "prefPostHubInfo",
+                    "bool",
+                    title: "Post Hub information (IP, firmware, uptime, mode, sunrise/sunset) to InfluxDB",
+                    defaultValue: false
+                )
+            }
+            input(
+                "includeHubInfo",
+                "bool",
+                title: "Include Hub Name as a tag for events",
+                defaultValue: true
+            )
+            input(
+                "filterEvents",
+                "bool",
+                title: "Only post device events to InfluxDB when the data value changes",
+                defaultValue: true
+            )
+        }
+
+        section("Devices To Monitor:", hideable:true, hidden:false) {
+            input(
+                "accessAllAttributes",
+                "bool",
+                title: "Advanced attribute selection?",
+                defaultValue: false,
+                submitOnChange: true
+            )
+            if (accessAllAttributes) {
+                input(
+                    name: "allDevices",
+                    type: "capability.*",
+                    title: "Selected Devices",
+                    multiple: true,
+                    required: false,
+                    submitOnChange: true
+                )
+                settings.allDevices.each { device ->
+                    deviceId = device.getId()
+                    attrList = device.getSupportedAttributes().unique()
+                    if (attrList) {
+                        options = []
+                        attrList.each { attr ->
+                            options.add("${attr}")
+                        }
+                        input(
+                            name:"attrForDev${deviceId}",
+                            type: "enum",
+                            title: "$device",
+                            options: options.sort(),
+                            multiple: true,
+                            required: false,
+                            submitOnChange: true )
+                    }
+                }
+            }
+            else {
+                deviceTypeMap.each { name, entry ->
+                    input(
+                        "${name}",
+                        "capability.${entry.capability}",
+                        title: "${entry.title}",
+                        multiple: true,
+                        required: false
+                    )
+                }
+            }
+        }
+
+        section("Variables To Monitor:", hideable:true, hidden:false) {
+            List vars = []
+            getAllGlobalVars().each {
+                switch (it.value.type) {
+                    case 'integer':
+                    case 'bigdecimal':
+                    case 'boolean':
+                    case 'string':
+                        vars += it.key
+                        break
+                }
+            }
+            input(
+                "variableList",
+                "enum",
+                title: "Selected Variables (datetime variables are not supported)",
+                multiple: true,
+                required: false,
+                submitOnChange: true,
+                options: vars.sort(){ it.capitalize() }
+            )
+        }
+
+        section() {
+            label title: "Assign a custom label for this SmartApp instance", required: false
+        }
+    }
+}
+
+def connectionPage() {
+    dynamicPage(name: "connectionPage", title: "Connection Properties", install: false, uninstall: false) {
+        section {
+            input(
+                "prefDatabaseTls",
+                "bool",
+                title: "Use TLS?",
+                defaultValue: false,
+                submitOnChange: true
+            )
+            if (prefDatabaseTls) {
+                input(
+                    "prefIgnoreSSLIssues",
+                    "bool",
+                    title: "Ignore SSL cert verification issues",
+                    defaultValue: false
+                )
+            }
+            input(
+                "prefDatabaseHost",
+                "text",
+                title: "Host",
+                defaultValue: "",
+                required: true
+            )
+            input(
+                "prefDatabasePort",
+                "text",
+                title: "Port",
+                defaultValue: prefDatabaseTls ? "443" : "8086",
+                required: false
+            )
+            input(
+                name: "prefInfluxVer",
+                title: "Influx Write Protocol Version",
+                type: "enum",
+                options: [
+                    "1" : "v1",
+                    "2" : "v2",
+                    "3" : "v3"
+                ],
+                required: true,
+                submitOnChange: true
+            )
+            if (prefInfluxVer == "1") {
+                input(
+                    "prefDatabaseName",
+                    "text",
+                    title: "Database Name",
+                    defaultValue: "Hubitat",
+                    required: true
+                )
+                paragraph "Do not use special characters (including spaces) in Database Names"
+            }
+            else if (prefInfluxVer == "2") {
+                input(
+                    "prefOrg",
+                    "text",
+                    title: "Org",
+                    defaultValue: "",
+                    required: true
+                )
+                input(
+                    "prefBucket",
+                    "text",
+                    title: "Bucket",
+                    defaultValue: "",
+                    required: true
+                )
+                paragraph "Do not use special characters (including spaces) in Org or Bucket Names"
+            }
+            else if (prefInfluxVer == "3") {
+                input(
+                    "prefDatabaseName",
+                    "text",
+                    title: "Database Name",
+                    defaultValue: "Hubitat",
+                    required: true
+                )
+                paragraph "Do not use special characters (including spaces) in Database Names"
+            }
+            input(
+                name: "prefAuthType",
+                title: "Authorization Type",
+                type: "enum",
+                options: [
+                    "none" : "None",
+                    "basic" : "Username / Password",
+                    "token" : "Token"
+                ],
+                required: true,
+                submitOnChange: true
+            )
+            if (prefAuthType == "basic") {
+                input(
+                    "prefDatabaseUser",
+                    "text",
+                    title: "Username",
+                    defaultValue: "",
+                    required: true
+                )
+                input(
+                    "prefDatabasePass",
+                    "text",
+                    title: "Password",
+                    defaultValue: "",
+                    required: true
+                )
+            }
+            else if (prefAuthType == "token") {
+                input(
+                    "prefDatabaseToken",
+                    "text",
+                    title: "Token",
+                    required: true
+                )
+            }
+        }
+    }
+}
+
+private void checkAndLogVersionDemarcation() {
+    String currentVer = version()
+    if (state.lastLoggedVersion != currentVer) {
+        logTrace "=================== APP VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
+        state.lastLoggedVersion = currentVer
+    }
+}
+
+private void updateAppLabel() {
+    Boolean showVersion = (settings?.showVersionInLabel == null) ? true : settings.showVersionInLabel.toBoolean()
+    String baseLabel = "InfluxDB Logger Advanced (Custom)"
+    if (showVersion) baseLabel += " v${version()}"
+
+    if (app.label != baseLabel && !app.label?.startsWith(baseLabel)) {
+        app.updateLabel(baseLabel)
+    }
+}
+
+/**
+ *  installed()
+ *
+ *  Runs when the app is first installed.
+ **/
+void installed() {
+    checkAndLogVersionDemarcation()
+    state.installedAt = now()
+    state.loggerQueue = []
+    state.postCount = 0
+    updated()
+    logger("${app.label}: Installed v${version()} (${timeStamp()})", logInfo)
+}
+
+/**
+ *  uninstalled()
+ *
+ *  Runs when the app is uninstalled.
+ **/
+void uninstalled() {
+    logger("${app.label}: Uninstalled", logInfo)
+}
+
+/**
+ *  updated()
+ *
+ *  Runs when app settings are changed.
+ **/
+void updated() {
+    checkAndLogVersionDemarcation()
+    updateAppLabel()
+    logger("${app.label}: Updated", logInfo)
+
+    // Database config:
+    setupDB()
+
+    // Clear out any prior subscriptions
+    unsubscribe()
+    removeAllInUseGlobalVar()
+
+    // Register use and create subscriptions for variables
+    if (prefQueueSizeVariable) {
+        logger("Queue size available in variable ${prefQueueSizeVariable}", logInfo)
+        addInUseGlobalVar(prefQueueSizeVariable)
+    }
+    variableList.each { variable ->
+        logger("Subscribing to variable ${variable}", logInfo)
+        subscribe(location, "variable:${variable}", "handleVariableEvent")
+        addInUseGlobalVar(variable)
+    }
+
+    // Create device subscriptions
+    Map<String,List> deviceAttrMap = getDeviceAttrMap()
+    deviceAttrMap.each { device, attrList ->
+        attrList.each { attr ->
+            logger("Subscribing to ${device}: ${attr}", logInfo)
+            subscribe(device, attr, handleEvent, ["filterEvents": filterEvents])
+        }
+    }
+
+    // Subscribe to system start
+    subscribe(location, "systemStart", hubRestartHandler)
+
+    // Subscribe to mode events if requested
+    if (prefPostHubInfo) {
+        subscribe(location, "mode", handleModeEvent)
+    }
+
+    // Clear out any prior schedules
+    unschedule()
+
+    // Set up softpoll if requested
+    state.softPollingInterval = settings.prefSoftPollingInterval.toInteger()
+    switch (state.softPollingInterval) {
+        case 1:
+            runEvery1Minute(softPoll)
+            break
+        case 5:
+            runEvery5Minutes(softPoll)
+            break
+        case 10:
+            runEvery10Minutes(softPoll)
+            break
+        case 15:
+            runEvery15Minutes(softPoll)
+            break
+        case 30:
+            runEvery30Minutes(softPoll)
+            break
+        case 60:
+            runEvery1Hour(softPoll)
+            break
+        case 180:
+            runEvery3Hours(softPoll)
+            break
+    }
+
+    // Flush any pending batch
+    runIn(1, writeQueuedDataToInfluxDb)
+}
+
+/**
+ *  getDeviceAttrMap()
+ *
+ *  Build a device attribute map.
+ **/
+private Map<String,List> getDeviceAttrMap() {
+    deviceAttrMap = [:]
+
+    if (settings.accessAllAttributes) {
+        settings.allDevices.each { device ->
+            deviceId = device.getId()
+            deviceAttrMap[device] = settings["attrForDev${deviceId}"]
+        }
+    }
+    else {
+        deviceTypeMap.each { name, entry ->
+            deviceList = settings."${name}"
+            if (deviceList) {
+                deviceList.each { device ->
+                    deviceAttrMap[device] = entry.attributes
+                }
+            }
+        }
+    }
+
+    return deviceAttrMap
+}
+
+/**
+ * hubRestartHandler()
+ *
+ * Handle hub restarts.
+**/
+void hubRestartHandler(evt) {
+    if (prefPostHubInfo) {
+        handleModeEvent(null)
+    }
+
+    if (state.loggerQueue.size()) {
+        runIn(60, writeQueuedDataToInfluxDb)
+    }
+}
+
+/**
+ *  encodeVariableEvent(evt)
+ *
+ *  Builds data to send to InfluxDB for variable events.
+ **/
+private String encodeVariableEvent(evt) {
+    if (evt?.value == null) {
+        logger("Skipping variable event with null value: ${evt}", logWarn)
+        return null
+    }
+
+    String name = evt.name - 'variable:'
+    def variable = getGlobalVar(name)
+    if (!variable) {
+        logger("Variable ${name} not found", logWarn)
+        return null
+    }
+    String type = variable.type
+    String value
+
+    switch (type) {
+        case 'integer':
+            value = "${evt.value}i"
+            break
+        case 'bigdecimal':
+            value = "${evt.value}"
+            break
+        case 'boolean':
+            value = evt.value.toString() == 'true' ? 'T' : 'F'
+            break
+        case 'string':
+            value = '"' + escapeStringForInfluxDB(evt.value.toString()) + '"'
+            break
+    }
+
+    String variableName = escapeStringForInfluxDB(name)
+    String data = "${type}Variable,variableName=${variableName}"
+
+    if (settings.includeHubInfo == null || settings.includeHubInfo) {
+        String hubName = escapeStringForInfluxDB(location.name)
+        data += ",hubName=${hubName}"
+    }
+
+    data += " value=${value}"
+
+    long eventTimestamp = evt.unixTime * 1e6
+    data += " ${eventTimestamp}"
+
+    return(data)
+}
+
+/**
+ *  encodeDeviceEvent(evt)
+ *
+ *  Builds data to send to InfluxDB for device events.
+ **/
+private String encodeDeviceEvent(evt) {
+    if (evt?.value == null) {
+        logger("Skipping device event with null value: ${evt?.displayName} ${evt?.name}", logWarn)
+        return null
+    }
+
+    String unit = ''
+    String value = ''
+    String valueBinary = ''
+    String evtValStr = evt.value.toString()
+
+    switch (evt.name) {
+        case 'acceleration':
+            valueBinary = (evtValStr == 'active') ? '1i' : '0i'
+            break
+        case 'alarm':
+            valueBinary = (evtValStr == 'off') ? '0i' : '1i'
+            break
+        case 'carbonMonoxide':
+            valueBinary = (evtValStr == 'detected') ? '1i' : '0i'
+            break
+        case 'consumableStatus':
+            valueBinary = (evtValStr == 'good') ? '1i' : '0i'
+            break
+        case 'contact':
+            valueBinary = (evtValStr == 'closed') ? '1i' : '0i'
+            break
+        case 'door':
+            valueBinary = (evtValStr == 'closed') ? '1i' : '0i'
+            break
+        case 'filterStatus':
+            valueBinary = (evtValStr == 'normal') ? '1i' : '0i'
+            break
+        case 'lock':
+            valueBinary = (evtValStr == 'locked') ? '1i' : '0i'
+            break
+        case 'motion':
+            valueBinary = (evtValStr == 'active') ? '1i' : '0i'
+            break
+        case 'mute':
+            valueBinary = (evtValStr == 'muted') ? '1i' : '0i'
+            break
+        case 'naturalGas':
+            valueBinary = (evtValStr == 'detected') ? '1i' : '0i'
+            break
+        case 'powerSource':
+            valueBinary = (evtValStr == 'mains') ? '1i' : '0i'
+            break
+        case 'presence':
+            valueBinary = (evtValStr == 'present') ? '1i' : '0i'
+            break
+        case 'shock':
+            valueBinary = (evtValStr == 'detected') ? '1i' : '0i'
+            break
+        case 'sleeping':
+            valueBinary = (evtValStr == 'sleeping') ? '1i' : '0i'
+            break
+        case 'smoke':
+            valueBinary = (evtValStr == 'detected') ? '1i' : '0i'
+            break
+        case 'sound':
+            valueBinary = (evtValStr == 'detected') ? '1i' : '0i'
+            break
+        case 'switch':
+            valueBinary = (evtValStr == 'on') ? '1i' : '0i'
+            break
+        case 'tamper':
+            valueBinary = (evtValStr == 'detected') ? '1i' : '0i'
+            break
+        case 'thermostatMode':
+            valueBinary = (evtValStr == 'off') ? '0i' : '1i'
+            break
+        case 'thermostatFanMode':
+            valueBinary = (evtValStr == 'auto') ? '0i' : '1i'
+            break
+        case 'thermostatOperatingState':
+            valueBinary = (evtValStr == 'heating' || evtValStr == 'cooling') ? '1i' : '0i'
+            break
+        case 'thermostatSetpointMode':
+            valueBinary = (evtValStr == 'followSchedule') ? '0i' : '1i'
+            break
+        case 'threeAxis':
+            unit = evt.name
+            try {
+                def (_,x,y,z) = (evtValStr =~ /^\[x:(-?[0-9]{1,3}),y:(-?[0-9]{1,3}),z:(-?[0-9]{1,3})\]$/)[0]
+                value = "valueX=${x}i,valueY=${y}i,valueZ=${z}i"
+            }
+            catch (e) {
+                value = "valueX=0i,valueY=0i,valueZ=0i"
+                logger("Invalid threeAxis format: ${evtValStr}", logWarn)
+            }
+            break
+        case 'touch':
+            valueBinary = (evtValStr == 'touched') ? '1i' : '0i'
+            break
+        case 'valve':
+            valueBinary = (evtValStr == 'open') ? '1i' : '0i'
+            break
+        case 'water':
+            valueBinary = (evtValStr == 'wet') ? '1i' : '0i'
+            break
+        case 'windowShade':
+            valueBinary = (evtValStr == 'closed') ? '1i' : '0i'
+            break
+        case 'doubleTapped':
+        case 'held':
+        case 'pushed':
+            unit = 'button'
+            valueBinary = '1i'
+            break
+        case 'released':
+            unit = 'button'
+            valueBinary = '0i'
+            break
+    }
+
+    if (!unit) {
+        if (valueBinary) {
+            unit = escapeStringForInfluxDB(evt.name)
+        }
+        else if (evt.unit) {
+            unit = escapeStringForInfluxDB(evt.unit)
+        }
+    }
+
+    if (!value) {
+        if (evtValStr.isNumber()) {
+            value = evtValStr
+        }
+        else {
+            value = '"' + escapeStringForInfluxDB(evtValStr) + '"'
+        }
+    }
+
+    String measurement = escapeStringForInfluxDB(evt.name)
+    String deviceId = evt.deviceId
+    String deviceName = escapeStringForInfluxDB(evt.displayName)
+    String data = "${measurement},deviceName=${deviceName},deviceId=${deviceId}"
+
+    if (settings.includeHubInfo == null || settings.includeHubInfo) {
+        String hubName = escapeStringForInfluxDB(location.name)
+        data += ",hubName=${hubName}"
+    }
+
+    if (unit) {
+        data += ",unit=${unit}"
+    }
+    if (value ==~ /^value.*/) {
+        data += " ${value}"
+    }
+    else {
+        data += " value=${value}"
+    }
+    if (valueBinary) {
+        data += ",valueBinary=${valueBinary}"
+    }
+
+    long eventTimestamp = evt.unixTime * 1e6
+    data += " ${eventTimestamp}"
+
+    return(data)
+}
+
+/**
+ *  encodeHubInfo(evt)
+ *
+ *  Build a Hub Information record to send to InfluxDB.
+ **/
+private String encodeHubInfo(evt) {
+    String hubName = escapeStringForInfluxDB(location.name)
+    String localIP = escapeStringForInfluxDB(location.hub.localIP)
+    String firmwareVersion = escapeStringForInfluxDB(location.hub.firmwareVersionString)
+    String upTime = escapeStringForInfluxDB(location.hub.uptime.toString())
+    String mode = escapeStringForInfluxDB(evt?.value ? evt.value : location.getMode())
+
+    def times = getSunriseAndSunset()
+    String sunriseTime = escapeStringForInfluxDB(times.sunrise.format("HH:mm", location.timeZone))
+    String sunsetTime = escapeStringForInfluxDB(times.sunset.format("HH:mm", location.timeZone))
+
+    Long eventTimestamp = (evt?.unixTime ? evt.unixTime : now()) * 1e6
+
+    String data = "_hubInfo,hubName=${hubName} localIP=\"${localIP}\",firmwareVersion=\"${firmwareVersion}\",upTime=\"${upTime}\",mode=\"${mode}\",sunriseTime=\"${sunriseTime}\",sunsetTime=\"${sunsetTime}\" ${eventTimestamp}"
+    return data
+}
+
+/**
+ *  handleVariableEvent(evt)
+ *
+ *  Handle variable events
+ **/
+void handleVariableEvent(evt) {
+    logger("Handle Variable Event: ${evt.name}, ${evt.value}", logDebug)
+
+    data = encodeVariableEvent(evt)
+    if (data) {
+        queueToInfluxDb([data])
+    }
+}
+
+/**
+ *  handleEvent(evt)
+ *
+ *  Handle device events
+**/
+void handleEvent(evt) {
+    logger("Handle Event: ${evt.displayName}, ${evt.name}, ${evt.unit}, ${evt.value}", logDebug)
+
+    data = encodeDeviceEvent(evt)
+    if (data) {
+        queueToInfluxDb([data])
+    }
+}
+
+/**
+ *  handleModeEvent(evt)
+ *
+ *  Log hub information when mode changes.
+ **/
+void handleModeEvent(evt) {
+    logger("Handle Mode Event: ${evt}", logDebug)
+
+    data = encodeHubInfo(evt)
+    if (data) {
+        queueToInfluxDb([data])
+    }
+}
+
+/**
+ *  softPoll()
+ *
+ *  Re-queues last value to InfluxDB unless an event has already been seen in the last softPollingInterval.
+ **/
+void softPoll() {
+    logger("Keepalive check", logDebug)
+
+    Long timeNow = now()
+    List<String> eventList = []
+
+    variableList.each { name ->
+        logger("Keep alive for variable ${name}", logDebug)
+        def varObj = getGlobalVar(name)
+        if (varObj) {
+            event = encodeVariableEvent([
+                name: "variable:${name}",
+                value: varObj.value,
+                unixTime: timeNow
+            ])
+            if (event) eventList.add(event)
+        }
+    }
+
+    Map<String,List> deviceAttrMap = getDeviceAttrMap()
+    deviceAttrMap.each { device, attrList ->
+        attrList.each { attr ->
+            if (momentaryAttributes.contains(attr)) {
+                logger("Keep alive for device ${device}(${attr}) suppressed - momentary attribute", logDebug)
+                return
+            }
+            if (device.latestState(attr)) {
+                Integer activityMinutes = (timeNow - device.latestState(attr).date.time) / 60000
+                if (activityMinutes > state.softPollingInterval) {
+                    logger("Keep alive for device ${device}(${attr})", logDebug)
+                    event = encodeDeviceEvent([
+                        name: attr,
+                        value: device.latestState(attr).value,
+                        unit: device.latestState(attr).unit,
+                        device: device,
+                        deviceId: device.id,
+                        displayName: device.displayName,
+                        unixTime: timeNow
+                    ])
+                    if (event) eventList.add(event)
+                }
+                else {
+                    logger("Keep alive for device ${device}(${attr}) unnecessary - last activity ${activityMinutes} minutes", logDebug)
+                }
+            }
+            else {
+                logger("Keep alive for device ${device}(${attr}) suppressed - last activity never", logDebug)
+            }
+        }
+    }
+
+    if (settings.prefPostHubInfo) {
+        eventList.add(encodeHubInfo(null))
+    }
+
+    queueToInfluxDb(eventList)
+}
+
+/**
+ *  queueToInfluxDb()
+ *
+ *  Adds events to the InfluxDB queue.
+ **/
+private void queueToInfluxDb(List<String> eventList) {
+    priorLoggerQueueSize = state.loggerQueue.size()
+    state.loggerQueue += eventList
+    eventList.each { event ->
+        logger("Queued event: ${event}", logInfo)
+    }
+
+    if (priorLoggerQueueSize == 0) {
+        logger("Scheduling batch", logDebug)
+        runIn(settings.prefBatchTimeLimit, writeQueuedDataToInfluxDb)
+    }
+    else if (priorLoggerQueueSize > settings.prefBacklogLimit + settings.prefBatchSizeLimit) {
+        writeQueuedDataToInfluxDb()
+    }
+}
+
+/**
+ *  writeQueuedDataToInfluxDb()
+ *
+ *  Posts data to InfluxDB queue.
+ **/
+void writeQueuedDataToInfluxDb() {
+    Integer loggerQueueSize = state.loggerQueue.size()
+    logger("Number of events queued for InfluxDB: ${loggerQueueSize}", logDebug)
+    if (loggerQueueSize == 0) {
+        return
+    }
+
+    Integer postCount = state.postCount
+    Long timeNow = now()
+    if (postCount) {
+        Long elapsed = timeNow - state.lastPost
+        logger("Post of ${postCount} events already running (elapsed ${elapsed}ms)", logDebug)
+        if (elapsed < 90000) {
+            runIn(30, writeQueuedDataToInfluxDb)
+            return
+        }
+
+        logger("Post callback failsafe timeout", logDebug)
+        state.postCount = 0
+
+        if (loggerQueueSize > settings.prefBacklogLimit) {
+            logger("Backlog of ${state.loggerQueue.size()} events exceeds limit of ${settings.prefBacklogLimit}: dropping ${postCount} events (failsafe)", logError)
+            state.loggerQueue = state.loggerQueue.drop(postCount)
+            loggerQueueSize -= postCount
+        }
+    }
+
+    if (loggerQueueSize > settings.prefBacklogLimit) {
+        logger("Backlog of ${loggerQueueSize} events queued for InfluxDB", logWarn)
+    }
+
+    postCount = loggerQueueSize < settings.prefBatchSizeLimit ? loggerQueueSize : settings.prefBatchSizeLimit
+    state.postCount = postCount
+    state.lastPost = timeNow
+
+    String data = state.loggerQueue.subList(0, postCount).toArray().join('\n')
+
+    def postParams = [
+        uri: state.uri,
+        requestContentType: 'application/json',
+        contentType: 'application/json',
+        headers: state.headers,
+        ignoreSSLIssues: settings.prefIgnoreSSLIssues,
+        timeout: 60,
+        body: data
+    ]
+    asynchttpPost('handleInfluxResponse', postParams, [ postTime: timeNow, postCount: postCount ])
+}
+
+/**
+ *  handleInfluxResponse()
+ *
+ *  Handles response from post made in writeQueuedDataToInfluxDb().
+ **/
+void handleInfluxResponse(hubResponse, closure) {
+    Double elapsed = (closure) ? (now() - closure.postTime) / 1000 : 0
+    Integer postCount = closure?.postCount ?: state.postCount
+    Integer loggerQueueSize
+
+    state.postCount = 0
+
+    if (hubResponse.status < 400) {
+        logger("Post of ${postCount} events complete - elapsed time ${elapsed} seconds - Status: ${hubResponse.status}", logInfo)
+    }
+    else {
+        logger("Post of ${postCount} events failed - elapsed time ${elapsed} seconds - Status: ${hubResponse.status}, Error: ${hubResponse.errorMessage}, Headers: ${hubResponse.headers}", logWarn)
+        if (postCount == 1 && state.loggerQueue.size() > 0) {
+            logger("Failed record was: ${state.loggerQueue[0]}", logError)
+        }
+
+        loggerQueueSize = state.loggerQueue.size()
+        if (loggerQueueSize <= settings.prefBacklogLimit) {
+            if (loggerQueueSize > postCount) {
+                logger("Backlog of ${loggerQueueSize} events", logWarn)
+            }
+
+            runIn(60, writeQueuedDataToInfluxDb)
+
+            if (prefQueueSizeVariable) {
+                setGlobalVar(prefQueueSizeVariable, loggerQueueSize)
+            }
+            return
+        }
+
+        logger("Backlog of ${loggerQueueSize} events exceeds limit of ${settings.prefBacklogLimit}: dropping ${postCount} events", logError)
+    }
+
+    state.loggerQueue = state.loggerQueue.drop(postCount)
+    loggerQueueSize = state.loggerQueue.size()
+
+    if (loggerQueueSize) {
+        runInMillis(50, writeQueuedDataToInfluxDb)
+    }
+
+    if (prefQueueSizeVariable) {
+        setGlobalVar(prefQueueSizeVariable, loggerQueueSize)
+    }
+}
+
+/**
+ *  renameVariable()
+ *
+ *  Handle renaming of hub variables
+ **/
+void renameVariable(String oldName, String newName) {
+    logger("${app.label}: variable \"${oldName}\" renamed to \"${newName}\"", logInfo)
+
+    if (settings?.prefQueueSizeVariable == oldName) {
+        app.updateSetting("prefQueueSizeVariable", [type: "enum", value: newName])
+        logger("Queue size available in variable ${newName}", logInfo)
+    }
+
+    List variableList = settings.variableList ?: []
+    Integer index = variableList.indexOf(oldName)
+    if (index >= 0) {
+        variableList[index] = newName
+        app.updateSetting("variableList", [type: "enum", value: variableList])
+
+        logger("Subscribing to variable ${newName}", logInfo)
+        subscribe(location, "variable:${newName}", "handleVariableEvent")
+        unsubscribe(location, "variable:${oldName}", "handleVariableEvent")
+    }
+}
+
+/**
+ *  uriString()
+ *
+ *  Format the uri string.
+ **/
+private String uriString() {
+    String uri
+
+    if (settings?.prefDatabaseTls) {
+        uri = "https://"
+    }
+    else {
+        uri = "http://"
+    }
+
+    uri += settings.prefDatabaseHost
+    if (settings?.prefDatabasePort) {
+        uri += ":" + settings.prefDatabasePort
+    }
+
+    if (settings?.prefInfluxVer == "3") {
+        uri += "/api/v3/write_lp?db=${settings.prefDatabaseName}"
+    }
+    else if (settings?.prefInfluxVer == "2") {
+        uri += "/api/v2/write?org=${settings.prefOrg}&bucket=${settings.prefBucket}"
+    }
+    else {
+        uri += "/write?db=${settings.prefDatabaseName}"
+    }
+
+    return uri
+}
+
+/**
+ *  setupDB()
+ *
+ *  Set up the database uri and header state variables.
+ **/
+private void setupDB() {
+    def headers = [:]
+    if (settings.prefAuthType == null || settings.prefAuthType == "basic") {
+        if (settings.prefDatabaseUser && settings.prefDatabasePass) {
+            String userpass = "${settings.prefDatabaseUser}:${settings.prefDatabasePass}"
+            headers.put("Authorization", "Basic " + userpass.bytes.encodeBase64())
+        }
+    }
+    else if (settings.prefAuthType == "token") {
+        headers.put("Authorization", "Token ${settings.prefDatabaseToken}")
+    }
+
+    state.uri = uriString()
+    state.headers = headers
+
+    logger("InfluxDB URI: ${state.uri}", logInfo)
+}
+
+/**
+ *  logger()
+ *
+ *  Wrapper function for logging.
+ **/
+private void logger(String msg, Integer level = logDebug) {
+    Integer loggingLevel = settings.configLoggingLevelIDE != null ? settings.configLoggingLevelIDE.toInteger() : logWarn
+    if (level > loggingLevel) {
+        return
+    }
+
+    switch (level) {
+        case logError:
+            log.error msg
+            break
+        case logWarn:
+            log.warn msg
+            break
+        case logInfo:
+            log.info msg
+            break
+        case logDebug:
+            log.debug msg
+            break
+    }
+}
+
+private void logTrace(String msg) {
+    log.trace "${app.label}: ${msg}"
+}
+
+/**
+ *  escapeStringForInfluxDB()
+ *
+ *  Escape values to InfluxDB.
+ **/
+private String escapeStringForInfluxDB(String str) {
+    if (str == null) {
+        return 'null'
+    }
+
+    str = str.replaceAll(" ", "\\\\ ")
+    str = str.replaceAll(",", "\\\\,")
+    str = str.replaceAll("=", "\\\\=")
+    str = str.replaceAll("\"", "\\\\\"")
+
+    return str
+}
