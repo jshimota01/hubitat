@@ -20,6 +20,7 @@
  **/
 /**
  *  Changelog History:
+ *  v2.9.5    10/10/26    jshimota    Suite Version Parity Bump: Synchronized version to v2.9.5 for parity with Advanced vThermostat Child app and Device Driver refactorings.
  *  v2.5.1    09/24/26    jshimota    Standardized version update trace log line format across installed and updated SmartApp lifecycle hooks.
  *  v2.5.0    09/24/26    jshimota    Bumped version to v2.5.0 for parity with child app v2.6.0 and driver v2.8.0 refactorings.
  *  v2.4.0    09/18/26    jshimota    Bumped version to v2.4.0 for parity with child app v2.5.0 and driver v2.6.0 refactorings.
@@ -36,8 +37,8 @@
  *  v1.0.0    12/03/20    NelsonClark Original release of Advanced vThermostat Manager.
  **/
 
-static String version() { return '2.5.1' }
-def timeStamp() { return "2026/09/24 02:11 PM" }
+static String version() { return '2.9.5' }
+def timeStamp() { return "2026/10/10 11:00 AM" }
 
 definition(
     name: "Advanced vThermostat Manager (Custom)",

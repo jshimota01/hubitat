@@ -5,7 +5,7 @@
  * Purpose:
  * Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
  * Features Thermostat Controller functionality, locked 'Auto' dashboard dual-setpoint display support,
- * smart dependency health tracking, and maintenance routines.
+ * customizable ambient display precision, scale-aware setpoint separation, and smart dependency health tracking.
  **/
 /**
  * Copyright 2026 James Shimota / Original 2020 Nelson Clark
@@ -24,6 +24,10 @@
  **/
 /**
  * Changelog:
+ * v2.9.8    10/10/26    jshimota    Ambient Temperature Precision Rendering Fix: Fixed setTemperature precision formatting to preserve exact trailing decimals (e.g., 72.0, 72.00) in temperature attribute events without Double string truncation.
+ * v2.9.7    10/10/26    jshimota    GUI Cleanup & Precision Formatting Fix: Purged unnecessary controlCool and controlHeat GUI commands. Fixed Fahrenheit setpoint formatting to display whole integers without trailing .0 decimals. Fixed ambient temperature precision rendering in setTemperature and forced attribute refresh in updated().
+ * v2.9.6    10/10/26    jshimota    GUI Cleanup & Logging Standardization: Purged redundant setLogLevel and setHealthStatus GUI commands from metadata and code routines. Standardized logging engine to match CentraLite Pearl driver logMessage implementation.
+ * v2.9.5    10/10/26    jshimota    Scale-Aware Separation & Precision Refactor: Added tempPrecision preference (0, 1, 2 decimals) for ambient temperature presentation. Aligned setpointDistance in setHeatingSetpoint and setCoolingSetpoint to scale-aware constants (2.0 °F / 1.0 °C). Enforced standard closest-integer rounding (Math.round) for Fahrenheit setpoints.
  * v2.9.2    09/24/26    jshimota    Updated sendIfChanged to evaluate args.isStateChange correctly. Standardized driverVersion attribute updates to use sendIfChanged across lifecycle methods.
  * v2.9.1    09/24/26    jshimota    Added standard checkAndLogVersionDemarcation trace demarcation output across installed, updated, and configure lifecycle hooks.
  * v2.9.0    09/24/26    jshimota    Enforced strict presentation locking under lockDashboardToAuto = true. Keeps thermostatMode statically locked to 'auto' across all internal physicalThermostatMode transitions, ensuring dashboard tiles retain constant dual-setpoint UI presentation without style flips.
@@ -48,9 +52,10 @@
 
 import groovy.json.JsonOutput
 import groovy.transform.Field
+import java.math.RoundingMode
 
-static String version() { return '2.9.2' }
-def timeStamp() { return "2026/09/24 02:20 PM" }
+static String version() { return '2.9.8' }
+def timeStamp() { return "2026/10/10 12:05 PM" }
 
 metadata {
     definition (
@@ -84,19 +89,16 @@ metadata {
         attribute "physicalThermostatMode", "string"
 
         // Custom Commands
-        command "setHealthStatus", ["string"]
         command "heatUp"
         command "heatDown"
         command "coolUp"
         command "coolDown"
-        command "controlHeat", ["string"]
-        command "controlCool", ["string"]
         command "resetDriver"
-        command "setLogLevel", ["number"]
     }
 
     preferences {
         input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i>When enabled, locks thermostatMode attribute to 'auto' so dashboard tiles preserve dual heat/cool setpoint controls.</i>", defaultValue: true, required: true
+        input name: "tempPrecision", type: "enum", title: "<b>Device Temperature Display Precision</b>", options: ["0": "0 Decimals (Whole Number - e.g., 72)", "1": "1 Decimal (e.g., 71.8)", "2": "2 Decimals (e.g., 71.82)"], defaultValue: "1", description: "<i>Controls decimal precision for reported device ambient temperature attribute only.</i>"
 
         // Independent Logging Switches
         input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
@@ -143,6 +145,13 @@ void updated() {
     def hubScale = getTemperatureScale()
     state.currentUnit = hubScale
     sendIfChanged([name: "supportedThermostatModes", value: JsonOutput.toJson(["heat", "cool", "auto", "off"])])
+    
+    // Re-apply ambient temperature precision on existing temperature reading
+    def currentTempRaw = device.currentValue("temperature")
+    if (currentTempRaw != null) {
+        setTemperature(currentTempRaw)
+    }
+    
     updateThermostatSetpoint(hubScale)
 }
 
@@ -162,11 +171,6 @@ def refresh() {
     logInfo "refresh() requested - Updating controller state."
     evaluateMode()
     return []
-}
-
-def setHealthStatus(String status) {
-    String normStatus = (status?.toLowerCase() == "offline") ? "offline" : "online"
-    sendIfChanged([name: "healthStatus", value: normStatus])
 }
 
 private void initialize(Boolean isInstall = false) {
@@ -250,46 +254,19 @@ private void initialize(Boolean isInstall = false) {
    VIRTUAL THERMOSTAT CORE CONTROL LOGIC
    ========================================================================================= */
 
-def setLogLevel(level) {
-    int lvl = level ? level.toInteger() : 3
-    Boolean dbg = lvl >= 4
-    Boolean trc = lvl >= 5
-    device.updateSetting("logDebugEnable", [type: "bool", value: dbg])
-    device.updateSetting("logTraceEnable", [type: "bool", value: trc])
-    logWarn "Logging levels updated via app request -> Debug: ${dbg}, Trace: ${trc}"
-}
-
-def controlHeat(String action) {
-    logInfo "Thermostat Controller driving Heating: ${action}"
-    if (action?.toLowerCase() == "on") {
-        sendIfChanged([name: "thermostatOperatingState", value: "heating"])
-        sendIfChanged([name: "controllerState", value: "controlling heat"])
-    } else {
-        sendIfChanged([name: "thermostatOperatingState", value: "idle"])
-        sendIfChanged([name: "controllerState", value: "idle"])
-    }
-}
-
-def controlCool(String action) {
-    logInfo "Thermostat Controller driving Cooling: ${action}"
-    if (action?.toLowerCase() == "on") {
-        sendIfChanged([name: "thermostatOperatingState", value: "cooling"])
-        sendIfChanged([name: "controllerState", value: "controlling cool"])
-    } else {
-        sendIfChanged([name: "thermostatOperatingState", value: "idle"])
-        sendIfChanged([name: "controllerState", value: "idle"])
-    }
-}
-
 def updateThermostatSetpoint(String units = null) {
     if (!units) units = getTemperatureScale()
     def mode = device.currentValue("physicalThermostatMode") ?: "off"
     def targetVal
     
     if (mode == "cool") {
-        targetVal = device.currentValue("coolingSetpoint") ?: (units == "C" ? 24.5 : 76.0)
+        targetVal = device.currentValue("coolingSetpoint") ?: (units == "C" ? 24.5 : 76)
     } else {
-        targetVal = device.currentValue("heatingSetpoint") ?: (units == "C" ? 21.0 : 70.0)
+        targetVal = device.currentValue("heatingSetpoint") ?: (units == "C" ? 21.0 : 70)
+    }
+    
+    if (units == "F" && targetVal instanceof Number) {
+        targetVal = Math.round(targetVal.toDouble()) as Integer
     }
     
     sendIfChanged([name: "thermostatSetpoint", value: targetVal, unit: units])
@@ -299,7 +276,10 @@ def updateThermostatSetpoint(String units = null) {
 def evaluateMode() {
     logTrace "evaluateMode() - START"
     
-    def temp = device.currentValue("temperature")
+    def tempRaw = device.currentValue("temperature")
+    if (tempRaw == null || !tempRaw.toString().isNumber()) return
+    Double temp = tempRaw.toString().toDouble()
+
     def heatingSetpoint = device.currentValue("heatingSetpoint")
     def coolingSetpoint = device.currentValue("coolingSetpoint")
     def threshold = device.currentValue("thermostatThreshold")
@@ -356,14 +336,18 @@ def emergencyHeat() {
 def setHeatingSetpoint(Object value) {
     if (value == null || !value.toString().isNumber()) return
     Double dVal = value.toString().toDouble()
-    Double newHeatingSetpoint = roundDegrees(dVal)
+    Object newHeatingSetpoint = roundDegrees(dVal)
+
+    if (getTemperatureScale() == "F") {
+        newHeatingSetpoint = Math.round(newHeatingSetpoint.toDouble()) as Integer
+    }
 
     if (newHeatingSetpoint == device.currentValue("heatingSetpoint")) {
         evaluateMode()
         return
     }
 
-    def setpointDistance = (getTemperatureScale() == "C") ? 3.0 : 5.0
+    def setpointDistance = (getTemperatureScale() == "C") ? 1.0 : 2.0
     def coolmax = device.currentValue("maxCoolTemp") ?: 95.0
     def heatmin = device.currentValue("minHeatTemp") ?: 35.0
     def heatmax = device.currentValue("maxHeatTemp") ?: (getTemperatureScale() == "C" ? 32.0 : 90.0)
@@ -374,9 +358,16 @@ def setHeatingSetpoint(Object value) {
         newHeatingSetpoint = coolmax - setpointDistance
     }
 
-    Double newCoolingSetpoint = null
+    Object newCoolingSetpoint = null
     if (newHeatingSetpoint > (coolingSetpoint - setpointDistance)) {
         newCoolingSetpoint = newHeatingSetpoint + setpointDistance
+    }
+
+    if (getTemperatureScale() == "F") {
+        newHeatingSetpoint = Math.round((newHeatingSetpoint as Number).toDouble()) as Integer
+        if (newCoolingSetpoint != null) {
+            newCoolingSetpoint = Math.round((newCoolingSetpoint as Number).toDouble()) as Integer
+        }
     }
     
     if (newHeatingSetpoint > heatmax || newHeatingSetpoint < heatmin) {
@@ -387,7 +378,7 @@ def setHeatingSetpoint(Object value) {
     def units = getTemperatureScale()
     sendIfChanged([name: "heatingSetpoint", value: newHeatingSetpoint, unit: units])
     
-    if (newCoolingSetpoint && newCoolingSetpoint <= coolmax) {
+    if (newCoolingSetpoint != null && newCoolingSetpoint <= coolmax) {
         sendIfChanged([name: "coolingSetpoint", value: newCoolingSetpoint, unit: units])
     }
     updateThermostatSetpoint(units)
@@ -397,14 +388,18 @@ def setHeatingSetpoint(Object value) {
 def setCoolingSetpoint(Object value) {
     if (value == null || !value.toString().isNumber()) return
     Double dVal = value.toString().toDouble()
-    Double newCoolingSetpoint = roundDegrees(dVal)
+    Object newCoolingSetpoint = roundDegrees(dVal)
+
+    if (getTemperatureScale() == "F") {
+        newCoolingSetpoint = Math.round(newCoolingSetpoint.toDouble()) as Integer
+    }
 
     if (newCoolingSetpoint == device.currentValue("coolingSetpoint")) {
         evaluateMode()
         return
     }
 
-    def setpointDistance = (getTemperatureScale() == "C") ? 3.0 : 5.0
+    def setpointDistance = (getTemperatureScale() == "C") ? 1.0 : 2.0
     def coolmin = device.currentValue("minCoolTemp") ?: 60.0
     def coolmax = device.currentValue("maxCoolTemp") ?: 95.0
     def heatmin = device.currentValue("minHeatTemp") ?: 35.0
@@ -415,9 +410,16 @@ def setCoolingSetpoint(Object value) {
         newCoolingSetpoint = heatmin + setpointDistance
     }
 
-    Double newHeatingSetpoint = null
+    Object newHeatingSetpoint = null
     if ((newCoolingSetpoint - setpointDistance) < heatingSetpoint) {
         newHeatingSetpoint = newCoolingSetpoint - setpointDistance
+    }
+
+    if (getTemperatureScale() == "F") {
+        newCoolingSetpoint = Math.round((newCoolingSetpoint as Number).toDouble()) as Integer
+        if (newHeatingSetpoint != null) {
+            newHeatingSetpoint = Math.round((newHeatingSetpoint as Number).toDouble()) as Integer
+        }
     }
     
     if (newCoolingSetpoint > coolmax || newCoolingSetpoint < coolmin) {
@@ -427,7 +429,7 @@ def setCoolingSetpoint(Object value) {
 
     def units = getTemperatureScale()
     sendIfChanged([name: "coolingSetpoint", value: newCoolingSetpoint, unit: units])
-    if (newHeatingSetpoint && newHeatingSetpoint >= heatmin) {
+    if (newHeatingSetpoint != null && newHeatingSetpoint >= heatmin) {
         sendIfChanged([name: "heatingSetpoint", value: newHeatingSetpoint, unit: units])
     }
     updateThermostatSetpoint(units)
@@ -492,8 +494,17 @@ def setTemperature(value) {
         return
     }
     Double dVal = value.toString().toDouble()
+    int precision = settings?.tempPrecision != null ? settings.tempPrecision.toInteger() : 1
+    
+    Object formattedValue
+    if (precision == 0) {
+        formattedValue = Math.round(dVal) as Integer
+    } else {
+        formattedValue = BigDecimal.valueOf(dVal).setScale(precision, RoundingMode.HALF_UP)
+    }
+
     def units = getTemperatureScale()
-    sendIfChanged([name: "temperature", value: dVal, unit: units])
+    sendIfChanged([name: "temperature", value: formattedValue, unit: units, isStateChange: true])
     evaluateMode()
 }
 
@@ -572,7 +583,7 @@ def roundDegrees(Double value) {
 }
 
 /* =========================================================================================
-   MASTER UTILITY ROUTINES & LOGGING ENGINE
+   MASTER UTILITY ROUTINES & LOGGING ENGINE (CENTRALITE PATTERN)
    ========================================================================================= */
 
 void disableDebugLogging() {
@@ -640,7 +651,16 @@ private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
     String devName = device.displayName ?: "Device Driver"
     
-    String settingKey = "log${lowerLevel.capitalize()}Enable"
+    String settingKey
+    switch (lowerLevel) {
+        case "info":  settingKey = "logInfoEnable"; break
+        case "error": settingKey = "logErrorEnable"; break
+        case "warn":  settingKey = "logWarnEnable"; break
+        case "debug": settingKey = "logDebugEnable"; break
+        case "trace": settingKey = "logTraceEnable"; break
+        default:      settingKey = "logInfoEnable"; break
+    }
+
     Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
 
     if (getSettingBool(settingKey, defaultEnabled)) {
@@ -655,5 +675,5 @@ private void logWarn(String msg)  { logMessage("warn", msg) }
 private void logError(String msg) { logMessage("error", msg) }
 
 private Boolean getSettingBool(String key, Boolean defaultVal = false) {
-    return settings[key] != null ? settings[key] as Boolean : defaultVal
+    return (settings && settings[key] != null) ? settings[key] as Boolean : defaultVal
 }

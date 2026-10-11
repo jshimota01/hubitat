@@ -20,6 +20,7 @@
  **/
 /**
  * Changelog:
+ * v2.9.5    10/10/26    jshimota    Suite Parity & Precision Alignment: Synchronized version to v2.9.5 for parity with driver v2.9.5. Updated updateTemperature to respect driver ambient precision preferences without altering local driver evaluation logic.
  * v2.7.2    09/24/26    jshimota    Removed redundant refresh() call in setpointChangeHandler to prevent double-evaluation loops on MEM setpoint updates. Guarded evaluateOverallHealth to only push setHealthStatus when state changes.
  * v2.7.1    09/24/26    jshimota    Standardized version update trace log line format across lifecycle methods.
  * v2.7.0    09/24/26    jshimota    Decoupled thermostatOperatingState changes from updateAppLabel() to prevent routine heating/idle transitions from modifying app labels and triggering dashboard tile style/icon re-renders. Replaced debounced setpoint refresh timer with direct, synchronous driver refresh execution.
@@ -43,8 +44,8 @@
  * v1.0.0    12/03/20    NelsonClark Initial public release of Advanced vThermostat Child App.
  **/
 
-static String version() { return '2.7.2' }
-def timeStamp() { return "2026/09/24 02:20 PM" }
+static String version() { return '2.9.5' }
+def timeStamp() { return "2026/10/10 11:00 AM" }
 
 definition(
     name: "Advanced vThermostat Child (Custom)",
@@ -66,7 +67,7 @@ def pageConfig() {
     def displayUnits = getDisplayUnits()
     def hubScale = getTemperatureScale()
     
-    def setpointDistance = (hubScale == "C") ? 3.0 : 5.0
+    def setpointDistance = (hubScale == "C") ? 1.0 : 2.0
     def defaultHeat = (hubScale == "C") ? 21.0 : 70.0
     def defaultCool = (hubScale == "C") ? 24.5 : 76.0
     def defaultThresh = (hubScale == "C") ? 0.5 : 1.0
@@ -299,8 +300,6 @@ def temperatureHandler(evt) {
 }
 
 def setpointChangeHandler(evt) {
-    // Driver handles its own evaluation pass internally during setpoint updates.
-    // Redundant thermostat.refresh() call removed to eliminate duplicate execution pipelines.
     logDebug "Setpoint change acknowledged from ${evt.device.displayName}: ${evt.name} = ${evt.value}"
 }
 

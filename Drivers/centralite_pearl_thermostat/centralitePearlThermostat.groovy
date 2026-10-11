@@ -40,6 +40,12 @@
  **/
 /**
  * Changelog:
+  v0.8.8    10/10/26    jshimota    Narrow Setpoint Logging Fix: Suppressed individual setpoint info logs in parse() for Zigbee clusters 0x0011 and 0x0012 by passing emitLog = false while preserving Hubitat attribute events. Formatted consolidated setpoint logs to 'Heating setpoint is now XX °F and cooling setpoint is now YY °F' in processSetpoint() and initialize(). Bypassed log emission on no-op commands. Consolidated Setpoint Logging: Combined dual-setpoint processSetpoint logs into a single log entry to prevent log splitting and allow deduplication routines to catch redundant commands.
+ * v0.8.7    10/10/26    jshimota    Setpoint Description Simplification: Streamlined thermostatSetpoint log descriptors to 'Cooling setpoint' and 'Heating setpoint' for clean descriptionText logs.
+ * v0.8.6    10/10/26    jshimota    Setpoint Deduplication & Health Check Race Condition Fix: Added value-equivalence checks in processSetpoint() and auto() to eliminate duplicate commands/events when setpoints remain unchanged. Updated updateAttribute() phrasing to 'was updated to' for sensor metrics (temperature/battery/powerSource) vs 'was set to' for commands. Explicitly identified 'Heating active target' and 'Cooling active target' in thermostatSetpoint descriptors. Removed automatic executeHealthCheck() from configure() and increased COMMAND_TIMEOUT to 15s to prevent false offline transitions during preferences save.
+ * v0.8.5    10/10/26    jshimota    Setpoint Log Deduplication & Disambiguation: Disambiguated thermostatSetpoint log descriptor to 'Thermostat setpoint (active target)' to eliminate duplicate 'Cooling/Heating setpoint was set to...' info entries during attribute updates.
+ * v0.8.4    10/10/26    jshimota    Setpoint & Temperature Precision Refactor: Enforced whole-number integer values for setpoint attributes (heatingSetpoint, coolingSetpoint, thermostatSetpoint) while maintaining preference-driven fixed precision string formatting for ambient temperature attribute display (e.g., 70.00 for 2 decimals, 70.0 for 1 decimal). Re-evaluates ambient temperature precision on updated().
+ * v0.8.3    10/10/26    jshimota    Opposing Setpoint Hardware Dispatch Correction: Refactored processSetpoint to dispatch a dedicated Zigbee write attribute command frame for the opposing setpoint whenever scale-aware separation enforcement (2.0 °F / 1.0 °C) forces a setpoint adjustment. Keeps physical hardware registers synchronized with Hubitat attributes.
  * v0.8.2    10/08/26    jshimota    Integer Log Formatting Refactor: Standardized driver log messages and descriptionText string outputs to present setpoint temperatures formatted as whole integers to eliminate event log clutter, while preserving underlying BigDecimal floating precision across state storage and Zigbee cluster messaging.
  * v0.8.1    10/08/26    jshimota    Setpoint Precision & Boundary Hardening Refactor: Decoupled setpoint parsing from tempPrecision by implementing getSetpointTemperature() (locked to 2 decimal places) to preserve exact setpoint reporting. Hardened processSetpoint to enforce 2.0°F setpoint separation after applying min/max hardware clamps.
  * v0.8.0    10/08/26    jshimota    Setpoint Precision Refactor: Preserved BigDecimal setpoint precision in processSetpoint without integer truncation. Converted setpoint commands to precise Zigbee 0.01°C raw integer writes to support decimal precision contracts with external controllers like MEM.
@@ -66,8 +72,8 @@
  * v0.5.0    08/31/26    jshimota    Applied Driver Template v1.0.10: Standardized logging engine, phase-anchored custom Health Check, single-shot version demarcation, master utility routines, and updated GUI controls.
  **/
  
-static String version() { return '0.8.2' }
-def timeStamp() { return "2026/10/08 08:51 AM" }
+static String version() { return '0.8.8' }
+def timeStamp() { return "2026/10/10 02:15 PM" }
 
 import hubitat.zigbee.zcl.DataType
 import groovy.transform.Field
@@ -157,6 +163,21 @@ void updated() {
     checkAndLogVersionDemarcation()
     logInfo "Preferences updated"
     initialize(false)
+    
+    if (device.currentValue("temperature") != null) {
+        try {
+            BigDecimal rawTemp = state.lastRawTemperature as BigDecimal
+            if (rawTemp != null) {
+                updateAttribute("temperature", formatTemperaturePrecision(rawTemp), getTemperatureScale(), "physical")
+            } else {
+                BigDecimal currentTemp = new BigDecimal(device.currentValue("temperature").toString())
+                updateAttribute("temperature", formatTemperaturePrecision(currentTemp), getTemperatureScale(), "physical")
+            }
+        } catch (Exception e) {
+            logDebug "Could not re-format current ambient temperature on preference update: ${e.message}"
+        }
+    }
+
     runIn(1, "configure")
 }
 
@@ -180,10 +201,19 @@ void initialize(Boolean isInstall = false) {
     if (device.currentValue("battery") == null) sendEvent(name: "battery", value: 100, unit: "%") 
     if (device.currentValue("powerSource") == null) sendEvent(name: "powerSource", value: "unknown") 
     if (device.currentValue("thermostatOperatingState") == null) sendEvent(name: "thermostatOperatingState", value: "idle")
-    if (device.currentValue("temperature") == null) sendEvent(name: "temperature", value: 70, unit: getTemperatureScale())
-    if (device.currentValue("heatingSetpoint") == null) updateAttribute("heatingSetpoint", 68.00g, getTemperatureScale(), "digital", "Heating setpoint")
-    if (device.currentValue("coolingSetpoint") == null) updateAttribute("coolingSetpoint", 74.00g, getTemperatureScale(), "digital", "Cooling setpoint")
-    if (device.currentValue("thermostatSetpoint") == null) updateAttribute("thermostatSetpoint", 68.00g, getTemperatureScale(), "digital", "Heating setpoint")
+    if (device.currentValue("temperature") == null) updateAttribute("temperature", formatTemperaturePrecision(70.00g), getTemperatureScale(), "digital")
+    
+    // Suppress individual logs during initialization to emit a single consolidated summary log
+    if (device.currentValue("heatingSetpoint") == null) updateAttribute("heatingSetpoint", 68, getTemperatureScale(), "digital", "Heating setpoint", false)
+    if (device.currentValue("coolingSetpoint") == null) updateAttribute("coolingSetpoint", 74, getTemperatureScale(), "digital", "Cooling setpoint", false)
+    if (device.currentValue("thermostatSetpoint") == null) updateAttribute("thermostatSetpoint", 68, getTemperatureScale(), "digital", "Heating setpoint", false)
+
+    Object initHeat = device.currentValue("heatingSetpoint")
+    Object initCool = device.currentValue("coolingSetpoint")
+    String scale = getTemperatureScale()
+    String heatStr = (initHeat != null) ? "${initHeat}" : "--"
+    String coolStr = (initCool != null) ? "${initCool}" : "--"
+    logInfo "Heating setpoint is now ${heatStr} °${scale} and cooling setpoint is now ${coolStr} °${scale}"
 
     if (getSettingBool("lockDashboardToAuto", true)) {
         updateAttribute("thermostatMode", "auto")
@@ -228,7 +258,6 @@ List<String> configure() {
         cmds += zigbee.writeAttribute(0x0201, 0x0010, DataType.INT8, rawOffset)
     }
 
-    cmds += executeHealthCheck()
     return cmds
 }
 
@@ -269,7 +298,7 @@ void raiseCoolingSetpointLevel() { changeSetpoint("coolingSetpoint", 1) }
 void lowerCoolingSetpointLevel() { changeSetpoint("coolingSetpoint", -1) }
 
 private void changeSetpoint(String attributeName, int delta) {
-    def currentVal = device.currentValue(attributeName) ?: (attributeName == "heatingSetpoint" ? 68.00g : 74.00g)
+    def currentVal = device.currentValue(attributeName) ?: (attributeName == "heatingSetpoint" ? 68 : 74)
     BigDecimal nextLevel = (currentVal as BigDecimal) + delta
     if (attributeName == "heatingSetpoint") setHeatingSetpoint(nextLevel) else setCoolingSetpoint(nextLevel)
 }
@@ -344,10 +373,14 @@ List<String> auto() {
     updateModeState("auto")
     
     def temp = device.currentValue("temperature") ?: 70.00g
-    def hSp = device.currentValue("heatingSetpoint") ?: 68.00g
-    def cSp = device.currentValue("coolingSetpoint") ?: 74.00g
-    def targetSp = (temp >= cSp) ? cSp : hSp
-    String spLabel = (temp >= cSp) ? "Cooling setpoint" : "Heating setpoint"
+    def hSp = device.currentValue("heatingSetpoint") ?: 68
+    def cSp = device.currentValue("coolingSetpoint") ?: 74
+    
+    BigDecimal tempBd = (temp instanceof BigDecimal) ? (temp as BigDecimal) : new BigDecimal(temp.toString())
+    BigDecimal cSpBd = new BigDecimal(cSp.toString())
+    
+    def targetSp = (tempBd >= cSpBd) ? Math.round(cSpBd) as Integer : Math.round(new BigDecimal(hSp.toString())) as Integer
+    String spLabel = (tempBd >= cSpBd) ? "Cooling setpoint" : "Heating setpoint"
     updateAttribute("thermostatSetpoint", targetSp, getTemperatureScale(), "digital", spLabel)
     
     return zigbee.writeAttribute(0x0201, 0x1C, DataType.ENUM8, 1)
@@ -444,30 +477,55 @@ private List<String> processSetpoint(degrees, int attributeId) {
     boolean isC = (getTemperatureScale() == "C") 
     BigDecimal maxTemp = isC ? 44.00g : 86.00g 
     BigDecimal minTemp = isC ? 7.00g : 30.00g 
+    BigDecimal minSep = isC ? 1.00g : 2.00g
     
     BigDecimal numDegrees = new BigDecimal(degrees.toString()).setScale(2, RoundingMode.HALF_UP)
     if (numDegrees < minTemp) numDegrees = minTemp
     if (numDegrees > maxTemp) numDegrees = maxTemp
     
+    Integer intDegrees = Math.round(numDegrees) as Integer
     String attrName = (attributeId == 0x12) ? "heatingSetpoint" : "coolingSetpoint" 
     String setpointLabel = (attributeId == 0x12) ? "Heating setpoint" : "Cooling setpoint"
 
-    // Hardened Post-Clamp Setpoint Separation Enforcement
-    BigDecimal currentCooling = (attrName == "heatingSetpoint") ? (device.currentValue("coolingSetpoint") as BigDecimal) : null
-    BigDecimal currentHeating = (attrName == "coolingSetpoint") ? (device.currentValue("heatingSetpoint") as BigDecimal) : null
+    Object currentAttrVal = device.currentValue(attrName)
+    if (currentAttrVal != null && currentAttrVal.toString().isNumber()) {
+        Integer currentInt = Math.round(new BigDecimal(currentAttrVal.toString())) as Integer
+        if (currentInt == intDegrees) {
+            logDebug "${setpointLabel} already at target value (${intDegrees} °${getTemperatureScale()}). Skipping redundant Zigbee write frame."
+            return []
+        }
+    }
+
+    List<String> cmds = []
+
+    BigDecimal currentCooling = (attrName == "heatingSetpoint" && device.currentValue("coolingSetpoint") != null) ? new BigDecimal(device.currentValue("coolingSetpoint").toString()) : null
+    BigDecimal currentHeating = (attrName == "coolingSetpoint" && device.currentValue("heatingSetpoint") != null) ? new BigDecimal(device.currentValue("heatingSetpoint").toString()) : null
+
+    Integer targetHeat = (attrName == "heatingSetpoint") ? intDegrees : (currentHeating != null ? Math.round(currentHeating) as Integer : null)
+    Integer targetCool = (attrName == "coolingSetpoint") ? intDegrees : (currentCooling != null ? Math.round(currentCooling) as Integer : null)
 
     if (attrName == "heatingSetpoint" && currentCooling != null) {
-        if (currentCooling - numDegrees < 2.00g) {
-            BigDecimal adjCooling = numDegrees + 2.00g
+        if (currentCooling - numDegrees < minSep) {
+            BigDecimal adjCooling = numDegrees + minSep
             if (adjCooling <= maxTemp) {
-                updateAttribute("coolingSetpoint", adjCooling, getTemperatureScale(), "digital", "Cooling setpoint")
+                Integer adjCoolInt = Math.round(adjCooling) as Integer
+                targetCool = adjCoolInt
+                updateAttribute("coolingSetpoint", adjCoolInt, getTemperatureScale(), "digital", "Cooling setpoint", false)
+                double adjCoolCelsius = isC ? adjCooling.doubleValue() : fahrenheitToCelsius(adjCooling.doubleValue())
+                int adjCoolRaw = Math.round(adjCoolCelsius * 100).toInteger()
+                cmds += zigbee.writeAttribute(0x0201, 0x11, DataType.INT16, adjCoolRaw)
             }
         }
     } else if (attrName == "coolingSetpoint" && currentHeating != null) {
-        if (numDegrees - currentHeating < 2.00g) {
-            BigDecimal adjHeating = numDegrees - 2.00g
+        if (numDegrees - currentHeating < minSep) {
+            BigDecimal adjHeating = numDegrees - minSep
             if (adjHeating >= minTemp) {
-                updateAttribute("heatingSetpoint", adjHeating, getTemperatureScale(), "digital", "Heating setpoint")
+                Integer adjHeatInt = Math.round(adjHeating) as Integer
+                targetHeat = adjHeatInt
+                updateAttribute("heatingSetpoint", adjHeatInt, getTemperatureScale(), "digital", "Heating setpoint", false)
+                double adjHeatCelsius = isC ? adjHeating.doubleValue() : fahrenheitToCelsius(adjHeating.doubleValue())
+                int adjHeatRaw = Math.round(adjHeatCelsius * 100).toInteger()
+                cmds += zigbee.writeAttribute(0x0201, 0x12, DataType.INT16, adjHeatRaw)
             }
         }
     }
@@ -475,12 +533,17 @@ private List<String> processSetpoint(degrees, int attributeId) {
     double celsius = isC ? numDegrees.doubleValue() : fahrenheitToCelsius(numDegrees.doubleValue()) 
     int finalValue = Math.round(celsius * 100).toInteger() 
 
-    logInfo "Setting ${setpointLabel} to ${Math.round(numDegrees)} °${getTemperatureScale()}"
+    // Consolidated single log output for setpoint command execution
+    String scale = getTemperatureScale()
+    String heatStr = (targetHeat != null) ? "${targetHeat}" : "--"
+    String coolStr = (targetCool != null) ? "${targetCool}" : "--"
+    logInfo "Heating setpoint is now ${heatStr} °${scale} and cooling setpoint is now ${coolStr} °${scale}"
     
-    updateAttribute(attrName, numDegrees, getTemperatureScale(), "digital", setpointLabel)
-    updateAttribute("thermostatSetpoint", numDegrees, getTemperatureScale(), "digital", setpointLabel)
+    updateAttribute(attrName, intDegrees, getTemperatureScale(), "digital", setpointLabel, false)
+    updateAttribute("thermostatSetpoint", intDegrees, getTemperatureScale(), "digital", setpointLabel, false)
     
-    return zigbee.writeAttribute(0x0201, attributeId, DataType.INT16, finalValue) 
+    cmds += zigbee.writeAttribute(0x0201, attributeId, DataType.INT16, finalValue)
+    return cmds
 }
 
 /* =========================================================================================
@@ -563,15 +626,19 @@ void parse(String description) {
                 case 0x0201: // Thermostat Cluster
                     if (attrInt == 0x0000) {
                         BigDecimal temp = getTemperature(descMap.value)
-                        updateAttribute("temperature", temp, getTemperatureScale(), "physical")
+                        updateAttribute("temperature", formatTemperaturePrecision(temp), getTemperatureScale(), "physical")
                     } else if (attrInt == 0x0011) {
                         BigDecimal temp = getSetpointTemperature(descMap.value)
-                        updateAttribute("coolingSetpoint", temp, getTemperatureScale(), "physical", "Cooling setpoint")
-                        updateAttribute("thermostatSetpoint", temp, getTemperatureScale(), "physical", "Cooling setpoint")
+                        Integer intTemp = Math.round(temp) as Integer
+                        // Pass emitLog = false to suppress duplicate individual log output while retaining Hubitat event dispatching
+                        updateAttribute("coolingSetpoint", intTemp, getTemperatureScale(), "physical", "Cooling setpoint", false)
+                        updateAttribute("thermostatSetpoint", intTemp, getTemperatureScale(), "physical", "Cooling setpoint", false)
                     } else if (attrInt == 0x0012) {
                         BigDecimal temp = getSetpointTemperature(descMap.value)
-                        updateAttribute("heatingSetpoint", temp, getTemperatureScale(), "physical", "Heating setpoint")
-                        updateAttribute("thermostatSetpoint", temp, getTemperatureScale(), "physical", "Heating setpoint")
+                        Integer intTemp = Math.round(temp) as Integer
+                        // Pass emitLog = false to suppress duplicate individual log output while retaining Hubitat event dispatching
+                        updateAttribute("heatingSetpoint", intTemp, getTemperatureScale(), "physical", "Heating setpoint", false)
+                        updateAttribute("thermostatSetpoint", intTemp, getTemperatureScale(), "physical", "Heating setpoint", false)
                     } else if (attrInt == 0x001C) {
                         String mode = getModeMap()[descMap.value] ?: "off"
                         updateAttribute("physicalThermostatMode", mode, null, "physical")
@@ -661,8 +728,20 @@ private BigDecimal getTemperature(String value) {
     double celsius = raw / 100.0
     double tempVal = (getTemperatureScale() == "C") ? celsius : celsiusToFahrenheit(celsius)
     
+    BigDecimal bdVal = BigDecimal.valueOf(tempVal)
+    state.lastRawTemperature = bdVal
+    return bdVal
+}
+
+private Object formatTemperaturePrecision(BigDecimal tempVal) {
+    if (tempVal == null) return null
     int precision = settings?.tempPrecision != null ? settings.tempPrecision.toInteger() : 1
-    return BigDecimal.valueOf(tempVal).setScale(precision, RoundingMode.HALF_UP)
+    
+    if (precision == 0) {
+        return Math.round(tempVal) as Integer
+    } else {
+        return String.format("%.${precision}f", tempVal.setScale(precision, RoundingMode.HALF_UP).doubleValue())
+    }
 }
 
 /**
@@ -727,7 +806,11 @@ void clearAllSchedules() {
     logInfo "All scheduled jobs have been successfully cleared."
 }
 
-private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null, final String customLabel = null) {
+private void updateAttribute(final String attribute, Object value, final String unit = null, final String type = null, final String customLabel = null, Boolean emitLog = true) {
+    if (value instanceof BigDecimal && attribute in ["heatingSetpoint", "coolingSetpoint", "thermostatSetpoint"]) {
+        value = Math.round(value as BigDecimal) as Integer
+    }
+
     final String currentVal = device.currentValue(attribute)?.toString()
     if (currentVal == value?.toString()) return
 
@@ -739,9 +822,12 @@ private void updateAttribute(final String attribute, final Object value, final S
     }
 
     String labelText = customLabel ?: attribute
-    Object displayVal = (value instanceof BigDecimal && attribute in ["heatingSetpoint", "coolingSetpoint", "thermostatSetpoint"]) ? Math.round(value as BigDecimal) : value
-    final String descriptionText = "${device.displayName} - ${labelText} was set to ${displayVal}${formattedUnit}"
-    logInfo descriptionText
+    
+    Boolean isSensorMetric = attribute in ["temperature", "battery", "powerSource", "healthStatus"]
+    String actionVerb = isSensorMetric ? "was updated to" : "was set to"
+    
+    final String descriptionText = "${device.displayName} - ${labelText} ${actionVerb} ${value}${formattedUnit}"
+    if (emitLog) logInfo descriptionText
     sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
 
@@ -788,4 +874,4 @@ private Boolean getSettingBool(String key, Boolean defaultVal = false) {
     options: [ 60: "Every Hour", 240: "Every 4 Hours", 480: "Every 8 Hours", 720: "Every 12 Hours", 1440: "Every 24 Hours", 0: "Disabled" ]
 ]
 
-@Field static final int COMMAND_TIMEOUT = 10
+@Field static final int COMMAND_TIMEOUT = 15
