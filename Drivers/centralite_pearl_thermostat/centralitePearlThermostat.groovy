@@ -40,7 +40,8 @@
  **/
 /**
  * Changelog:
-  v0.8.8    10/10/26    jshimota    Narrow Setpoint Logging Fix: Suppressed individual setpoint info logs in parse() for Zigbee clusters 0x0011 and 0x0012 by passing emitLog = false while preserving Hubitat attribute events. Formatted consolidated setpoint logs to 'Heating setpoint is now XX °F and cooling setpoint is now YY °F' in processSetpoint() and initialize(). Bypassed log emission on no-op commands. Consolidated Setpoint Logging: Combined dual-setpoint processSetpoint logs into a single log entry to prevent log splitting and allow deduplication routines to catch redundant commands.
+ * v0.8.9    10/14/26    jshimota    Log Deduplication Refactor: Removed redundant device.displayName prepending from descriptionText and logMessage to eliminate duplicate device name prefixes in Hubitat system event logs.
+ * v0.8.8    10/10/26    jshimota    Narrow Setpoint Logging Fix: Suppressed individual setpoint info logs in parse() for Zigbee clusters 0x0011 and 0x0012 by passing emitLog = false while preserving Hubitat attribute events. Formatted consolidated setpoint logs to 'Heating setpoint is now XX °F and cooling setpoint is now YY °F' in processSetpoint() and initialize(). Bypassed log emission on no-op commands. Consolidated Setpoint Logging: Combined dual-setpoint processSetpoint logs into a single log entry to prevent log splitting and allow deduplication routines to catch redundant commands.
  * v0.8.7    10/10/26    jshimota    Setpoint Description Simplification: Streamlined thermostatSetpoint log descriptors to 'Cooling setpoint' and 'Heating setpoint' for clean descriptionText logs.
  * v0.8.6    10/10/26    jshimota    Setpoint Deduplication & Health Check Race Condition Fix: Added value-equivalence checks in processSetpoint() and auto() to eliminate duplicate commands/events when setpoints remain unchanged. Updated updateAttribute() phrasing to 'was updated to' for sensor metrics (temperature/battery/powerSource) vs 'was set to' for commands. Explicitly identified 'Heating active target' and 'Cooling active target' in thermostatSetpoint descriptors. Removed automatic executeHealthCheck() from configure() and increased COMMAND_TIMEOUT to 15s to prevent false offline transitions during preferences save.
  * v0.8.5    10/10/26    jshimota    Setpoint Log Deduplication & Disambiguation: Disambiguated thermostatSetpoint log descriptor to 'Thermostat setpoint (active target)' to eliminate duplicate 'Cooling/Heating setpoint was set to...' info entries during attribute updates.
@@ -72,8 +73,8 @@
  * v0.5.0    08/31/26    jshimota    Applied Driver Template v1.0.10: Standardized logging engine, phase-anchored custom Health Check, single-shot version demarcation, master utility routines, and updated GUI controls.
  **/
  
-static String version() { return '0.8.8' }
-def timeStamp() { return "2026/10/10 02:15 PM" }
+static String version() { return '0.8.9' }
+def timeStamp() { return "2026/10/14 10:45 AM" }
 
 import hubitat.zigbee.zcl.DataType
 import groovy.transform.Field
@@ -698,7 +699,7 @@ private void markHealthCheckSuccess(String clusterHex = "0000") {
         name: "healthStatus", 
         value: "online", 
         isStateChange: false, 
-        descriptionText: "${device.displayName} health check verified online"
+        descriptionText: "health check verified online"
     )
 }
 
@@ -708,7 +709,7 @@ private void markDeviceActivity() {
             name: "healthStatus", 
             value: "online", 
             isStateChange: false, 
-            descriptionText: "${device.displayName} healthStatus restored to online via active traffic"
+            descriptionText: "healthStatus restored to online via active traffic"
         )
     }
 }
@@ -826,7 +827,7 @@ private void updateAttribute(final String attribute, Object value, final String 
     Boolean isSensorMetric = attribute in ["temperature", "battery", "powerSource", "healthStatus"]
     String actionVerb = isSensorMetric ? "was updated to" : "was set to"
     
-    final String descriptionText = "${device.displayName} - ${labelText} ${actionVerb} ${value}${formattedUnit}"
+    final String descriptionText = "${labelText} ${actionVerb} ${value}${formattedUnit}"
     if (emitLog) logInfo descriptionText
     sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
@@ -840,7 +841,6 @@ void disableDebugLogging() {
 
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"
-    String devName = device.displayName ?: "Device Driver"
     
     String settingKey
     switch (lowerLevel) {
@@ -855,7 +855,7 @@ private void logMessage(String level, String msg) {
     Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
 
     if (getSettingBool(settingKey, defaultEnabled)) {
-        log."${lowerLevel}" "${devName}: ${msg}"
+        log."${lowerLevel}" "${msg}"
     }
 }
 

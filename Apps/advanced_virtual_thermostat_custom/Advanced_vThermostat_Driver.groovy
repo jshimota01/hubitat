@@ -1,9 +1,9 @@
 /**
- * Advanced Virtual Thermostat Device Driver (Custom)
+ * Advanced Virtual Thermostat Device Driver
  * Device Driver for Hubitat Elevation
  *
  * Purpose:
- * Custom virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
+ * Virtual thermostat device for joining temperature sensors with heating/cooling switch outlets.
  * Features Thermostat Controller functionality, locked 'Auto' dashboard dual-setpoint display support,
  * customizable ambient display precision, scale-aware setpoint separation, and smart dependency health tracking.
  **/
@@ -24,6 +24,13 @@
  **/
 /**
  * Changelog:
+ * v3.0.0    10/14/26    jshimota    Major Release & Logging Optimization: Purged '(Custom)' from display names. Downgraded setDriverHysteresis logs to logDebug and removed forced state change to deduplicate event chatter via sendIfChanged(). Retained operating state transitions at logInfo. Bounced version to v3.0.0.
+ * v2.10.5   10/12/26    jshimota    Production Release: Retained detailed, preference-controlled debug tracing for thermostat mode commands and demand evaluation. Includes the accepted-mode sequencing fix from v2.10.4; sendIfChanged() event deduplication and the authoritative safety interlock are preserved.
+ * v2.10.4   10/12/26    jshimota    Mode Evaluation Sequencing Fix: Retained sendIfChanged() for event deduplication, but passed the validated/accepted requested physical mode into the immediate internal evaluation and thermostat-setpoint presentation update. This avoids relying on an immediate currentValue("physicalThermostatMode") reread after emitting the mode event. evaluateMode() calls without an override retain their existing behavior; safety interlock remains first and authoritative.
+ * v2.10.3   10/12/26    jshimota    Added preference-controlled debug snapshots around heat(), setThermostatMode(), and evaluateMode() decisions/exits to capture command sequencing and demand evaluation. No control logic changes.
+ * v2.10.2   10/12/26    jshimota    Exposed thermostatThreshold preference (range 0..10, default 1.0). Added driverHysteresisEnabled attribute and setDriverHysteresis command allowing MEM to disable internal driver hysteresis. Updated evaluateMode comparison to inclusive (>=) check.
+ * v2.10.1   10/12/26    jshimota    Synchronous Safety State Events: Enforced immediate synchronous attribute event generation in setSafetyMode() so querying safetyStatus immediately after setSafetyMode("cleared") returns "cleared" without event loop lag.
+ * v2.10.0   10/12/26    jshimota    Safety Hold Thermostat Operating State Badge: Explicitly set thermostatOperatingState and controllerState to 'Safety Hold' during active safety interlock states. Preserved enum-compliant thermostatMode attribute so standard Hubitat Thermostat Tiles remain functional while displaying 'Safety Hold' on their main center badge.
  * v2.9.8    10/10/26    jshimota    Ambient Temperature Precision Rendering Fix: Fixed setTemperature precision formatting to preserve exact trailing decimals (e.g., 72.0, 72.00) in temperature attribute events without Double string truncation.
  * v2.9.7    10/10/26    jshimota    GUI Cleanup & Precision Formatting Fix: Purged unnecessary controlCool and controlHeat GUI commands. Fixed Fahrenheit setpoint formatting to display whole integers without trailing .0 decimals. Fixed ambient temperature precision rendering in setTemperature and forced attribute refresh in updated().
  * v2.9.6    10/10/26    jshimota    GUI Cleanup & Logging Standardization: Purged redundant setLogLevel and setHealthStatus GUI commands from metadata and code routines. Standardized logging engine to match CentraLite Pearl driver logMessage implementation.
@@ -54,12 +61,12 @@ import groovy.json.JsonOutput
 import groovy.transform.Field
 import java.math.RoundingMode
 
-static String version() { return '2.9.8' }
-def timeStamp() { return "2026/10/10 12:05 PM" }
+static String version() { return '3.0.0' }
+def timeStamp() { return "2026/10/14" }
 
 metadata {
     definition (
-        name: "Advanced vThermostat Device (Custom)",
+        name: "Advanced vThermostat Device",
         namespace: "jshimota",
         author: "Nelson Clark / Customizations by jshimota",
         importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Driver.groovy"
@@ -74,6 +81,8 @@ metadata {
         // Attributes
         attribute "driverVersion", "string"
         attribute "healthStatus", "enum", ["unknown", "offline", "online"]
+        attribute "safetyStatus", "enum", ["cleared", "active"]
+        attribute "driverHysteresisEnabled", "enum", ["enabled", "disabled"]
         attribute "thermostatThreshold", "number"
         attribute "minHeatTemp", "number"
         attribute "maxHeatTemp", "number"
@@ -89,6 +98,8 @@ metadata {
         attribute "physicalThermostatMode", "string"
 
         // Custom Commands
+        command "setSafetyMode", ["string"]
+        command "setDriverHysteresis", ["string"]
         command "heatUp"
         command "heatDown"
         command "coolUp"
@@ -98,6 +109,7 @@ metadata {
 
     preferences {
         input name: "lockDashboardToAuto", type: "bool", title: "<b>Lock Dashboard Tile to 'Auto' Mode</b>", description: "<i>When enabled, locks thermostatMode attribute to 'auto' so dashboard tiles preserve dual heat/cool setpoint controls.</i>", defaultValue: true, required: true
+        input name: "thermostatThreshold", type: "decimal", title: "<b>Internal Temperature Hysteresis Threshold (°F)</b>", range: "0..10", defaultValue: 1.0, required: false, description: "<i>Driver internal hysteresis deadband before triggering heat/cool calls (0.0 to 10.0 °F). Default: 1.0.</i>"
         input name: "tempPrecision", type: "enum", title: "<b>Device Temperature Display Precision</b>", options: ["0": "0 Decimals (Whole Number - e.g., 72)", "1": "1 Decimal (e.g., 71.8)", "2": "2 Decimals (e.g., 71.82)"], defaultValue: "1", description: "<i>Controls decimal precision for reported device ambient temperature attribute only.</i>"
 
         // Independent Logging Switches
@@ -131,6 +143,12 @@ void installed() {
     sendIfChanged([name: "driverVersion", value: version()])
     if (device.currentValue("healthStatus") == null) {
         sendIfChanged([name: "healthStatus", value: "online"])
+    }
+    if (device.currentValue("safetyStatus") == null) {
+        sendIfChanged([name: "safetyStatus", value: "cleared"])
+    }
+    if (device.currentValue("driverHysteresisEnabled") == null) {
+        sendIfChanged([name: "driverHysteresisEnabled", value: "enabled"])
     }
     initialize(true)
 }
@@ -181,6 +199,12 @@ private void initialize(Boolean isInstall = false) {
 
     if (device.currentValue("healthStatus") == null) {
         sendIfChanged([name: "healthStatus", value: "online"])
+    }
+    if (device.currentValue("safetyStatus") == null) {
+        sendIfChanged([name: "safetyStatus", value: "cleared"])
+    }
+    if (device.currentValue("driverHysteresisEnabled") == null) {
+        sendIfChanged([name: "driverHysteresisEnabled", value: "enabled"])
     }
 
     def hubScale = getTemperatureScale()
@@ -254,9 +278,54 @@ private void initialize(Boolean isInstall = false) {
    VIRTUAL THERMOSTAT CORE CONTROL LOGIC
    ========================================================================================= */
 
-def updateThermostatSetpoint(String units = null) {
+def setDriverHysteresis(String stateVal) {
+    logDebug "setDriverHysteresis ENTRY: requested=${stateVal}, current=${device.currentValue('driverHysteresisEnabled')}, physicalMode=${device.currentValue('physicalThermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, safety=${device.currentValue('safetyStatus')}."
+    if (stateVal == null) {
+        logDebug "setDriverHysteresis EXIT: null request."
+        return
+    }
+    String normState = stateVal.toString().trim().toLowerCase()
+    String newState = (normState == "disabled") ? "disabled" : "enabled"
+    
+    sendIfChanged([name: "driverHysteresisEnabled", value: newState])
+    logDebug "Driver internal hysteresis state set to ${newState.toUpperCase()}."
+    evaluateMode()
+    logDebug "setDriverHysteresis RETURN: current=${device.currentValue('driverHysteresisEnabled')}, physicalMode=${device.currentValue('physicalThermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, safety=${device.currentValue('safetyStatus')}."
+}
+
+def setSafetyMode(String mode) {
+    logDebug "setSafetyMode ENTRY: requested=${mode}, safetyBefore=${device.currentValue('safetyStatus')}, physicalModeBefore=${device.currentValue('physicalThermostatMode')}, operatingStateBefore=${device.currentValue('thermostatOperatingState')}, controllerStateBefore=${device.currentValue('controllerState')}, temp=${device.currentValue('temperature')}, heatSP=${device.currentValue('heatingSetpoint')}, hysteresisState=${device.currentValue('driverHysteresisEnabled')}."
+    if (mode == null) {
+        logDebug "setSafetyMode EXIT: null request."
+        return
+    }
+    String normMode = mode.toString().trim().toLowerCase()
+    
+    if (!(normMode in ["active", "cleared"])) {
+        logError "setSafetyMode() received invalid safety mode string: '${mode}'. Strictly accepting 'active' or 'cleared'."
+        return
+    }
+
+    if (normMode == "active") {
+        logWarn "Safety mode ACTIVE. Forcing physical thermostat mode to OFF and holding idle."
+        sendIfChanged([name: "physicalThermostatMode", value: "off"])
+        sendIfChanged([name: "thermostatOperatingState", value: "Safety Hold"])
+        sendIfChanged([name: "controllerState", value: "Safety Hold"])
+        sendIfChanged([name: "safetyStatus", value: "active", isStateChange: true])
+    } else {
+        logInfo "Safety mode CLEARED. Resuming normal thermostat evaluation."
+        sendIfChanged([name: "safetyStatus", value: "cleared", isStateChange: true])
+        sendIfChanged([name: "thermostatOperatingState", value: "idle"])
+        sendIfChanged([name: "controllerState", value: "idle"])
+        logDebug "setSafetyMode CLEARED BEFORE evaluateMode: safety=${device.currentValue('safetyStatus')}, physicalMode=${device.currentValue('physicalThermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, controllerState=${device.currentValue('controllerState')}, hysteresisState=${device.currentValue('driverHysteresisEnabled')}."
+        evaluateMode()
+    }
+    logDebug "setSafetyMode RETURN: safety=${device.currentValue('safetyStatus')}, physicalMode=${device.currentValue('physicalThermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, controllerState=${device.currentValue('controllerState')}, hysteresisState=${device.currentValue('driverHysteresisEnabled')}."
+}
+
+def updateThermostatSetpoint(String units = null, String modeOverride = null) {
     if (!units) units = getTemperatureScale()
-    def mode = device.currentValue("physicalThermostatMode") ?: "off"
+    def mode = modeOverride ?: (device.currentValue("physicalThermostatMode") ?: "off")
     def targetVal
     
     if (mode == "cool") {
@@ -273,20 +342,49 @@ def updateThermostatSetpoint(String units = null) {
     sendIfChanged([name: "thermostatTemperatureSetpoint", value: targetVal, unit: units])
 }
 
-def evaluateMode() {
-    logTrace "evaluateMode() - START"
+def evaluateMode(String requestedMode = null) {
+    logTrace "evaluateMode() - START (requestedMode=${requestedMode})"
+
+    String isSafetyActive = device.currentValue("safetyStatus") ?: "cleared"
+    if (isSafetyActive == "active") {
+        logDebug "evaluateMode EXIT: safetyStatus=active; operatingState=${device.currentValue('thermostatOperatingState')}, physicalMode=${device.currentValue('physicalThermostatMode')}. No demand evaluation performed."
+        if (device.currentValue("thermostatOperatingState") != "Safety Hold") {
+            sendIfChanged([name: "thermostatOperatingState", value: "Safety Hold"])
+            sendIfChanged([name: "controllerState", value: "Safety Hold"])
+        }
+        return
+    }
     
     def tempRaw = device.currentValue("temperature")
-    if (tempRaw == null || !tempRaw.toString().isNumber()) return
+    if (tempRaw == null || !tempRaw.toString().isNumber()) {
+        logDebug "evaluateMode EXIT: temperature is missing/invalid (temperature=${tempRaw}); safetyStatus=${isSafetyActive}, physicalMode=${device.currentValue('physicalThermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}."
+        return
+    }
     Double temp = tempRaw.toString().toDouble()
 
     def heatingSetpoint = device.currentValue("heatingSetpoint")
     def coolingSetpoint = device.currentValue("coolingSetpoint")
-    def threshold = device.currentValue("thermostatThreshold")
+    
+    Boolean isHysteresisDisabled = (device.currentValue("driverHysteresisEnabled") == "disabled")
+    
+    BigDecimal threshold
+    if (isHysteresisDisabled) {
+        threshold = 0.0g
+    } else if (settings.thermostatThreshold != null && settings.thermostatThreshold.toString().isNumber()) {
+        threshold = settings.thermostatThreshold.toBigDecimal()
+    } else if (device.currentValue("thermostatThreshold") != null && device.currentValue("thermostatThreshold").toString().isNumber()) {
+        threshold = device.currentValue("thermostatThreshold").toBigDecimal()
+    } else {
+        threshold = 1.0g
+    }
+
     def current = device.currentValue("thermostatOperatingState")
-    def mode = device.currentValue("physicalThermostatMode") ?: "off"
+    def mode = requestedMode ?: (device.currentValue("physicalThermostatMode") ?: "off")
+
+    logDebug "evaluateMode INPUT: requestedMode=${requestedMode}, modeSource=${requestedMode != null ? 'accepted request' : 'currentValue'}, evaluatedPhysicalMode=${mode}, publishedPhysicalMode=${device.currentValue('physicalThermostatMode')}, thermostatMode=${device.currentValue('thermostatMode')}, operatingState=${current}, tempRaw=${tempRaw}, temp=${temp}, heatSP=${heatingSetpoint}, coolSP=${coolingSetpoint}, hysteresisState=${device.currentValue('driverHysteresisEnabled')}, threshold=${threshold}, lockDashboardToAuto=${getSettingBool('lockDashboardToAuto', true)}."
 
     if (mode == "off") {
+        logDebug "evaluateMode EXIT: physicalMode=off; would otherwise calculate demand. Current operatingState=${current}."
         if (current != "idle") {
             sendIfChanged([name: "thermostatOperatingState", value: "idle"])
             sendIfChanged([name: "controllerState", value: "idle"])
@@ -296,32 +394,43 @@ def evaluateMode() {
 
     def callFor = "idle"
 
-    if (!threshold || threshold <= 0) {
-        logError "evaluateMode() - Threshold not set or invalid: ${threshold}"
-    } else {
-        def units = getTemperatureScale()
-        if (mode in ["heat", "emergency heat", "emergencyHeat"]) {
-            updateThermostatSetpoint(units)
-            if ((current == "idle" && (heatingSetpoint - temp) > threshold) || (current == "heating" && (temp - heatingSetpoint) < threshold)) {
-                callFor = "heating"
-            }
-        } else if (mode == "cool") {
-            updateThermostatSetpoint(units)
-            if ((temp - coolingSetpoint) >= threshold) callFor = "cooling"
-        } else if (mode == "auto") {
-            updateThermostatSetpoint(units)
-            if ((current == "idle" && (heatingSetpoint - temp) > threshold) || (current == "heating" && (temp - heatingSetpoint) < threshold)) {
-                callFor = "heating"
-            } else if ((current == "idle" && (temp - coolingSetpoint) >= threshold) || (current == "cooling" && (coolingSetpoint - temp) < threshold)) {
-                callFor = "cooling"
-            }
+    def units = getTemperatureScale()
+    if (mode in ["heat", "emergency heat", "emergencyHeat"]) {
+        updateThermostatSetpoint(units, mode)
+        Boolean heatDemand = ((current == "idle" && (heatingSetpoint - temp) >= threshold) || (current == "heating" && (temp - heatingSetpoint) < threshold))
+        logDebug "evaluateMode HEAT TEST: current=${current}, heatSP=${heatingSetpoint}, temp=${temp}, difference=${heatingSetpoint != null ? (heatingSetpoint - temp) : 'null'}, threshold=${threshold}, condition=${heatDemand}."
+        if (heatDemand) {
+            callFor = "heating"
+        } else {
+            logDebug "evaluateMode: HEAT mode selected but heat-demand condition is FALSE; no heating call requested."
         }
+    } else if (mode == "cool") {
+        updateThermostatSetpoint(units, mode)
+        Boolean coolDemand = ((temp - coolingSetpoint) >= threshold)
+        logDebug "evaluateMode COOL TEST: temp=${temp}, coolSP=${coolingSetpoint}, difference=${coolingSetpoint != null ? (temp - coolingSetpoint) : 'null'}, threshold=${threshold}, condition=${coolDemand}."
+        if (coolDemand) callFor = "cooling"
+    } else if (mode == "auto") {
+        updateThermostatSetpoint(units, mode)
+        Boolean heatDemand = ((current == "idle" && (heatingSetpoint - temp) >= threshold) || (current == "heating" && (temp - heatingSetpoint) < threshold))
+        Boolean coolDemand = ((current == "idle" && (temp - coolingSetpoint) >= threshold) || (current == "cooling" && (coolingSetpoint - temp) < threshold))
+        logDebug "evaluateMode AUTO TEST: current=${current}, temp=${temp}, heatSP=${heatingSetpoint}, coolSP=${coolingSetpoint}, threshold=${threshold}, heatCondition=${heatDemand}, coolCondition=${coolDemand}."
+        if (heatDemand) {
+            callFor = "heating"
+        } else if (coolDemand) {
+            callFor = "cooling"
+        }
+    } else {
+        logDebug "evaluateMode: unsupported/unhandled physical mode '${mode}'; callFor remains idle."
     }
 
+    logDebug "evaluateMode DECISION: physicalMode=${mode}, priorOperatingState=${current}, calculatedCallFor=${callFor}."
     if (current != callFor) {
-        logDebug "sendEvent : thermostatOperatingState = $callFor"
+        logDebug "evaluateMode ACTION: sending thermostatOperatingState=${callFor}; controllerState=${callFor == 'idle' ? 'idle' : 'controlling ' + callFor}."
         sendIfChanged([name: "thermostatOperatingState", value: callFor])
         sendIfChanged([name: "controllerState", value: callFor == "idle" ? "idle" : "controlling ${callFor}"])
+        logDebug "evaluateMode AFTER ACTION: thermostatOperatingState=${device.currentValue('thermostatOperatingState')}, controllerState=${device.currentValue('controllerState')}."
+    } else {
+        logDebug "evaluateMode NO EVENT: operatingState already equals calculated callFor (${callFor})."
     }
 }
 
@@ -439,8 +548,8 @@ def setCoolingSetpoint(Object value) {
 def setThermostatThreshold(Object value) {
     if (value == null || !value.toString().isNumber()) return
     Double dVal = value.toString().toDouble()
-    if (dVal <= 0) {
-        logWarn "setThermostatThreshold() ignoring invalid non-positive value (${dVal}). Threshold must be > 0."
+    if (dVal < 0) {
+        logWarn "setThermostatThreshold() ignoring invalid negative value (${dVal}). Threshold must be >= 0."
         return
     }
     if (dVal != device.currentValue("thermostatThreshold")) {
@@ -450,7 +559,11 @@ def setThermostatThreshold(Object value) {
 }
 
 def setThermostatMode(String value) {
-    if (value == null) return
+    logDebug "setThermostatMode ENTRY: requested=${value}, physicalModeBefore=${device.currentValue('physicalThermostatMode')}, thermostatModeBefore=${device.currentValue('thermostatMode')}, operatingStateBefore=${device.currentValue('thermostatOperatingState')}, safetyStatus=${device.currentValue('safetyStatus')}, temp=${device.currentValue('temperature')}, heatSP=${device.currentValue('heatingSetpoint')}, coolSP=${device.currentValue('coolingSetpoint')}, hysteresisState=${device.currentValue('driverHysteresisEnabled')}."
+    if (value == null) {
+        logDebug "setThermostatMode EXIT: null requested mode."
+        return
+    }
     
     String normMode = value.toString().trim()
     if (normMode == "emergency heat") normMode = "emergencyHeat"
@@ -461,6 +574,14 @@ def setThermostatMode(String value) {
         return
     }
 
+    String isSafetyActive = device.currentValue("safetyStatus") ?: "cleared"
+    if (isSafetyActive == "active" && normMode != "off") {
+        logWarn "setThermostatMode(${normMode}) blocked while Safety Hold is active. Physical mode remains OFF."
+        sendIfChanged([name: "physicalThermostatMode", value: "off"])
+        return
+    }
+
+    logDebug "setThermostatMode ACCEPTED: normalizedMode=${normMode}; safetyStatus=${isSafetyActive}. Updating physical mode."
     sendIfChanged([name: "physicalThermostatMode", value: normMode])
 
     if (getSettingBool("lockDashboardToAuto", true)) {
@@ -469,17 +590,21 @@ def setThermostatMode(String value) {
         sendIfChanged([name: "thermostatMode", value: normMode])
     }
     
-    updateThermostatSetpoint()
-    evaluateMode()
+    updateThermostatSetpoint(null, normMode)
+    logDebug "setThermostatMode BEFORE evaluateMode: acceptedMode=${normMode}, publishedPhysicalMode=${device.currentValue('physicalThermostatMode')}, thermostatMode=${device.currentValue('thermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, safety=${device.currentValue('safetyStatus')}."
+    evaluateMode(normMode)
+    logDebug "setThermostatMode RETURN: physicalMode=${device.currentValue('physicalThermostatMode')}, thermostatMode=${device.currentValue('thermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, controllerState=${device.currentValue('controllerState')}."
 }
 
 def off()  { setThermostatMode("off") }
 def auto() { setThermostatMode("auto") }
 
 def heat() {
+    logDebug "heat() ENTRY: physicalMode=${device.currentValue('physicalThermostatMode')}, thermostatMode=${device.currentValue('thermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, safety=${device.currentValue('safetyStatus')}, temp=${device.currentValue('temperature')}, heatSP=${device.currentValue('heatingSetpoint')}, coolSP=${device.currentValue('coolingSetpoint')}, hysteresisState=${device.currentValue('driverHysteresisEnabled')}."
     sendIfChanged([name: "lastRunningMode", value: "heat"])
     updateDataValue("lastRunningMode", "heat")
     setThermostatMode("heat")
+    logDebug "heat() RETURN: physicalMode=${device.currentValue('physicalThermostatMode')}, thermostatMode=${device.currentValue('thermostatMode')}, operatingState=${device.currentValue('thermostatOperatingState')}, controllerState=${device.currentValue('controllerState')}, safety=${device.currentValue('safetyStatus')}."
 }
 
 def cool() {
@@ -553,7 +678,7 @@ def setMaxHeatTemp(Double value) {
     def units = getTemperatureScale()
     sendIfChanged([name: "maxHeatTemp", value: value, unit: units])
     sendIfChanged([name: "maxHeatingSetpoint", value: value, unit: units])
-    if (device.currentValue("heatingSetpoint") > value) setHeatingSetpoint(value)
+    if (device.currentValue("heatingSetpoint") > value) setHeatPoint(value)
 }
 
 def fanAuto() {}
@@ -639,7 +764,7 @@ private void sendIfChanged(Map args) {
         if (args.isStateChange != null) eventMap.isStateChange = args.isStateChange
 
         sendEvent(eventMap)
-        logTrace "${desc}"
+        logInfo "${desc}"
     }
 }
 

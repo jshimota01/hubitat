@@ -39,6 +39,7 @@
  **/
 /**
  * Changelog:
+ * v1.3.5  	 10/14/26	 jshimota 	 logging duplication and capitalization fixes
  * v1.3.4    09/19/26    jshimota    Promoted hardware-level Motion Cool-Down Time (Cluster 0xFF01, Attr 0x0001) implementation to production release.
  * v1.4.1-dev 09/19/26    jshimota    Updated coolDownTimeSetting preference description to note that hardware changes apply only on initialization or battery removal.
  * v1.4.0-dev 09/19/26    jshimota    Added hardware-level Motion Cool-Down Time (Cluster 0xFF01, Attr 0x0001) configuration command and preferences.
@@ -59,8 +60,8 @@
  **/
 // [KEEP-EXACT] See possible changelog.txt for past changelog history.
 
-static String version() { return '1.3.4' }
-def timeStamp() { return "2026/09/19 09:05 AM" }
+static String version() { return '1.3.5' }
+def timeStamp() { return "2026/10/14 11:05 AM" }
 
 import hubitat.zigbee.clusters.iaszone.ZoneStatus
 import hubitat.zigbee.zcl.DataType
@@ -369,8 +370,12 @@ private void updateAttribute(final String attribute, final Object value, final S
     final String currentVal = device.currentValue(attribute)?.toString()
     if (currentVal == value?.toString()) return
 
-    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
-    logInfo descriptionText
+    final String capAttribute = attribute ? attribute.capitalize() : attribute
+    final String logMsg = "${capAttribute} was set to ${value}${unit ?: ''}"
+    
+    logInfo logMsg
+    
+    final String descriptionText = "${device.displayName} - ${logMsg}"
     sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
 

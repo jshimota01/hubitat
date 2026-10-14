@@ -1,0 +1,393 @@
+/**
+ * Advanced vThermostat Child App (Custom)
+ * Platform: Hubitat Elevation
+ * Notes: Custom child app for binding temperature sensors to heating/cooling outlets for virtual thermostat operation
+ **/
+/**
+ * Copyright 2026 James Shimota / Original 2020 Nelson Clark
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+/**
+ * Changelog:
+ * v2.9.6    10/12/26    jshimota    Safety Interlock Outlet Fail-Safe: Added subscription to safetyStatus driver attribute. Guarded setOutletsState to immediately force all heating/cooling outlets OFF whenever safetyStatus == 'active' or thermostatOperatingState == 'Safety Hold'.
+ * v2.9.5    10/10/26    jshimota    Suite Parity & Precision Alignment: Synchronized version to v2.9.5 for parity with driver v2.9.5. Updated updateTemperature to respect driver ambient precision preferences without altering local driver evaluation logic.
+ * v2.7.2    09/24/26    jshimota    Removed redundant refresh() call in setpointChangeHandler to prevent double-evaluation loops on MEM setpoint updates. Guarded evaluateOverallHealth to only push setHealthStatus when state changes.
+ * v2.7.1    09/24/26    jshimota    Standardized version update trace log line format across lifecycle methods.
+ * v2.7.0    09/24/26    jshimota    Decoupled thermostatOperatingState changes from updateAppLabel() to prevent routine heating/idle transitions from modifying app labels and triggering dashboard tile style/icon re-renders. Replaced debounced setpoint refresh timer with direct, synchronous driver refresh execution.
+ * v2.6.0    09/24/26    jshimota    Implemented Smart Dependency Health Engine evaluating bound temperature sources (virtual/physical) and outlets via healthStatus or getLastActivity fallback. Added debounced setpoint change handler using runIn(1) to eliminate event loop chatter.
+ * v2.5.0    09/18/26    jshimota    Guarded setpointChangeHandler against virtual thermostat 'off' mode state to prevent background refresh loops during schedule changes.
+ * v2.4.2    09/06/26    jshimota    Enforced explicit off command execution across setOutletsState when state is idle to ensure floor heaters shut off immediately on setpoint drop.
+ * v2.4.1    09/05/26    jshimota    Aligned child app initial setpoint limits to support 90 °F (32.0 °C) maximum heating boundary.
+ * v2.4.0    09/05/26    jshimota    Added event subscriptions for setpoint changes to trigger immediate driver refresh evaluation passes without waiting on full timer intervals.
+ * v2.3.5    08/30/26    jshimota    Converted current temperature check to Double comparison and added [DEVICE CREATION FAILED] badge.
+ * v2.3.4    08/30/26    jshimota    Confirmed co-located importUrl paths under Apps directory on GitHub.
+ * v2.3.3    08/30/26    jshimota    Updated importUrl paths from Drivers to Apps directory on GitHub.
+ * v2.3.2    08/30/26    jshimota    Updated child creation callouts to highlight automatic 'Virtual' room placement.
+ * v2.3.1    08/30/26    jshimota    Added automatic assignment of new child devices to 'Virtual' room.
+ * v2.3.0    08/30/26    jshimota    Added automated device creation help callout and applied v1.1.0 App Master Template.
+ * v2.2.1    08/30/26    jshimota    Verified brackets/parentheses parity and NPE-safe location scale checks.
+ * v2.2.0    08/30/26    jshimota    Applied initial App Master Template architecture.
+ * v2.1.1    08/30/26    jshimota    Formatted names to use (Custom) in parenthetical style.
+ * v2.1.0    08/30/26    jshimota    Removed v2 identifiers, updated URLs and app/device references.
+ * v2.0.0    08/22/26    jshimota    Bumped definition name to v2 and corrected child device creation logic.
+ * v1.1.0    04/15/21    NelsonClark Added support for multi-outlet binding and hysteresis threshold configuration.
+ * v1.0.0    12/03/20    NelsonClark Initial public release of Advanced vThermostat Child App.
+ **/
+
+static String version() { return '2.9.6' }
+def timeStamp() { return "2026/10/12 09:00 AM" }
+
+definition(
+    name: "Advanced vThermostat Child (Custom)",
+    namespace: "jshimota",
+    author: "Nelson Clark / Customizations by jshimota",
+    description: "Join any sensor(s) with any outlet(s) for virtual thermostat control.",
+    category: "Green Living",
+    iconUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo-small.png",
+    iconX2Url: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat-logo.png",
+    importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/advanced_virtual_thermostat_custom/Advanced_vThermostat_Custom_Child.groovy",
+    parent: "jshimota:Advanced vThermostat Manager (Custom)"
+)
+
+preferences {
+    page(name: "pageConfig")
+}
+
+def pageConfig() {
+    def displayUnits = getDisplayUnits()
+    def hubScale = getTemperatureScale()
+    
+    def setpointDistance = (hubScale == "C") ? 1.0 : 2.0
+    def defaultHeat = (hubScale == "C") ? 21.0 : 70.0
+    def defaultCool = (hubScale == "C") ? 24.5 : 76.0
+    def defaultThresh = (hubScale == "C") ? 0.5 : 1.0
+
+    dynamicPage(name: "pageConfig", title: "", install: true, uninstall: true) {
+        String currentVersion = version()
+
+        section() {
+            paragraph "<div style='background-color:#1A252F; color:#FFFFFF; padding:12px; border-radius:6px; text-align:center; margin-bottom:10px;'>" +
+                      "<h2 style='color:#FFFFFF; margin:0; font-size:20px; font-weight:600;'>Advanced vThermostat Child (Custom)</h2>" +
+                      "<span style='font-size:12px; opacity:0.8;'>Version ${currentVersion} (${timeStamp()})</span></div>"
+        }
+
+        section("<b>Thermostat Naming & Auto-Creation Notice</b>") {
+            paragraph "<div style='background-color:#EBF5FB; border-left:4px solid #3498DB; padding:10px; border-radius:4px; font-size:12px; margin-bottom:8px;'>" +
+                      "ℹ️ <b>Automatic Device Creation & Room Assignment:</b> Entering a name below automatically creates and configures your virtual thermostat device under <b>Devices</b> using the <code>Advanced vThermostat Device (Custom)</code> driver.<br/><br/>" +
+                      "<b>Room Assignment:</b> This app will automatically place the newly created virtual thermostat directly into the <b>Virtual</b> room on your hub. <b>You do not need to manually create a device or create a room!</b></div>"
+            
+            label title: "<b>Name for this Advanced vThermostat Instance:</b>", required: true
+        }
+        
+        section("<b>Temperature Sensors</b>") {
+            input "sensors", "capability.temperatureMeasurement", title: "Select Sensor(s):", multiple: true, required: true
+        }
+
+        section("<b>Heating Outlets</b>") {
+            input "heatOutlets", "capability.switch", title: "Select Outlet(s) to use for Heating:", multiple: true
+        }
+
+        section("<b>Cooling Outlets</b>") {
+            input "coolOutlets", "capability.switch", title: "Select Outlet(s) to use for Cooling:", multiple: true
+        }
+
+        if (!state.deviceID) {
+            section("<b>Initial Thermostat Settings</b>") {
+                input "heatingSetPoint", "decimal", title: "Heating Setpoint in $displayUnits", required: true, defaultValue: defaultHeat
+                input "coolingSetPoint", "decimal", title: "Cooling Setpoint in $displayUnits", required: true, defaultValue: defaultCool
+                input "thermostatThreshold", "decimal", title: "Temperature Threshold in $displayUnits", required: true, defaultValue: defaultThresh
+            }
+        }
+    
+        section("<b>App Preferences & Logging Options</b>", hideable: true, hidden: true) {
+            input name: "showVersionInLabel", type: "bool", title: "Show Version in App Label?", defaultValue: true
+            input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
+            input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", defaultValue: true, required: true
+            input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", defaultValue: true, required: true
+            input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", defaultValue: false, required: true
+            input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", defaultValue: false, required: true
+        }
+    }
+}
+
+private void checkAndLogVersionDemarcation() {
+    String currentVer = version()
+    if (state.lastLoggedVersion != currentVer) {
+        logTrace "=================== APP VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
+        state.lastLoggedVersion = currentVer
+    }
+}
+
+private void updateAppLabel(String statusText = null) {
+    Boolean showVersion = getSettingBool("showVersionInLabel", true)
+    String customLabel = app.getLabel() ?: "Advanced vThermostat Child"
+    String baseLabel = customLabel
+    
+    if (baseLabel.contains(" v2.")) baseLabel = baseLabel.substring(0, baseLabel.indexOf(" v2."))
+    if (showVersion) baseLabel += " v${version()}"
+    if (statusText != null) baseLabel += " - [${statusText}]"
+
+    if (app.label != baseLabel) app.updateLabel(baseLabel)
+}
+
+private String captureSettingsSnapshot() {
+    Map snapshot = [:]
+    List<String> sortedKeys = settings.keySet()
+        .collect { it.toString() }
+        .findAll { k -> !(k == "label" || k.startsWith("btn")) }
+        .sort()
+
+    sortedKeys.each { k -> snapshot[k] = settings[k]?.toString() }
+    String jsonString = groovy.json.JsonOutput.toJson(snapshot)
+    return java.security.MessageDigest.getInstance("MD5").digest(jsonString.bytes).encodeHex().toString()
+}
+
+void installed() {
+    checkAndLogVersionDemarcation()
+    logInfo "Installing child app v${version()} (${timeStamp()})..."
+    
+    state.deviceID = "avt-" + app.id
+    def label = app.getLabel()
+    logInfo "Creating vThermostat child device automatically in 'Virtual' room: ${label} with ID: ${state.deviceID}"
+    
+    def thermostat = null
+    try {
+        thermostat = addChildDevice(
+            "jshimota", 
+            "Advanced vThermostat Device (Custom)", 
+            state.deviceID, 
+            null, 
+            [label: label, name: label, room: "Virtual", completedSetup: true]
+        )
+    } catch(e) {
+        logError "Error adding vThermostat child device ${label}: ${e}"
+        updateAppLabel("DEVICE CREATION FAILED")
+    }
+    
+    state.lastSettingsSnapshot = captureSettingsSnapshot()
+    initialize(thermostat, true)
+}
+
+void updated() {
+    checkAndLogVersionDemarcation()
+    logInfo "Updating child app configuration..."
+
+    String currentSnapshot = captureSettingsSnapshot()
+    Boolean settingsChanged = (state.lastSettingsSnapshot == null || state.lastSettingsSnapshot != currentSnapshot)
+    Boolean codeVersionChanged = (state.lastInitializedVersion != version())
+
+    if (settingsChanged || codeVersionChanged) {
+        state.lastSettingsSnapshot = currentSnapshot
+        unsubscribe()
+        unschedule()
+        initialize(getThermostat(), false)
+    }
+    updateAppLabel()
+}
+
+void uninstalled() {
+    logInfo "Uninstalling child app and device ${state.deviceID}..."
+    unsubscribe()
+    unschedule()
+    if (state.deviceID) deleteChildDevice(state.deviceID)
+}
+
+private void initialize(thermostatInstance = null, Boolean isInstall = false) {
+    state.lastInitializedVersion = version()
+    if (!thermostatInstance) thermostatInstance = getThermostat()
+    if (!thermostatInstance) {
+        logError "initialize() - Device instance not found."
+        updateAppLabel("DEVICE NOT FOUND")
+        return
+    }
+
+    def thermostatMode = "off"
+    if (heatOutlets && coolOutlets) thermostatMode = "auto"
+    else if (heatOutlets) thermostatMode = "heat"
+    else if (coolOutlets) thermostatMode = "cool"
+    
+    if (heatingSetPoint != null) thermostatInstance.setHeatingSetpoint(heatingSetPoint.toDouble())
+    if (coolingSetPoint != null) thermostatInstance.setCoolingSetpoint(coolingSetPoint.toDouble())
+    if (thermostatThreshold != null) thermostatInstance.setThermostatThreshold(thermostatThreshold.toDouble())
+    
+    thermostatInstance.setThermostatMode(thermostatMode)
+
+    subscribe(sensors, "temperature", temperatureHandler)
+    subscribe(thermostatInstance, "thermostatOperatingState", thermostatStateHandler)
+    subscribe(thermostatInstance, "safetyStatus", safetyStatusHandler)
+    subscribe(thermostatInstance, "heatingSetpoint", setpointChangeHandler)
+    subscribe(thermostatInstance, "coolingSetpoint", setpointChangeHandler)
+
+    subscribe(sensors, "healthStatus", dependencyHealthHandler)
+    if (heatOutlets) subscribe(heatOutlets, "healthStatus", dependencyHealthHandler)
+    if (coolOutlets) subscribe(coolOutlets, "healthStatus", dependencyHealthHandler)
+
+    runEvery30Minutes("evaluateOverallHealth")
+
+    updateTemperature()
+    evaluateOverallHealth()
+    updateAppLabel()
+
+    if (isInstall) {
+        app.updateSetting("logDebugEnable", [type: "bool", value: true])
+        runIn(1800, "disableDebugLogging")
+    }
+}
+
+void disableDebugLogging() {
+    if (getSettingBool("logDebugEnable", false)) {
+        app.updateSetting("logDebugEnable", [type: "bool", value: false])
+    }
+}
+
+def getThermostat() {
+    if (!state.deviceID) return null
+    return getChildDevices().find { d -> d.deviceNetworkId == state.deviceID }
+}
+
+def temperatureHandler(evt) {
+    updateTemperature()
+    evaluateOverallHealth()
+}
+
+def setpointChangeHandler(evt) {}
+
+def safetyStatusHandler(evt) {
+    logInfo "Safety status event received from thermostat: ${evt.value}"
+    if (evt.value == "active") {
+        setOutletsState("Safety Hold")
+    } else {
+        setOutletsState()
+    }
+}
+
+def evaluateOverallHealth() {
+    def thermostat = getThermostat()
+    if (!thermostat) return
+
+    Boolean sensorsHealthy = sensors?.every { s -> isDeviceHealthy(s, 12) } ?: false
+    Boolean heatOutletsHealthy = heatOutlets ? heatOutlets.every { o -> isDeviceHealthy(o, 12) } : true
+    Boolean coolOutletsHealthy = coolOutlets ? coolOutlets.every { o -> isDeviceHealthy(o, 12) } : true
+
+    Boolean overallHealthy = sensorsHealthy && heatOutletsHealthy && coolOutletsHealthy
+    String targetStatus = overallHealthy ? "online" : "offline"
+
+    if (state.lastHealthStatus != targetStatus) {
+        state.lastHealthStatus = targetStatus
+        if (thermostat.hasCommand("setHealthStatus")) thermostat.setHealthStatus(targetStatus)
+    }
+}
+
+private Boolean isDeviceHealthy(Object dev, Integer maxInactivityHours = 12) {
+    if (!dev) return true
+    def healthAttr = dev.currentValue("healthStatus")
+    if (healthAttr != null) return healthAttr.toString().toLowerCase() == "online"
+
+    Date lastAct = dev.getLastActivity()
+    if (lastAct != null) {
+        Long elapsedMs = now() - lastAct.getTime()
+        return elapsedMs <= (maxInactivityHours * 3600000L)
+    }
+    return true
+}
+
+def dependencyHealthHandler(evt) { evaluateOverallHealth() }
+
+def updateTemperature() {
+    def thermostat = getThermostat()
+    if (!thermostat || !sensors) return null
+
+    def validTemps = []
+    sensors.each { sensor ->
+        def val = sensor.currentValue("temperature")
+        if (val != null && val.toString().isNumber()) validTemps << val.toString().toDouble()
+    }
+
+    if (validTemps.isEmpty()) return null
+
+    def avgTemp = (validTemps.sum() / validTemps.size()).toDouble().round(1)
+    def currentValRaw = thermostat.currentValue("temperature")
+    Double currentTemp = (currentValRaw != null && currentValRaw.toString().isNumber()) ? currentValRaw.toString().toDouble() : null
+
+    if (currentTemp == null || currentTemp != avgTemp) {
+        thermostat.setTemperature(avgTemp)
+    }
+    return avgTemp
+}
+
+def thermostatStateHandler(evt) {
+    if (evt.value) {
+        logInfo "Thermostat operating state changed to ${evt.value}"
+        setOutletsState(evt.value)
+    }
+}
+
+def setOutletsState(opState = null) {
+    def thermostat = getThermostat()
+    if (!thermostat) return
+
+    def currentState = opState ?: thermostat.currentValue("thermostatOperatingState")
+    def safetyState = thermostat.currentValue("safetyStatus")
+
+    if (safetyState == "active" || currentState == "Safety Hold") {
+        logInfo "Safety Interlock active. Forcing all bound heating and cooling outlets OFF."
+        safelyControlSwitches(heatOutlets, "off")
+        safelyControlSwitches(coolOutlets, "off")
+        return
+    }
+
+    if (currentState == "heating") {
+        safelyControlSwitches(coolOutlets, "off")
+        safelyControlSwitches(heatOutlets, "on")
+    } else if (currentState == "cooling") {
+        safelyControlSwitches(heatOutlets, "off")
+        safelyControlSwitches(coolOutlets, "on")
+    } else {
+        safelyControlSwitches(heatOutlets, "off")
+        safelyControlSwitches(coolOutlets, "off")
+    }
+}
+
+def safelyControlSwitches(devices, String targetState) {
+    if (!devices) return
+    devices.each { device ->
+        if (device.currentValue("switch") != targetState) {
+            if (device.hasCommand(targetState)) device."${targetState}"()
+        }
+    }
+}
+
+private void logMessage(String level, String msg) {
+    String lowerLevel = level?.toLowerCase() ?: "info"
+    String appLabel = app.label ?: app.name ?: "App"
+    String settingKey = "log${lowerLevel.capitalize()}Enable"
+    Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
+    if (getSettingBool(settingKey, defaultEnabled)) log."${lowerLevel}" "${appLabel}: ${msg}"
+}
+
+private void logInfo(String msg)  { logMessage("info", msg) }
+private void logDebug(String msg) { logMessage("debug", msg) }
+private void logTrace(String msg) { logMessage("trace", msg) }
+private void logWarn(String msg)  { logMessage("warn", msg) }
+private void logError(String msg) { logMessage("error", msg) }
+
+private Boolean getSettingBool(String key, Boolean defaultVal = false) {
+    def val = settings[key]
+    if (val == null) return defaultVal
+    if (val instanceof Boolean) return val
+    return val.toString().toBoolean()
+}
+
+def getTemperatureScale() { return "${location?.temperatureScale ?: 'F'}" }
+def getDisplayUnits() { return getTemperatureScale() == "C" ? "°C" : "°F" }

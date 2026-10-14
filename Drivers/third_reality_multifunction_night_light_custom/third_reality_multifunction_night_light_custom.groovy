@@ -32,6 +32,7 @@
  **/
 /**
  * Changelog:
+ * v1.0.13   10/14/26    jshimota    Fixed duplicate device name in log output and capitalized attribute names in log strings.
  * v1.0.12   09/14/26    jshimota    Optimized markDeviceOnline to emit isStateChange: false to refresh lastActivity without event history log clutter.
  * v1.0.11   09/10/26    jshimota    Fixed platform 'Last Activity' timestamp refresh by forcing healthStatus state change on health check verification.
  * v1.0.10   09/10/26    jshimota    Promoted Health Check execution/response outputs to logInfo, updated timeout warning, and validated cluster 0x0000 ZCL read target.
@@ -47,8 +48,8 @@
  * v1.0.0    09/04/26    jshimota    Initial baseline release for Third Reality 3RSNL02043Z night light driver development.
  **/
 
-static String version() { return '1.0.12' }
-def timeStamp() { return "2026/09/14 10:00 AM" }
+static String version() { return '1.0.13' }
+def timeStamp() { return "2026/10/14 11:54 AM" }
 
 import groovy.transform.Field
 import hubitat.zigbee.clusters.iaszone.ZoneStatus
@@ -582,8 +583,12 @@ private void updateAttribute(final String attribute, final Object value, final S
     state["last_${attribute}"] = valStr
     state["lastTime_${attribute}"] = now
 
-    final String descriptionText = "${device.displayName} - ${attribute} was set to ${value}${unit ?: ''}"
-    logInfo descriptionText
+    final String capAttribute = attribute ? attribute.capitalize() : attribute
+    final String logMsg = "${capAttribute} was set to ${value}${unit ?: ''}"
+    
+    logInfo logMsg
+    
+    final String descriptionText = "${device.displayName} - ${logMsg}"
     sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
 
