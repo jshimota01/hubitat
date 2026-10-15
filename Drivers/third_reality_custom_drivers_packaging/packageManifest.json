@@ -1,7 +1,7 @@
 {
   "packageName": "Third Reality Custom Drivers",
   "author": "James Shimota",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "minimumHEVersion": "2.4.4.156",
   "dateReleased": "2026-10-14",
   "documentationLink": "https://github.com/jshimota01/hubitat",
