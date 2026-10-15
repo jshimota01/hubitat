@@ -7,7 +7,7 @@
  * Custom multi-function driver for Third Reality 3RSNL02043Z Zigbee RGB Night Light, 
  * Motion Sensor, and Illuminance/Lux Sensor. Features standardized phase-anchored 
  * health tracking, color/level control, motion parsing via private cluster 0xFC00, 
- * illuminance measurement with configurable report sensitivity, and human-readable colorName tracking.
+ * raw-delta illuminance measurement filtering, and human-readable colorName tracking.
  *
  * Notes:
  * Custom Health Check Implementation
@@ -32,6 +32,9 @@
  **/
 /**
  * Changelog:
+ * v1.0.20   10/15/26    jshimota    Synchronized state.lastAcceptedLux unconditionally inside recalculateLuxOffset() to maintain internal state consistency regardless of attribute event emission.
+ * v1.0.19   10/15/26    jshimota    Audited byte-swapping logic (removed magnitude thresholding), set default softwareLuxDelta to 25 raw units (~0.58% relative change), implemented instant luxOffset recalculation on preference updates, and handled ZCL 0xFFFF invalid readings.
+ * v1.0.18   10/15/26    jshimota    Architectural Refactor: Decoupled Lux filtering into raw-first pipeline. Implemented explicit software raw-delta filtering (softwareLuxDelta) before Lux conversion, decoupled baseline state advancement from updateAttribute() event emission, prevented duplicate event pollution when raw changes convert to identical integer Lux, and preserved Read Attributes normalization fix.
  * v1.0.17   10/14/26    jshimota    Fixed Read Attributes Response normalization to consistently populate descMap.attrInt from descMap.attrId or raw data payload when attrInt is null.
  * v1.0.16   10/14/26    jshimota    Completed ZCL Read Attributes Response (command 01) value extraction for raw data array payloads, ensured full value normalization before cluster routing, and refined hardwareLuxDelta preference text.
  * v1.0.15   10/14/26    jshimota    Synchronized state.lastAcceptedLux update to fire strictly inside updateAttribute() upon event emission, implemented robust ZCL Read Attributes Response (command 01) status decoding, and exposed hardwareLuxDelta user preference for hardware Zigbee reporting threshold control.
@@ -52,8 +55,8 @@
  * v1.0.0    09/04/26    jshimota    Initial baseline release for Third Reality 3RSNL02043Z night light driver development.
  **/
 
-static String version() { return '1.0.17' }
-def timeStamp() { return "2026/10/14 10:25 PM" }
+static String version() { return '1.0.20' }
+def timeStamp() { return "2026/10/15 8:30 AM" }
 
 import groovy.transform.Field
 import hubitat.zigbee.clusters.iaszone.ZoneStatus
@@ -93,7 +96,7 @@ metadata {
     }
 
     preferences {
-        input name: "luxDelta", type: "enum", title: "<b>Lux Event Sensitivity (Software Filter)</b>", options: LuxSensitivityOpts.options, defaultValue: LuxSensitivityOpts.defaultValue, description: "<i>Minimum calculated Lux change required before emitting a Hubitat event.<br><b>Controls event history clutter & rule triggers (in lx).</b></i>"
+        input name: "softwareLuxDelta", type: "enum", title: "<b>Lux Event Sensitivity (Software Filter)</b>", options: SoftwareLuxSensitivityOpts.options, defaultValue: SoftwareLuxSensitivityOpts.defaultValue, description: "<i>Minimum raw ZCL change required before evaluating software Lux events.<br><b>Note:</b> Operates in raw ZCL units (~25 units = 0.58% change). Higher values suppress log chattiness.</i>"
         input name: "hardwareLuxDelta", type: "enum", title: "<b>Hardware Reporting Threshold (Zigbee Delta)</b>", options: HardwareLuxSensitivityOpts.options, defaultValue: HardwareLuxSensitivityOpts.defaultValue, description: "<i>Minimum raw Zigbee attribute change required before device transmits across the Zigbee network.<br><b>Note:</b> Operates in raw ZCL units. Higher values increase reporting thresholds on the physical device.</i>"
         input name: "luxOffset", type: "number", title: "<b>Lux Calibration Offset</b>", description: "<i>Adjust reported lux value by adding (+) or subtracting (-) a fixed integer.</i>", defaultValue: 0
         input name: "HealthCheckInterval", type: "enum", title: "<b>Health Check Interval</b>", options: HealthCheckIntervalOpts.options, defaultValue: HealthCheckIntervalOpts.defaultValue, description: "<i>Changes how often the driver executes a Health Check to verify device online status.<br><b>Note:</b> This is a custom driver routine and is NOT the native Hubitat Elevation platform Health Check service.</i>"
@@ -150,6 +153,7 @@ void updated() {
     state.lastTraceEnabled = getSettingBool("logTraceEnable", false)
 
     initialize(false)
+    recalculateLuxOffset()
     runIn(1, "configure")
 }
 
@@ -483,27 +487,7 @@ void parse(String description) {
         case 0x0400: // Illuminance Measurement Cluster
             markDeviceOnline(clusterHex)
             if (descMap.attrInt == 0x0000 && descMap.value != null) {
-                int rawValue = Integer.parseInt(descMap.value, 16)
-                if (rawValue > 0x3FFF && descMap.value.length() == 4) {
-                    String swapped = descMap.value.substring(2, 4) + descMap.value.substring(0, 2)
-                    rawValue = Integer.parseInt(swapped, 16)
-                }
-                int calculatedLux = (rawValue > 0) ? Math.round(Math.pow(10, (rawValue - 1) / 10000.0)) : 0
-                int finalLux = Math.max(0, calculatedLux + (settings.luxOffset ?: 0))
-
-                int minLuxDelta = settings.luxDelta != null ? settings.luxDelta.toInteger() : 50
-
-                if (state.lastAcceptedLux != null) {
-                    int luxChange = Math.abs(finalLux - (state.lastAcceptedLux as int))
-                    if (luxChange < minLuxDelta) {
-                        logTrace "parse(): Lux update suppressed (${finalLux} lx vs baseline ${state.lastAcceptedLux} lx | Delta ${luxChange} < threshold ${minLuxDelta})"
-                        return
-                    }
-                }
-
-                state.lastReportedLuxRaw = rawValue
-                logDebug "parse(): Lux report accepted -> Raw Hex=${descMap.value}, Computed=${calculatedLux} lx, Final=${finalLux} lx"
-                updateAttribute("illuminance", finalLux, "lx", "physical")
+                processIlluminanceReport(descMap.value)
             }
             break
 
@@ -528,6 +512,86 @@ void parse(String description) {
         default:
             logDebug "parse(): Unhandled cluster 0x${descMap.clusterId} message -> ${descMap}"
             break
+    }
+}
+
+/* =========================================================================================
+   DEDICATED LUX PROCESSING PIPELINE
+   ========================================================================================= */
+
+private void processIlluminanceReport(String rawHex) {
+    if (!rawHex) return
+    
+    int rawValue
+    try {
+        rawValue = Integer.parseInt(rawHex, 16)
+    } catch (Exception e) {
+        logError "processIlluminanceReport(): Failed to parse raw Hex payload '${rawHex}': ${e.message}"
+        return
+    }
+
+    // Reject reserved ZCL invalid measurement value (0xFFFF)
+    if (rawValue == 0xFFFF) {
+        logDebug "processIlluminanceReport(): Sensor reported ZCL invalid measurement (0xFFFF). Ignored."
+        return
+    }
+
+    int minRawDelta = settings.softwareLuxDelta != null ? settings.softwareLuxDelta.toInteger() : 25
+
+    if (state.lastAcceptedRawLux != null) {
+        int rawChange = Math.abs(rawValue - (state.lastAcceptedRawLux as int))
+        if (rawChange < minRawDelta) {
+            logTrace "processIlluminanceReport(): Suppressed insignificant raw reading (Raw=${rawValue} vs Baseline=${state.lastAcceptedRawLux} | Delta ${rawChange} < Threshold ${minRawDelta})"
+            return
+        }
+    }
+
+    // Advance accepted baseline raw state strictly once for accepted readings
+    state.lastAcceptedRawLux = rawValue
+
+    // Perform nonlinear ZCL Lux conversion
+    int calculatedLux = (rawValue > 0) ? Math.round(Math.pow(10, (rawValue - 1) / 10000.0)) : 0
+    int finalLux = Math.max(0, calculatedLux + (settings.luxOffset ?: 0))
+    state.lastAcceptedLux = finalLux
+
+    logInfo "Illuminance report accepted -> Raw ZCL=${rawValue}, Computed=${calculatedLux} lx, Final=${finalLux} lx"
+    
+    // Dispatch attribute update directly to Hubitat only if integer Lux changed
+    String currentAttrVal = device.currentValue("illuminance")?.toString()
+    String newAttrVal = finalLux.toString()
+
+    if (currentAttrVal != newAttrVal) {
+        sendEvent(
+            name: "illuminance", 
+            value: finalLux, 
+            unit: "lx", 
+            type: "physical", 
+            descriptionText: "${device.displayName} - Illuminance was set to ${finalLux} lx"
+        )
+    } else {
+        logDebug "processIlluminanceReport(): Integer Lux attribute unchanged (${finalLux} lx). Event emission skipped."
+    }
+}
+
+private void recalculateLuxOffset() {
+    if (state.lastAcceptedRawLux != null) {
+        int rawValue = state.lastAcceptedRawLux as int
+        int calculatedLux = (rawValue > 0) ? Math.round(Math.pow(10, (rawValue - 1) / 10000.0)) : 0
+        int finalLux = Math.max(0, calculatedLux + (settings.luxOffset ?: 0))
+        
+        state.lastAcceptedLux = finalLux
+        
+        String currentAttrVal = device.currentValue("illuminance")?.toString()
+        if (currentAttrVal != finalLux.toString()) {
+            logInfo "Recalculated Illuminance with new calibration offset -> Final=${finalLux} lx"
+            sendEvent(
+                name: "illuminance", 
+                value: finalLux, 
+                unit: "lx", 
+                type: "digital", 
+                descriptionText: "${device.displayName} - Illuminance recalibrated to ${finalLux} lx"
+            )
+        }
     }
 }
 
@@ -614,11 +678,6 @@ private void updateAttribute(final String attribute, final Object value, final S
     state["last_${attribute}"] = valStr
     state["lastTime_${attribute}"] = now
 
-    // Advance software baseline state strictly when illuminance event is committed
-    if (attribute == "illuminance") {
-        state.lastAcceptedLux = value as Integer
-    }
-
     final String capAttribute = attribute ? attribute.capitalize() : attribute
     final String logMsg = "${capAttribute} was set to ${value}${unit ?: ''}"
     
@@ -658,9 +717,9 @@ private Boolean getSettingBool(String key, Boolean defaultVal = false) {
     return settings[key] != null ? settings[key] as Boolean : defaultVal
 }
 
-@Field static final Map LuxSensitivityOpts = [
-    defaultValue: 50,
-    options: [ 5: "Very High (5 units - Sensitive)", 15: "High (15 units)", 30: "Medium-High (30 units)", 50: "Medium (50 units - Default)", 100: "Low (100 units)", 200: "Very Low (200 units)", 500: "Minimal (500 units)" ]
+@Field static final Map SoftwareLuxSensitivityOpts = [
+    defaultValue: 25,
+    options: [ 1: "Maximum (1 raw ZCL unit)", 5: "Very High (5 raw ZCL units)", 10: "High (10 raw ZCL units)", 25: "Balanced (25 raw ZCL units - Default)", 50: "Medium (50 raw ZCL units)", 100: "Coarse (100 raw ZCL units)" ]
 ]
 
 @Field static final Map HardwareLuxSensitivityOpts = [
