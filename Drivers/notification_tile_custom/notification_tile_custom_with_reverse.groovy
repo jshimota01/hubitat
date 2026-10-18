@@ -15,61 +15,13 @@
 *    Date        Who            What
 *    ----        ---            ----
 *    2021-01-06  thebearmay	Original version 0.1.0
-*    2021-01-07  thebearmay	Fix condition causing a loss notifications if they come in rapidly
-*    2021-01-07  thebearmay	Add alternative date format
-*    2021-01-07  thebearmay	Add last5H for horizontal display
-*    2021-01-07  thebearmay	Add leading date option
-*    2021-03-10  thebearmay	Lost span tag with class=last5
-*    2021-11-14  ArnB  2.0.0	Add capability Momentary an routine Push allowing a Dashboard switch to clear all messages. 	
-*    2021-11-15  ArnB  2.0.0	Revise logic minimizing attributes and sendevents. Allow for 5 to 20 messages in tile. Insure tile is less than 1024 	
-*    2021-11-16  ArnB  2.0.1	Fix: storing one less message than requested. 
-*					correct <br/> to <br />
-*					Restore: attribute last5H as an optional preference. 
-*    2021-11-17  ArnB  2.0.2	Add conversion logic from original version in Update routine 
-*    2021-11-17  ArnB  2.0.3	Add logic when message count shinks rather than reconfigure
-*    2021-11-18  ArnB  2.0.4	Add singleThreaded true
-*    2021-11-18  thebearmay    2.0.5 Remove unused attributes from v1.x.x
-*    2021-11-20  thebearmay    Add option to only display time
-*    2021-11-22  thebearmay    make date time format a selectable option
-*    2021-12-07  thebearmay    add "none" as a date time format
-*    2022-04-06  thebearmay    fix max message state coming back as string
-*    2022-09-15  thebearmay    issue with clean install
-*    2022-12-06  thebearmay    additional date/time format
-* 	 2025-04-03	 thebearmay	   add time/date formats, lowered mininum message count to 1
-*    2025-04-20  amithalp	   add color options
-*	 2026-04-21	 thebearmay	   v2.0.14 add a reverse fill order option
-*	 2026-04-22	 thebearmay	   v2.0.15 initialize state.lastLimit when configuring
-*    2026-04-21  jshimota      v2.0.16 added back my customizations of layout values and features
-*    2026-04-21  jshimota      v2.0.17 added switch for PRE wrapper
-* 	 2026-04-30	 jshimota      v2.0.18 Gemini fixes
-*    2026-05-03  jshimota      v2.0.19 Repair of Gemini created issues 
-*    2026-05-03  jshimota      v2.0.20 format improvement
-*    2026-07-27  jshimota      v2.0.21 Updated color default for Low/High brackets to improve high contrast legibility
-*    2026-07-27  jshimota      v2.0.22 Drop shadow trial
-*    2026-07-27  jshimota      v2.0.23 Outline trial
-*    2026-07-27  jshimota      v2.0.24 Vertical backlight trial
-*    2026-07-27  jshimota      v2.0.25 Split drop shadows: Black for [L]/[H], White for [E]/[N]
-*    2026-07-27  jshimota      v2.0.26 Updated default colors for [L] (#FFD700) and [H] (#FF6600) for vibrant contrast
-*    2026-07-27  jshimota      v2.0.27 Added enableShadow preference switch
-*    2026-08-06  jshimota      v2.0.28 Increased HTML tile length safety buffer from 950 to 1010 chars
-*    2026-08-06  jshimota      v2.0.29 Replaced per-line PRE tags with lightweight CSS pre-wrap styling
-*    2026-08-23  jshimota      v2.0.30 Integrated dynamic log handlers and sendIfChanged state manager
-*    2026-08-23  jshimota      v2.0.31 Resolved regex tag stripping bug, logsOff settings type, and sendIfChanged comparison
-*    2026-08-23  jshimota      v2.0.32 Added description text for preference switches
-*    2026-08-23  jshimota      v2.0.33 Converted font size to em units and added missing preference descriptions
-*    2026-08-23  jshimota      v2.0.34 Added description for bracket color preferences
-*    2026-08-23  jshimota      v2.0.35 Added description for Date/Time format preference selector
-*    2026-08-23  jshimota      v2.0.36 Fixed BigDecimal tileFontSize attribute type, dynamic HTML buffer limit, and CSS fallbacks
-*    2026-08-23  jshimota      v2.0.37 Minified CSS payload and shortened shadow class names to optimize tile storage capacity
-*    2026-08-23  jshimota      v2.0.38 Converted priority colors to CSS classes, optimized wrapper defaults, and stripped empty timestamp spaces
-*    2026-08-23  jshimota      v2.0.39 Option A base 10px scaling (0.625em) and string-type flexible font size input parser
 *    2026-08-23  jshimota      v2.0.41 Added once-per-day date separator header injection using Groovy native Date.format()
+*    2026-08-26  jshimota      v2.0.42 Added HTML payload interceptor inside deviceNotification to unwrap block-level app tags and enforce inline timestamp placement
+*    2026-10-17  jshimota      v2.0.43 Cleaned up log prefix formatting (Device Label; Message), decoupled msgList pruning from date headers, preserved notification history across preference updates, and implemented null-safe attribute comparison guards.
 */
-/*
-* Notification Tile (Custom) - Refactored
-*/
+
 import groovy.transform.Field
-static String version()    {  return '2.0.41'  }
+static String version()    {  return '2.0.43'  }
 
 @Field sdfList = ["ddMMMyyyy HH:mm","ddMMMyyyy HH:mm:ss","ddMMMyyyy hh:mma", "dd/MM/yyyy HH:mm:ss", "MM/dd/yyyy HH:mm:ss", "dd/MM/yyyy hh:mma", "MM/dd/yyyy hh:mma", "MM/dd HH:mm", "MM/dd h:mma", "HH:mm", "H:mm","h:mma", "HH:mm ddMMMyyyy","HH:mm:ss ddMMMyyyy","hh:mma ddMMMyyyy", "HH:mm:ss dd/MM/yyyy", "HH:mm:ss MM/dd/yyyy", "hh:mma dd/MM/yyyy ", "hh:mma MM/dd/yyyy", "HH:mm yyyy-MM-dd", "None"]
 
@@ -118,17 +70,25 @@ preferences {
 }
 
 void installed() {
+    state.msgList = []
     state.msgCount = 0
     configure()
 }
 
-void updated(){
-    if(logDebugEnable) runIn(1800, logsOff)
-    configure()
+void updated() {
+    if (logDebugEnable) runIn(1800, logsOff)
+    logDebug "updated(): Refreshing preferences and re-rendering tile..."
+    
+    sendIfChanged([name: "tileFontColor", value: existingTileFontColor ?: "white"])
+    sendIfChanged([name: "tileHorzWordPos", value: existingTileHorzWordPos ?: "left"])
+    sendIfChanged([name: "tileFontSize", value: parseFontSizeInput(existingTileFontSize).toString()])
+    
+    // Re-render tile with existing history preserved
+    renderTile()
 }
 
 void configure() {
-    logDebug "configure()"
+    logDebug "configure(): Hard reset executed"
     
     state.msgList = []
     state.msgCount = 0
@@ -184,9 +144,9 @@ def deviceNotification(String notification) {
     logDebug "deviceNotification entered: ${notification}"
     
     String rawInput = notification?.trim() ?: ""
-    logInfo "Received notification entry: ${rawInput}"
+    logInfo rawInput
 
-    if(sdfPref == null) device.updateSetting("sdfPref",[value:"ddMMMyyyy HH:mm",type:"enum"])
+    if (sdfPref == null) device.updateSetting("sdfPref", [value: "ddMMMyyyy HH:mm", type: "enum"])
     
     if (rawInput.length() > 800) {
         rawInput = rawInput.substring(0, 797) + "..."
@@ -194,6 +154,12 @@ def deviceNotification(String notification) {
 
     String tag = rawInput.find(/\[[A-Z]+\]/)
     String cleanedMsg = rawInput.replaceFirst(/\[[A-Z]+\]/, '').trim()
+
+    // --- HTML PAYLOAD INTERCEPTOR & UNWRAPPER ---
+    // Safely unwrap outer div/span block elements while preserving inner content and multiline formatting
+    if (cleanedMsg.matches(/(?si)^<(div|span)[^>]*>.*<\/(div|span)>$/)) {
+        cleanedMsg = cleanedMsg.replaceAll(/(?si)^<(div|span)[^>]*>|<\/(div|span)>$/, '').trim()
+    }
 
     String timestamp = ""
     if (sdfPref != "None") {
@@ -232,18 +198,44 @@ def deviceNotification(String notification) {
         state.msgList.add(colorized)
     }
 
-    int limit = (settings.msgLimit ?: 5).toInteger()
-    while (state.msgList.size() > limit) {
-        if (!revFill) state.msgList.removeAt(state.msgList.size() - 1) else state.msgList.removeAt(0)
+    renderTile()
+}
+
+private void renderTile() {
+    if (state.msgList == null || state.msgList.isEmpty()) {
+        configure()
+        return
     }
+
+    int limit = (settings.msgLimit ?: 5).toInteger()
+    
+    // Helper closure to count non-header notification entries
+    def countMessages = { list -> list.count { !it.toString().startsWith("<b>") } }
+
+    // Prune entries exceeding msgLimit based on non-header message count
+    while (countMessages(state.msgList) > limit) {
+        if (!revFill) {
+            state.msgList.removeAt(state.msgList.size() - 1)
+        } else {
+            state.msgList.removeAt(0)
+        }
+    }
+
+    // Clean up trailing/leading orphaned date headers
+    cleanOrphanedDateHeaders()
 
     String styleBlock = getTileStyles()
     int maxWkLength = 1020 - styleBlock.length() - 27
     if (maxWkLength < 100) maxWkLength = 100
 
     String wkTile = state.msgList.join("<br />")
-    while (wkTile.length() > maxWkLength && state.msgList.size() > 1) {
-        if (!revFill) state.msgList.removeAt(state.msgList.size() - 1) else state.msgList.removeAt(0)
+    while (wkTile.length() > maxWkLength && countMessages(state.msgList) > 1) {
+        if (!revFill) {
+            state.msgList.removeAt(state.msgList.size() - 1)
+        } else {
+            state.msgList.removeAt(0)
+        }
+        cleanOrphanedDateHeaders()
         wkTile = state.msgList.join("<br />")
     }
 
@@ -252,7 +244,22 @@ def deviceNotification(String notification) {
     state.msgCount = state.msgList.size()
 
     if (settings.create5H) {
-        sendIfChanged([name: "last5H", value: " ** " + wkTile.replaceAll("<br />"," ** ") + " ** "])
+        sendIfChanged([name: "last5H", value: " ** " + wkTile.replaceAll("<br />", " ** ") + " ** "])
+    }
+}
+
+private void cleanOrphanedDateHeaders() {
+    if (state.msgList == null || state.msgList.isEmpty()) return
+
+    // Remove orphaned date header at list boundaries if no message follows or precedes it
+    if (!revFill) {
+        while (!state.msgList.isEmpty() && state.msgList.last().toString().startsWith("<b>")) {
+            state.msgList.removeAt(state.msgList.size() - 1)
+        }
+    } else {
+        while (!state.msgList.isEmpty() && state.msgList.first().toString().startsWith("<b>")) {
+            state.msgList.removeAt(0)
+        }
     }
 }
 
@@ -313,7 +320,7 @@ void push() {
 // Custom Logging Functions
 private void logMessage(String level, String msg) {
     if (settings["log${level.capitalize()}Enable"] == true) {
-        log."${level}" "Notification Tile Driver${level == 'warn' ? ' WARNING' : level == 'error' ? ' ERROR' : ''}: ${msg}"
+        log."${level}" "${device.displayName}; ${msg}"
     }
 }
 
@@ -323,7 +330,7 @@ private void logTrace(String msg) { logMessage("trace", msg) }
 private void logWarn(String msg)  { logMessage("warn", msg) }
 private void logError(String msg) { logMessage("error", msg) }
 
-// Custom sendEvent wrapper
+// Custom sendEvent wrapper with null-safe string guards
 private void sendIfChanged(Map args) {
     if (!args || !args.name) return
     

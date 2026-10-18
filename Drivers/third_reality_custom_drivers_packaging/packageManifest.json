@@ -1,9 +1,9 @@
 {
   "packageName": "Third Reality Custom Drivers",
   "author": "James Shimota",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "minimumHEVersion": "2.4.4.156",
-  "dateReleased": "2026-10-15",
+  "dateReleased": "2026-10-17",
   "documentationLink": "https://github.com/jshimota01/hubitat",
   "communityLink": "https://community.hubitat.com/",
   "releaseNotes": "1.0.11 add new feature to Motion to support cooldown\n1.0.12 logging issues resolved in temp/humidity and outlet drivers\n1.0.13 fix logging events - remove artifical zeroing on power meter readings\n1.0.14 outlet w/power logging improved for reduced overhead\n1.0.15 further logging cleanup\n1.0.20 of night lite added hardware threshold control",
