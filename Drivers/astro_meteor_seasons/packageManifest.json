@@ -1,12 +1,13 @@
 {
   "packageName": "Astro-Meteor Seasons",
   "author": "James Shimota",
-  "version": "0.3.7",
+  "version": "0.4.1",
   "minimumHEVersion": "2.4.1",
-  "dateReleased": "2026-05-12",
+  "dateReleased": "2026-10-20",
   "documentationLink": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_meteor_seasons/README.md",
   "communityLink": "",
   "licenseFile": "",
+  "releaseNotes": "0.4.1 Converted tile to file responsive to better server dashboards.",
   "drivers": [
     {
       "id": "66926837-739f-40d0-a9d2-20e8dd004489",
@@ -15,7 +16,7 @@
       "location": "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/astro_meteor_seasons/astroMeteorSeasons.groovy",
       "required": true,
       "oauth": false,
-      "version": "0.3.7"
+      "version": "0.4.1"
     }
   ]
 }
