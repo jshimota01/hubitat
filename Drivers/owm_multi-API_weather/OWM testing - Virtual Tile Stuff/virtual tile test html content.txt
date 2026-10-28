@@ -1,0 +1,51 @@
+<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.4;">
+<div style="font-size:1.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">Currently in Dundee</div>
+<div style="display:flex;align-items:center"><img src="http://icons/myicons/OWM/30.png" style="height:2em;max-width:2.4em;object-fit:contain"><b style="font-size:1.74em;margin-left:.2em">49°F</b></div>
+<div style="font-size:.93em;color:#ddd;margin-top:-.2em">(feels like 49°F)</div>
+<div style="text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">few clouds</div>
+<div>High: 66° Low: 41°</div>
+<div style="white-space:nowrap">💦78% &nbsp;&nbsp; <img src="http://icons/myicons/wind_dir/wind-n.png" style="height:.9em;vertical-align:middle;margin-right:.1em;">2 mph</div>
+</div>
+
+
+<div style="font-family:Roboto,sans-serif;font-size:26px;line-height:1.1;">
+<div style="font-size:1.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">Currently in Dundee</div>
+<div style="display:flex;align-items:center"><img src="http://icons/myicons/OWM/30.png" style="height:2em;max-width:2.4em;object-fit:contain"><b style="font-size:1.74em;margin-left:.2em">49°F</b></div>
+<div style="font-size:.93em;color:#ddd;margin-top:-.2em">(feels like 49°F)</div>
+<div style="text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">few clouds</div>
+<div>High: 66° Low: 41°</div>
+<div style="white-space:nowrap">💦78% &nbsp;&nbsp; <img src="http://icons/myicons/wind_dir/wind-n.png" style="height:.9em;vertical-align:middle;margin-right:.1em;">2 mph</div>
+</div>
+
+```html
+<div id="viewportTest" style="font-size:16px; color:white; background:#333; padding:4px;">
+  Measuring viewport...
+</div>
+
+<script>
+(function () {
+    function measure() {
+        var el = document.getElementById("viewportTest");
+        if (!el) return;
+
+        el.innerHTML =
+            "Viewport: " +
+            document.documentElement.clientWidth + " × " +
+            document.documentElement.clientHeight + " CSS px<br>" +
+            "Window: " +
+            window.innerWidth + " × " +
+            window.innerHeight + " CSS px<br>" +
+            "Device pixel ratio: " +
+            window.devicePixelRatio;
+    }
+
+    measure();
+})();
+</script>
+```
+
+<style> table.Ac{border-collapse:Collapse;margin:Auto;background:#DFF8AAE5}.Ac tr{color:#000;text-align:Center}.Ac td{font-size:80%}.Ac th,.Ac td{border:Solid 1px #000}.Ac th{background:#009B27;color:#FFF;text-align:Center;font-size:90%}.Ac tr:nth-child(even){color:#000000;background:#80ff00}ftAc{display:block;text-align:Center;font-size:50%;color:#000000}</style><table class="Ac"><tbody><tr><th colspan="2">Date / Time Tile</th></tr></tbody><tbody><tr><td>Lux</td><td>19138</td></tr><tr><td>Season</td><td>Fall</td></tr><tr><td>GMT</td><td>-0700</td></tr><tr><td>Time Zone</td><td>PDT</td></tr><tr><td>Mode</td><td>Day</td></tr><tr><td>OWM Sunrise</td><td>7:29 AM</td></tr><tr><td>OWM Sunset</td><td>6:25 PM</td></tr></tbody></table><ftac>Last Update - 10:34 AM</ftac>
+
+<div style="background-image: url(http://icons/myicons/astro_meteor_seasons/fall.svg);background-position: center;background-repeat: no-repeat;background-size: contain;width: 100%;height: 100%;"><div style="font-family: Georgia, serif;text-align: center;position: relative;top:40%;font-size:80%;color:#654321;text-transform: uppercase;font-style: oblique;margin:0;padding:0;"><span style="font-size:100%;display:inline-block;">Fall</span></div></div>
+
+<style> table.Ac{border-collapse:Collapse;width:95%;height:95%;margin:Auto;font-family:'Brush Script MT';font-size:16px;background:#DFF8AA}.Ac tr{color:#000;text-align:Center}.Ac td{font-size:110%}.Ac th,.Ac td{border:Solid 2px #000}.Ac th{background:#009B27;color:#FFF;text-align:Center;font-size:120%}.Ac tr:nth-child(even){color:#000000;background:#80ff00}ftAc{display:block;text-align:Center;font-size:80%;color:#000000}</style><table class="Ac"><tbody><tr><th colspan="2">Date / Time Tile</th></tr></tbody><tbody><tr><td>Lux</td><td>34255</td></tr><tr><td>Season</td><td>Fall</td></tr><tr><td>GMT</td><td>-0700</td></tr><tr><td>Time Zone</td><td>PDT</td></tr><tr><td>Mode</td><td>Day</td></tr><tr><td>OWM Sunrise</td><td>7:31 AM</td></tr><tr><td>OWM Sunset</td><td>6:22 PM</td></tr></tbody></table><ftac>Last Update - 10:42 AM</ftac>

@@ -1,0 +1,40 @@
+last5
+<style>.last5{display:block;text-align:left;font-size: 0.625em;color:white;}.e{color:red}.h{color:orange}.l{color:goldenrod}.n{color:green}</style><span class='last5'><span>21:30 Sunset twilight has begun</span><br /><b>10/19</b><br /><span >00:15 Advanced Porch Lighting: Evening cutoff lights turned OFF.</span><br /><span >01:13 Advanced Porch Lighting: Lights turned OFF (Sleep Mode trigger).</span><br /><span >06:35 Advanced Porch Lighting: Morning lights turned ON.</span><br /><span >07:52 Advanced Porch Lighting: Morning lights turned OFF.</span><br /><span >17:21 Advanced Porch Lighting: Evening lights turned ON.</span><br /><span >21:30 Sunset twilight has begun</span><br /><b>10/20</b><br /><span >00:15 Advanced Porch Lighting: Evening cutoff lights turned OFF.</span><br /><span >01:11 Advanced Porch Lighting: Lights turned OFF (Sleep Mode trigger).</span><br /><span >06:35 Advanced Porch Lighting: Morning lights turned ON.</span></span>
+
+<style>.last5{display:block;white-space:pre-wrap;font-family:monospace;text-align:left;font-size:1.000em;color:white;}.e{color:red}.h{color:orange}.l{color:goldenrod}.n{color:green}</style><span class="last5"><span>🔋 Battery Summary — 10/19 13:00
+
+🔴 Poor: None
+
+🟠 Fair:
+• 52% Bedroom Button w/Temp
+• 64% Garage Rolling Door Closed Contact
+• 65% Kitchen Temp/Humidity w/Display
+• 66% Bathroom Temp/Humidity w/Display
+
+⚠️ Stale Devices: None</span></span>
+
+<style>.last5{display:block;text-align:left;font-size:1em;color:white;}.e{color:red}.h{color:orange}.l{color:goldenrod}.n{color:green}.sb{text-shadow:0 2px 2px rgba(0,0,0,.8);}.sw{text-shadow:0 2px 2px rgba(255,255,255,.6);}</style><span class="last5"><span class="n sw">ℹ️ 6:40a  Influx Backlog: 0 steady</span><br><span class="n sw">ℹ️ 6:55a  Influx Backlog: 0 steady</span><br><span class="n sw">ℹ️ 7:10a  Influx Backlog: 0 steady</span><br><span class="n sw">ℹ️ 7:25a  Influx Backlog: 0 steady</span><br><span class="n sw">ℹ️ 7:40a  Influx Backlog: 0 steady</span><br><span class="n sw">ℹ️ 7:55a  Influx Backlog: 0 steady</span><br><span class="n sw">ℹ️ 8:10a  Influx Backlog: 0 steady</span><br><span class="n sw">ℹ️ 8:25a  Influx Backlog: 0 steady</span></span>
+
+<div style="background-color:#1e242a; border-radius:6px; padding:8px 10px; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; color:#ffffff; width:100%; box-sizing:border-box;"><div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:4px; margin-bottom:6px;"><span style="color:#3498db; font-weight:bold; font-size:.8em;">Mode Status</span><span style="color:#2ecc71; font-weight:bold; font-size:.8em;">Day</span></div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; font-size:1em;"><span style="color:#a0aab2;">Control Source</span><span style="color:#00ffff; font-weight:normal;">Scheduled</span></div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:0.6em;"><span style="color:#a0aab2;">HSM</span><span style="font-weight:normal;"><span style="color:#ffffff; font-weight:bold;">DISARMED</span></span></div><div style="text-align:center; font-size:.5em; font-weight:normal; color:#808c96; padding-top:2px; border-top:1px solid rgba(255,255,255,0.05);">Updated: 09:00:01 AM</div></div>
+
+<div style="height:100%; width:100%; box-sizing:border-box; padding:4px 6px; font-family:sans-serif; background:#181818; color:#fff; border-radius:4px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
+            <span style="font-size:0.65em; font-weight:bold; color:#3498DB; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:62%;" title="Garage Door Status">Garage Door Status</span>
+            <span style="background:#2e7d32; color:#fff; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:0.60em; letter-spacing:0.5px;">CLOSED</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.65em; color:#ccc; margin:2px 0;">
+            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
+                <span style="color:#aaa; font-size:0.9em;">Closed Sensor</span>
+                <span style="background:#2e7d32; color:#fff; padding:1px 5px; border-radius:4px; font-weight:bold; font-size:0.65em; letter-spacing:0.3px;">CLOSED</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
+                <span style="color:#aaa; font-size:0.9em;">Open Sensor</span>
+                <span style="background:#2e7d32; color:#fff; padding:1px 5px; border-radius:4px; font-weight:bold; font-size:0.65em; letter-spacing:0.3px;">OPEN</span>
+            </div>
+        </div>
+        <div style="font-size:0.45em; color:#4fc3f7; border-top:1px solid #333; padding-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            Door state changed to closed <span style="color:#666;">(10/17 01:37 PM)</span>
+        </div>
+    </div>
+	
+	<div style="background-image: url(http://icons/myicons/astro_meteor_seasons/fall.svg);background-position: center;background-repeat: no-repeat;background-size: contain;width: 100%;height: 100%;"><div style="font-family: Georgia, serif;text-align: center;position: relative;top:40%;font-size:150%;color:#654321;text-transform: uppercase;font-style: oblique;margin:0;padding:0;"><span style="font-size:100%;display:inline-block;">Fall</span></div></div>

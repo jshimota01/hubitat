@@ -1,0 +1,52 @@
+	v2.8.10 10/26/26	jshimota	Fix: Restored lunar_surface.png image rendering for custom and default moon-phase image directories by removing the conditional solid-circle substitution in the SVG mask.
+	v2.8.9  10/25/26	jshimota	Targeted Fix: Moved current condition text capitalization from HTML/CSS (text-transform: capitalize) to Groovy string formatting in generateTiles(), saving HTML payload size.
+	v2.8.8  10/25/26	jshimota	Targeted Fix: Centralized effective alternate icon determination via isAltIconsActive helper to ensure both base URL and filename lookup switch atomically to OWM when altIconsEnable is true but altIconLoc is blank; updated altIconsEnable preference description for UI alignment.
+	v2.8.7  10/25/26	jshimota	Targeted Fixes: Declared missing tdaConditionImageName attribute in metadata to prevent TDA icon corruption during preference updates; aligned altIconsEnable blank path behavior with preference text (falls back to standard OWM when blank); ensured refreshImageUrlsAndTiles explicitly clears or sets fallback for empty wind paths.
+	v2.8.6  10/25/26	jshimota	Corrective Revision: Fixed altIconsEnable logic in calcIconBasePath to reliably route to OWM when disabled without mutating user setting; forced forecast condition icons (today, tom, tda) to daytime variants while preserving night icon support for current conditions; expanded refreshImageUrlsAndTiles to update current and forecast wind direction image URLs without API refresh; made moon phase SVG lunar surface fallback reliant on exact preference state instead of substring matching.
+	v2.8.5  10/25/26	jshimota	Centralized Icon & Path Repair: Fixed TinyURL setting overwrite bug, decoupled wind direction images from altIconsEnable, synchronized day/night icon selection rules across attributes and tile renderers, normalized URL directory construction with query/fragment safety, handled default vs custom moon phase filenames and lunar_surface.png SVG fallback dependencies, and implemented immediate attribute URL refresh on setting updates.
+	v2.8.4  10/22/26	jshimota	Code formatting & condition lookup refinement.
+	v2.8.3  10/22/26	jshimota	Structural currentTile Layout & Scaling Optimization: Set table to width:100%;height:100%, applied shared .c tr:nth-child(n+3) selector for 1.2em lower rows, eliminated redundant inline font styling, and ensured clean responsive em scaling.
+	v2.8.2  10/22/26	jshimota	Targeted currentTile HTML/CSS Cleanup: Removed background:#0247 and font-size scaling from .c selector to inherit dashboard base fonts; tightly grouped current temp hero with feels-like subline; set city header to 1.1em and condition/hi-lo/wind lines to 1.2em; removed table-layout:fixed, height:98%, and inline image style redundancy.
+	v2.8.1  10/22/26	jshimota	Table-Based Tile Architecture Release: Refactored currentTile and currentAlertTile into single-class HTML tables (.c and .a selectors). Enlarged current temperature hero to 2.6em and icon to 3.2em; scaled alert description font to 0.95em to fill empty vertical space; applied 3-day forecast style compression across all remaining tiles.
+	v2.8.0  10/22/26	jshimota	Global Tile Optimization Release: Refactored currentTile, currentAlertTile, and currentMoonPhaseTile using learnings from 3DayForecastTile (short selectors, inline flex containers, CSS color compression, default element layout behaviors, SVG string compaction, and strict character pruning).	v2.7.5  10/22/26	jshimota	Optimized 3DayForecastTile HTML/CSS: converted td background to #0247, replaced margin/inset CSS with height:98%, removed vertical-align:middle and object-fit:contain defaults, removed redundant font-weight:bold on row 2, and compressed cell padding while strictly preserving zero-rain content (💧0%).
+	v2.7.4  10/22/26	jshimota	Optimized 3DayForecastTile HTML/CSS payload length: renamed .fcTable class selector to .f, converted rgba() background to 8-digit hex (#0f233c73), removed redundant CSS properties (border-collapse, max-width), saving ~89 characters per render.
+	v2.7.3  10/22/26	jshimota	Refined 3DayForecastTile vertical spacing: tightened td padding from .15em to .08em and added .25em bottom inset via margin-bottom and height calc while keeping 4.2em icon scale.
+	v2.7.2  10/22/26	jshimota	Simplified 3DayForecastTile HTML by removing <colgroup> block and utilizing table-layout:fixed for equal-width forecast columns, saving 94 characters per render.
+	v2.7.1  10/22/26	jshimota	Refactored appendTileDebug helper to calculate and report exact debug-free tile HTML length. Optimized 3DayForecastTile HTML/CSS: replaced .fcT span with bold tags and compacted styling declarations.
+	v2.7.0  10/22/26	jshimota	Comprehensive HTML dashboard tile refactoring: unified tileBaseFontSizeEm base font scaling across currentTile, currentAlertTile, and currentMoonPhaseTile; replaced px/rem/vw/vh sizing with relative .em multipliers; implemented exact runtime character-length calculation to enforce strict 1,024-char limit for currentAlertTile.
+	v2.6.5  10/22/26	jshimota	Optimized 3DayForecastTile HTML/CSS: removed redundant fcCol and fcDay class attributes, implemented border-collapse:separate with border-spacing:.2em 0 for column gaps, and scoped cell backgrounds via .fcTable td to reduce generated character count.
+	v2.6.4  10/22/26	jshimota	Refined 3DayForecastTile styling: added <colgroup> for 28%/24%/24%/24% column widths, enlarged icons to 4.2em, scaled day-label row to 1.1em (.fcDay), and applied continuous muted darker-blue column shading (.fcCol).
+	v2.6.3  10/22/26	jshimota	Visual refinement to 3DayForecastTile: enlarged forecast icons to 4.2em, emphasized day label row to 1.1em (.fcDay), and applied continuous muted darker-blue column shading (.fcCol) across all forecast cells.
+	v2.6.2  10/22/26	jshimota	Added defensive getValidTileBaseFontScale() validation helper with try/catch guard and runtime clamping (0.1-5.0) to prevent numeric conversion exceptions and out-of-bounds rendering.
+	v2.6.1  10/22/26	jshimota	Added 'Tile - Base Font size (.em)' GUI setting (0.1-5.0, default 1.0) and bound base font scale variable dynamically into 3DayForecastTile table styling.
+	v2.6.0  10/22/26	jshimota	Refactored 3DayForecastTile HTML/CSS to use inherited font scale (1em), relative cell padding (.15em), unitless line-height (1.15), and responsive icon sizing (3.8em) without fixed px/rem/vw/vh units.
+	v2.5.16 09/30/26	jshimota	didn't change version - had a small letter m in the moonphase icons.
+	v2.5.16	09/20/26	jshimota	Refactored text formatting: aligned currentWeatherSummaryText with selected humidity unit preference and fixed illuminanceUnit "none" display behavior.
+	v2.5.15	09/20/26	jshimota	Production merge release. Integrated minutely precip routines (from dev branch v2.5.14-v2.5.28-Dev), depth unit selectors, and humidity zero-division guard while maintaining v2.5.13 CIE illuminance math and fixed moon emojis.
+	v2.5.14	08/19/26	jshimota	Development branch: Minutely short-term precipitation analysis, precipNextHr attributes, and depth unit selector updates.
+	v2.5.13	09/06/26	jshimota	Fixed illuminance horizon math discontinuity at 0° altitude by offsetting daytime power curve with twilight base lux (400lx). Added safe try/catch numeric guard and updated log wording to Estimated Base Lux.
+	v2.5.12	09/06/26	jshimota	Fixed Groovy double type signature mismatches in calcCurrentIlluminance (explicit double literal primitives and BigDecimal logging setScale fix for Hubitat 2.4.4+ sandbox).
+	v2.5.11	09/06/26	jshimota	Replaced illuminance model with CIE Clear/Overcast Sky math (extends twilight down to -6° and eliminates 100% cloud zero-lux bug). Fixed Groovy clamp compatibility.
+	v2.5.10	07/31/26	jshimota	changed scheduling to be aware of day/night change so it updates 5 mins after to keep tiles aware
+	v2.5.9	07/28/26	jshimota	Added moon alt and az text to moonPhaseTile
+	v2.5.8	07/28/26	jshimota	Bug check: Cleaned up calcMoonPosition variables, aligned versions, and added text updates for moon angles in calcTextValue
+	v2.5.7	07/28/26	jshimota	Added independent calcMoonPosition routine dispatches for currentMoon attributes
+	v2.5.6	07/28/26	jshimota	Fixed location.timeZone null safety on tile date formats and corrected fallback attribute target in calcMoonPhaseSvgImage
+	v2.5.5	07/28/26	jshimota	Bug check cleanup: fixed null safe checks on generateTiles and convertWindDirectionState
+	v2.5.4	07/28/26	jshimota	Renamed ConditionImageText attributes to ConditionImageName and added .png extension to attribute values
+	v2.5.3	07/28/26	jshimota	Renamed ConditionIcon attributes to ConditionImageText across metadata, logic, and tiles
+	v2.5.2	07/28/26	jshimota	Renamed ConditionAltIcon attributes to ConditionAltImage across metadata, logic, and tiles
+	v2.5.1	07/28/26	jshimota	Renamed generic altitude references across routines/variables to sunAltitude
+	v2.5.0	07/28/26	jshimota	Renamed currentRain/currentSnow attributes to currentRainfall/currentSnowfall (and text variants)
+	v2.4.9	07/28/26	jshimota	Strictly enforce precisionPrecip scaling on zero and default values (0, 0.0, 0.00)
+	v2.4.8	07/28/26	jshimota	Separated hourly vs daily rain/snow mapping structure (daily returns direct number, current uses 1h key)
+	v2.4.7	07/28/26	jshimota	Fixed rain and snow extraction logic for current and forecast data sets
+	v2.4.6	07/28/26	jshimota	Renamed Wind Direction Icon attributes to WindDirectionImage
+	v2.4.5	07/28/26	jshimota	Fix init race condition by evaluating sun position/isDay prior to parsing forecast data
+	v2.4.4	07/28/26	jshimota	Fix race condition on forecast tile. fixed state storage of sun altitude to correct name
+	v2.4.3	07/28/26	jshimota	changed altitude and azimuth to currentSun prefixed, added currentMoon values, 
+	v2.4.2	07/28/26	jshimota	changed api log switch to logging section. renamed precisionSunAngles to precisionSunMoonAngles
+	v2.4.1	07/25/26	jshimota	Added button to allow a user to clear all schedules to help people converting
+	v2.4.0	07/25/26	jshimota	Initial public release
+	v2.3.0	07/20/26	jshimota	Integrated Moon Phase
+	v2.2.0	07/17/26	jshimota	basepath modifications

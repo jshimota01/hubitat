@@ -1,0 +1,61 @@
+<div> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <style>   body {     background: transparent;     color: black;     font-family: Arial, sans-serif;     font-size: 16px;     margin: 8px;   }    .test {     border: 1px solid #888;     border-radius: 6px;     padding: 10px;     margin-bottom: 10px;   }    .emoji {     font-family: "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;     font-size: 36px;     line-height: 1.5;   }    .label {     font-family: Arial, sans-serif;     font-size: 13px;     margin-bottom: 4px;   } </style>    <div class="test">   <div class="label">TEST 1 — Literal emoji</div>   <div class="emoji">🌧️ 🌦️ 🌧 🌂 💧</div> </div>  <div class="test">   <div class="label">TEST 2 — Numeric HTML entities</div>   <div class="emoji">🌧️ 🌦️ 🌧 🌂 💧</div> </div>  <div class="test">   <div class="label">TEST 3 — Unicode code points</div>   <div class="emoji">🌧 🌦 💧</div> </div>  <div class="test">   <div class="label">TEST 4 — Font comparison</div>   <div style="font-family:'Segoe UI Emoji';font-size:36px;">Segoe UI Emoji: 🌧️ 🌦️ 💧</div>   <div style="font-family:'Segoe UI Symbol';font-size:36px;">Segoe UI Symbol: 🌧️ 🌦️ 💧</div>   <div style="font-family:Arial,sans-serif;font-size:36px;">Arial fallback: 🌧️ 🌦️ 💧</div> </div>  </div>
+
+<div style="background:#607d8b;color:#fff;padding:10px;font-size:16px;line-height:2;text-align:left;">
+
+  <div><b>Weather Glyph Rendering Test</b></div>
+
+  <div>Water Drop: <span style="color:#60a5fa;">&#x1F4A7;</span> 0% | 50% | 100%</div>
+
+  <div>Light Bulb: <span style="color:#60a5fa;">&#x1F4A1;</span> 70%</div>
+
+  <div>Wind Gust: <span>&#x1F4A8;</span> 12 mph</div>
+
+  <div>Warning: <span style="color:#f87171;">&#x26A0;&#xFE0F;</span> Severe Weather</div>
+
+  <div>Person: &#x1F464; Sender</div>
+
+  <div>Alarm Clock: &#x23F0; 7:30 AM</div>
+
+  <div>Green Check: <span style="color:#4ade80;">&#x2705;</span> No Alerts</div>
+
+  <div>Moon Phases:
+    &#x1F311; &#x1F312; &#x1F313; &#x1F314;
+    &#x1F315; &#x1F316; &#x1F317; &#x1F318;
+  </div>
+
+  <div>Arrow Directions:
+    &#x2191;&#xFE0F;
+    &#x2197;&#xFE0F;
+    &#x2192;&#xFE0F;
+    &#x2198;&#xFE0F;
+    &#x2193;&#xFE0F;
+    &#x2199;&#xFE0F;
+    &#x2190;&#xFE0F;
+    &#x2196;&#xFE0F;
+  </div>
+
+  <hr style="border:0;border-top:1px solid #aaa;">
+
+  <div>Adjacent test: <span style="color:#60a5fa;">&#x1F4A7;</span>0%</div>
+
+  <div>Spaced test: <span style="color:#60a5fa;margin-right:4px;">&#x1F4A7;</span>0%</div>
+
+  <div>Separated test: <span style="color:#60a5fa;">&#x1F4A7;</span><span style="margin-left:4px;">0%</span></div>
+
+</div>
+
+<div style="background:#607d8b;color:white;padding:10px;">
+
+  <div style="font-family:'Segoe UI Emoji';font-size:28px;">
+    Segoe UI Emoji: 💧 💨 ⏰ 🌑 🌒 🌓 🌔
+  </div>
+
+  <div style="font-family:'Segoe UI Symbol';font-size:28px;">
+    Segoe UI Symbol: 💧 💨 ⏰ 🌑 🌒 🌓 🌔
+  </div>
+
+  <div style="font-family:Arial;font-size:28px;">
+    Arial: 💧 💨 ⏰ 🌑 🌒 🌓 🌔
+  </div>
+
+</div>

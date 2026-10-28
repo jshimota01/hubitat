@@ -1,0 +1,112 @@
+<style> table.Ah{border-collapse:Collapse;width:90%;margin:Auto;font-family:Palatino;background:#D9ECB1}.Ah tr{color:#000;text-align:Center}.Ah td{background:#0000001A;font-size:50%}.Ah th,.Ah td{border:Solid 1px #000}tiAh{display:block;color:#000;font-size:50%;font-family:Palatino;text-align:Center;padding:1px}.Ah th{background:#8080FF;color:#000;text-align:Center;font-size:50%}.Ah tr:nth-child(even){color:#ffffff;background:#40b0ac}hAh1{color:#0d0;font-size:65%}hAh2{color:#f00;font-size:65%}hAh6{color:#008000}hAh7{color:#ca6f1e}</style><tiah>Presence Devices</tiah><table class="Ah"><tbody><tr><th>Device</th><th>State</th></tr></tbody><tbody><tr><td>Mode - Home</td><td><hah1>📌</hah1></td></tr><tr><td>Owntracks Jim - Home</td><td><hah1>📌</hah1></td></tr><tr><td>Pixel 9 - Home</td><td><hah1>📌</hah1></td></tr><tr><td>Alexa Mode - Home</td><td><hah1>📌</hah1></td></tr></tbody></table>
+
+<style> table.Ah{border-collapse:Collapse;margin:Auto;font-family:Palatino;background:#D9ECB1}.Ah tr{color:#000;text-align:Center}.Ah td{background:#0000001A;font-size:50%}.Ah th,.Ah td{border:Solid 1px #000}tiAh{display:block;color:#000;font-size:50%;font-family:Palatino;text-align:Center;padding:1px}.Ah th{background:#8080FF;color:#000;text-align:Center;font-size:50%}.Ah tr:nth-child(even){color:#ffffff;background:#40b0ac}hAh1{color:#0d0;font-size:65%}hAh2{color:#f00;font-size:65%}hAh6{color:#008000}hAh7{color:#ca6f1e}</style><tiah>Presence Devices</tiah><table class="Ah"><tbody><tr><th>Device</th><th>State</th></tr></tbody><tbody><tr><td>Mode - Home</td><td><hah1>📌</hah1></td></tr><tr><td>Owntracks Jim - Home</td><td><hah1>📌</hah1></td></tr><tr><td>Pixel 9 - Home</td><td><hah1>📌</hah1></td></tr><tr><td>Alexa Mode - Home</td><td><hah1>📌</hah1></td></tr></tbody></table>
+
+<style>
+    table.Ah {
+        border-collapse: Collapse;
+        margin: Auto;
+        font-family: Palatino;
+        background: #D9ECB1
+    }
+
+    .Ah tr {
+        color: #000;
+        text-align: Center
+    }
+
+    .Ah td {
+        background: #0000001A;
+        font-size: 50%
+    }
+
+    .Ah th,
+    .Ah td {
+        border: Solid 1px #000
+    }
+
+    tiAh {
+        display: block;
+        color: #000;
+        font-size: 50%;
+        font-family: Palatino;
+        text-align: Center;
+        padding: 1px
+    }
+
+    .Ah th {
+        background: #8080FF;
+        color: #000;
+        text-align: Center;
+        font-size: 50%
+    }
+
+    .Ah tr:nth-child(even) {
+        color: #ffffff;
+        background: #40b0ac
+    }
+
+    hAh1 {
+        color: #0d0;
+        font-size: 65%
+    }
+
+    hAh2 {
+        color: #f00;
+        font-size: 65%
+    }
+
+    hAh6 {
+        color: #008000
+    }
+
+    hAh7 {
+        color: #ca6f1e
+    }
+</style>
+<p>
+    <tiah>Presence Devices</tiah>
+</p>
+<table class="Ah">
+    <thead>
+        <tr>
+            <th>Device</th>
+            <th>State</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+    <tbody>
+        <tr>
+            <td>Mode - Home</td>
+            <td>
+                <hah1>📌</hah1>
+            </td>
+        </tr>
+        <tr>
+            <td>Owntracks Jim - Home</td>
+            <td>
+                <hah1>📌</hah1>
+            </td>
+        </tr>
+        <tr>
+            <td>Pixel 9 - Home</td>
+            <td>
+                <hah1>📌</hah1>
+            </td>
+        </tr>
+        <tr>
+            <td>Alexa Mode - Home</td>
+            <td>
+                <hah1>📌</hah1>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<table>
+    <tbody>
+        <tr>
+            <td><br></td>
+            <td><br></td>
+        </tr>
+    </tbody>
+</table>

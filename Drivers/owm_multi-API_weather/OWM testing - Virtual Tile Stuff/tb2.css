@@ -1,0 +1,153 @@
+/* Tile Builder Standard Classes Start Here */
+:root {--myUnderline-color:lime; --myGreen-color:lime; --myRed-color:red; --myOrange-color:orange}
+
+/* Alignment Control goes here - Prefix a  */
+.a0{transform:none !important}
+.a1{text-align:center}
+.a2{text-align:right;transform:translateX(-50%) !important}
+
+/* Size Control goes here - Prefix S  */
+.S0{font-size:33%}
+.S1{font-size:50%}
+.S2{font-size:75%}
+.S3{font-size:125%}
+.S4{font-size:150%}
+.S5{font-size:200%}
+.S6{font-size:300%}
+.S7{font-size:400%}
+.S8{font-size:500%}
+
+/* Background colors go here - Prefix B. */
+.B0{display:inline-block;background:black}
+.B1{display:inline-block;background:black;border-radius:50%}
+.B2{display:inline-block;background:white}
+.B3{display:inline-block;background:white;border-radius:50%}
+.B4{display:inline-block;background:var(--myGreen-color)}
+.B5{display:inline-block;background:var(--myGreen-color);border-radius:50%}
+.B6{display:inline-block;background:var(--myRed-color)}
+.B7{display:inline-block;background:var(--myRed-color);border-radius:50%}
+.B8{display:inline-block;background:var(--myOrange-color)}
+.B9{display:inline-block;background:var(--myOrange-color);border-radius:50%}
+.B10{display:inline-block;background:yellow}
+.B11{display:inline-block;background:yellow;border-radius:50%}
+
+/* Background Gradients go here */
+.G0{background:linear-gradient(#56ab2f, #a8e063)}
+.G1{background:linear-gradient(#56ab2f, #a8e063);border-radius:50%}
+.G2{background:linear-gradient(#eb3349, #f45c43)}
+.G3{background:linear-gradient(#eb3349, #f45c43);border-radius:50%}
+.G4{background:linear-gradient(#E6C853 4%, #FCF48E 75%)}
+.G5{background:linear-gradient(#E6C853 4%, #FCF48E 75%);border-radius:50%}
+.G6{background:linear-gradient(#36d1dc, #5b86e5)}
+.G7{background:linear-gradient(#36d1dc, #5b86e5);border-radius:50%}
+.G8{background:linear-gradient(#bdc3c7, #2c3e50)}
+.G9{background:linear-gradient(#bdc3c7, #2c3e50);border-radius:50%}
+.G10{background:linear-gradient(limegreen,transparent),linear-gradient(90deg,skyblue,transparent), linear-gradient(-90deg,coral,transparent);background-blend-mode:screen;}
+/* Background Warning (background image) - Prefix W */
+.W0{background-image:repeating-linear-gradient(45deg, red 0px, red 5px, red 0px, yellow 5px, yellow 10px)}
+.W1{background-image:repeating-linear-gradient(45deg, red 0px, red 5px, red 0px, yellow 5px, yellow 10px);border-radius:50%}
+
+/* Animations go here - Prefix A */
+.A0 {animation:blink1 2s ease 0s infinite normal forwards} 
+@keyframes blink1{0%,50%,100% {opacity:1}25%,75% {opacity:0.1}}
+
+.A1 {animation:bounce1 2s ease 0s infinite normal forwards}@keyframes bounce1{0%{animation-timing-function:ease-in;opacity:1;transform: translate(-50%,-50%) translateY(-45px)} 24%{opacity:1} 40%{animation-timing-function:ease-in;transform: translate(-50%,-50%) translateY(-24px)}                 65% {animation-timing-function:ease-in;transform: translate(-50%,-50%) translateY(-12px)} 82%{animation-timing-function:ease-in;transform: translate(-50%,-50%) translateY(-6px)}                 93% {animation-timing-function:ease-in;transform: translate(-50%,-50%) translateY(-4px)} 25%,55%,75%,87% {animation-timing-function:ease-out;transform: translate(-50%,-50%) translateY(0px)}  100% {animation-timing-function: ease-out;opacity:1;transform: translate(-50%,-50%) translateY(0px)}}.A2 {animation:fade1 2s linear 0s infinite alternate forwards}
+@keyframes fade1{0% {opacity:0.25}100% {opacity:1}}
+
+.A3 {animation:glow1 2s ease-in-out infinite alternate}
+@keyframes glow1{from{text-shadow:0 0 5px #fff, 0 0 10px #fff, 0 0 15px #e60073} to{text-shadow:0 0 10px #fff, 0 0 15px #00FF00}}
+
+.A4 {animation:ping1 2s ease 0s infinite normal forwards}
+@keyframes ping1{0% {opacity:0.8;transform: translate(-50%,-50%) scale(0.2)} 80%{opacity:0;transform: translate(-50%,-50%) scale(1.5)} 100%{opacity:0; translate(-50%,-50%) transform:scale(2.2)}}
+
+.A5 {animation:pulse1 2s linear 0s infinite normal forwards}
+@keyframes pulse1{0%{transform: translate(-50%,-50%) scale(.75)} 50%{transform: translate(-50%,-50%) scale(1.25)} 100%{transform: translate(-50%,-50%) scale(0.75)}}
+
+.A6{animation:slide1 2s linear 0s infinite alternate-reverse}
+@keyframes slide1{0%{transform: translate(-50%,-50%) translateX(-20px)} 100%{transform: translate(-50%,-50%) translateX(20px)}}
+
+.A7{display:inline-block;animation:spin1 3s linear 0s infinite normal forwards}
+.A8{display:inline-block;animation:spin1 2s linear 0s infinite normal forwards}
+.A9{display:inline-block;animation:spin1 1s linear 0s infinite normal forwards}
+@keyframes spin1 {0% {transform: translate(-50%,-50%) rotate(0deg); transform-origin: center center} 100% {transform: translate(-50%,-50%) rotate(360deg); transform-origin: center center} }
+
+/* ***** Effects Start Here - Prefix Varies ***** */
+/* Effects Rotations - Prefix R */
+.R0{transform:translate(-50%,-50%) rotate(45deg) !important; transform-origin:center;display:inline-block}
+.R1{transform:translate(-50%,-50%) rotate(315deg) !important;transform-origin:center;display:inline-block}
+.R2{transform:translate(-50%,-50%) rotate(90deg) !important;transform-origin:center;display:inline-block}
+.R3{transform:translate(-50%,-50%) rotate(270deg) !important;transform-origin:center;display:inline-block}
+.R4{transform:translate(-50%,-50%) rotate(180deg) !important;transform-origin:center;display:inline-block}
+
+/* Effects Opacity - Prefix O*/
+.O0{opacity:0}
+.O1{opacity:0.1}
+.O2{opacity:0.2}
+.O3{opacity:0.3}
+.O4{opacity:0.4}
+.O5{opacity:0.5}
+.O6{opacity:0.6}
+.O7{opacity:0.7}
+.O8{opacity:0.8}
+.O9{opacity:0.9}
+
+/* Effects Color - Prefix C*/
+.C0{color:var(--myRed-color)}
+.C1{color:var(--myGreen-color)}
+.C2{color:var(--myOrange-color)}
+.C3{color:yellow}
+.C4{color:blue}
+.C5{color:black}
+.C6{color:white}
+.C7{color:gray}
+.C8{color:#744735}
+.C9{color:transparent}
+
+/* Effects Underline - Prefix U */
+.U0{text-decoration:underline solid var(--myUnderline-color)}
+.U1{text-decoration:underline dotted var(--myUnderline-color)}
+.U2{text-decoration:underline dashed var(--myUnderline-color)}
+.U3{text-decoration:underline wavy var(--myUnderline-color)}
+
+/* Effects Z-Index - Prefix Z */
+.Z1{z-index:1}
+.Z2{z-index:2}
+
+/* Effects Outlines - Prefix o (Lower case is deliberate) */
+.o0{outline:2px solid black;border-radius:50%}
+.o1{outline:2px solid black}
+.o2{outline:2px solid white;border-radius:50%}
+.o3{outline:2px solid white}
+.o4{outline:2px solid var(--myRed-color);border-radius:50%}
+.o5{outline:2px solid var(--myRed-color)}
+.o6{outline:2px solid var(--myGreen-color);border-radius:50%}
+.o7{outline:2px solid var(--myGreen-color)}
+.o8{outline:2px solid var(--myOrange-color);border-radius:50%}
+.o9{outline:2px solid var(--myOrange-color)}
+.o10{outline:2px solid yellow;border-radius:50%}
+.o11{outline:2px solid yellow}
+
+/* Effects Box Shadows */
+.BS0{box-shadow:0px 0px 5px 5px var(--myRed-color)}
+.BS1{box-shadow:0px 0px 5px 5px var(--myGreen-color)}
+.BS2{box-shadow:0px 0px 5px 5px var(--myOrange-color)}
+.BS3{box-shadow:0px 0px 5px 5px Yellow}
+.BS4{box-shadow:0px 0px 5px 5px Blue}
+.BS5{box-shadow:0px 0px 5px 5px Black}
+.BS6{box-shadow:0px 0px 5px 5px White}
+.BS7{box-shadow:0px 0px 5px 5px Gray}
+.BS8{box-shadow:0px 0px 5px 5px #744735}
+
+/* Effects Text Handling goes here */
+.T0{white-space:nowrap}
+.T1{padding:5px !important}
+.T2{padding:10px !important}
+.T3{padding:15px !important}
+.T4{letter-spacing:2px}
+.T5{letter-spacing:3px}
+.T6{letter-spacing:5px}
+.T7{text-shadow:5px 5px 10px #f00;}
+.T8{text-shadow:5px 5px 10px #0f0;}
+.T9{white-space:nowrap;word-spacing:10px;}
+
+/* Tile Builder Classes End Here */

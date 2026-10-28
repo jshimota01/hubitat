@@ -1,0 +1,47 @@
+apps
+377
+736
+922
+937
+941
+976
+977
+
+Devices
+48	Dining Room Third Reality Motion Sensor
+55	Bedroom Third Reality Motion Sensor
+107	Bedroom Jasco Ceiling Light Dimming Switch
+176	Kitchen Third Reality Stove Motion Sensor
+177	Office Desk Third Reality Motion Sensor
+510	Living Room Centralite Pearl Thermostat w/Temp
+577	Stairwell Lower Tuya Motion/Lux Sensor
+578	Stairwell Tuya Upper Motion/Lux Sensor
+579	Laundry Room Tuya Motion/Lux Sensor
+581	Guest Bedroom Tuya Motion/Lux Sensor
+584	Stairwell Jasco Light Dimming Switch
+608	Office Third Reality Motion/Lux Night Light
+648	Bedroom Closet Third Reality Motion Sensor
+1094	ZMA - Stairwell Motion
+1095	ZMA - Kitchen Motion
+
+
+
+
+
+
+Done:
+Centralite Thermmostat
+Third Reality Motion Sensor (Custom)	48, 55, 176, 177, 648	5
+Tuya ZG-204ZL Motion & Lux (Custom)	577, 578, 579, 581	4
+Zone Motion Advanced Child Device
+Jasco/GE 45857 Dimming Switch (Custom)	107	1
+Jasco/GE 43080 Dimming Switch (Custom)	584	1
+Third Reality Night Light (Custom)	608	1
+
+Prompt to Copy & Paste:
+    Please analyze this device driver code and locate all event log generation statements that create duplicate device names in the log output.
+    Specifically, identify any occurrences where the device name is redundant in the final log line (for example, generating Office Desk Motion: Office Desk Motion - motion was set to active).
+    In addition, locate any log output strings that begin with a lowercase character so that the first letter can be capitalized (e.g., changing 'motion was set...' to 'Motion was set...').
+    Do not make any code changes yet. Please list all occurrences of these redundancies and capitalization issues, explain what is causing them, and present your proposed fixes for review and discussion first.
+	
+	Approved. Proceed with refactor. Maintain all changelog history.  Update version as needed.  Do not delete or remove any other code, comments or data.

@@ -1,0 +1,7 @@
+/* Forces all WebViews to clear white backgrounds and use system sans-serif fonts */
+html, body {
+  background-color: transparent !important;
+  font-family: sans-serif !important;
+  margin: 0;
+  padding: 0;
+}

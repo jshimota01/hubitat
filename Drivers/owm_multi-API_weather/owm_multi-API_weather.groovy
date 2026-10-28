@@ -30,40 +30,16 @@
 	Wind Direction images are available from my repo - and if there are no wind direction images, icons are used.
 	
 	VERSIONS:
-	v2.5.16 09/30/26	jshimota	didn't change version - had a small letter m in the moonphase icons.
-	v2.5.16	09/20/26	jshimota	Refactored text formatting: aligned currentWeatherSummaryText with selected humidity unit preference and fixed illuminanceUnit "none" display behavior.
-	v2.5.15	09/20/26	jshimota	Production merge release. Integrated minutely precip routines (from dev branch v2.5.14-v2.5.28-Dev), depth unit selectors, and humidity zero-division guard while maintaining v2.5.13 CIE illuminance math and fixed moon emojis.
-	v2.5.14	08/19/26	jshimota	Development branch: Minutely short-term precipitation analysis, precipNextHr attributes, and depth unit selector updates.
-	v2.5.13	09/06/26	jshimota	Fixed illuminance horizon math discontinuity at 0° altitude by offsetting daytime power curve with twilight base lux (400lx). Added safe try/catch numeric guard and updated log wording to Estimated Base Lux.
-	v2.5.12	09/06/26	jshimota	Fixed Groovy double type signature mismatches in calcCurrentIlluminance (explicit double literal primitives and BigDecimal logging setScale fix for Hubitat 2.4.4+ sandbox).
-	v2.5.11	09/06/26	jshimota	Replaced illuminance model with CIE Clear/Overcast Sky math (extends twilight down to -6° and eliminates 100% cloud zero-lux bug). Fixed Groovy clamp compatibility.
-	v2.5.10	07/31/26	jshimota	changed scheduling to be aware of day/night change so it updates 5 mins after to keep tiles aware
-	v2.5.9	07/28/26	jshimota	Added moon alt and az text to moonPhaseTile
-	v2.5.8	07/28/26	jshimota	Bug check: Cleaned up calcMoonPosition variables, aligned versions, and added text updates for moon angles in calcTextValue
-	v2.5.7	07/28/26	jshimota	Added independent calcMoonPosition routine dispatches for currentMoon attributes
-	v2.5.6	07/28/26	jshimota	Fixed location.timeZone null safety on tile date formats and corrected fallback attribute target in calcMoonPhaseSvgImage
-	v2.5.5	07/28/26	jshimota	Bug check cleanup: fixed null safe checks on generateTiles and convertWindDirectionState
-	v2.5.4	07/28/26	jshimota	Renamed ConditionImageText attributes to ConditionImageName and added .png extension to attribute values
-	v2.5.3	07/28/26	jshimota	Renamed ConditionIcon attributes to ConditionImageText across metadata, logic, and tiles
-	v2.5.2	07/28/26	jshimota	Renamed ConditionAltIcon attributes to ConditionAltImage across metadata, logic, and tiles
-	v2.5.1	07/28/26	jshimota	Renamed generic altitude references across routines/variables to sunAltitude
-	v2.5.0	07/28/26	jshimota	Renamed currentRain/currentSnow attributes to currentRainfall/currentSnowfall (and text variants)
-	v2.4.9	07/28/26	jshimota	Strictly enforce precisionPrecip scaling on zero and default values (0, 0.0, 0.00)
-	v2.4.8	07/28/26	jshimota	Separated hourly vs daily rain/snow mapping structure (daily returns direct number, current uses 1h key)
-	v2.4.7	07/28/26	jshimota	Fixed rain and snow extraction logic for current and forecast data sets
-	v2.4.6	07/28/26	jshimota	Renamed Wind Direction Icon attributes to WindDirectionImage
-	v2.4.5	07/28/26	jshimota	Fix init race condition by evaluating sun position/isDay prior to parsing forecast data
-	v2.4.4	07/28/26	jshimota	Fix race condition on forecast tile. fixed state storage of sun altitude to correct name
-	v2.4.3	07/28/26	jshimota	changed altitude and azimuth to currentSun prefixed, added currentMoon values, 
-	v2.4.2	07/28/26	jshimota	changed api log switch to logging section. renamed precisionSunAngles to precisionSunMoonAngles
-	v2.4.1	07/25/26	jshimota	Added button to allow a user to clear all schedules to help people converting
-	v2.4.0	07/25/26	jshimota	Initial public release
-	v2.3.0	07/20/26	jshimota	Integrated Moon Phase
-	v2.2.0	07/17/26	jshimota	basepath modifications
+	v2.9.2  10/28/26	jshimota	MoonPhase Migration Fix: Migrated the tested OWM TEST v1.0.30 SVG generation logic into production, restoring compact path syntax, lunar image markup, and solid #000c shading; retained the TEST near-new-moon special case and lunar_surface.png path handling.
+	v2.9.1  10/28/26	jshimota	Tile Reliability Fixes: Forecast precipitation now falls back to stored converted attributes when API maps omit rain/snow; debug badge length is measured from the badge-free HTML and alert description budgeting uses the actual badge length rather than a hard-coded estimate.
+	v2.9.0  10/28/26	jshimota	Tile Migration Release: Transferred the validated Alerts, Currently, Forecast, and MoonPhase tile HTML/CSS from OWM TEST v1.0.30 while preserving production weather processing and the v2.8.10 Moon Phase SVG rendering fix.
 	v2.1.0	07/15/26	jshimota	start point
+
+	[KEEP-EXACT] See possible changelog.txt for past changelog history versions v2.1.1 - v2.8.9
+
 **/
 
-static String version()    {  return '2.5.16'  }
+static String version()    {  return '2.9.2'  }
 
 metadata {
     definition(
@@ -380,7 +356,7 @@ metadata {
 
         input name: "overrideLatitude", type: "decimal", title: "Base Override - Latitude", description: "Optional - Leave blank to use Hub location", required: false
         input name: "overrideLongitude", type: "decimal", title: "Base Override - Longitude", description: "Optional - Leave blank to use Hub location", required: false
-        input name: "altIconsEnable", type: "bool", title: "Base Override - Use Alternative Icons?", description: "Turn ON to use alternate icons (found in csv map within the driver), or OFF to use the standard OpenWeatherMap icons<br><b>Base Override - Icon Location MUST be filled!</b>", defaultValue: false, required: true
+        input name: "altIconsEnable", type: "bool", title: "Base Override - Use Alternative Icons?", description: "Turn ON to use alternate icons from configured path, or OFF to use standard OpenWeatherMap icons.<br><b>Note:</b> Alternate icons are only used when this is ON <i>and</i> Base Override - Icon Location is populated; if path is blank, standard OpenWeatherMap icons are used as a fallback.", defaultValue: false, required: true
         
         // Display Precision Selector Options
         input name: "precisionHumid", type: "enum", title: "Display Decimal Precision - Humidity", options: ["0": "0 Places", "1": "1 Place", "2": "2 Places"], description: "Choice of decimal precision for humidity readings in logging and tiles<br>Default: <b>0</b><br><i>EG: 1, 1.5, 1.55</i>", defaultValue: "0", required: true
@@ -410,6 +386,7 @@ metadata {
         input name: "nightInterval", type: "enum", title: "Polling - Nighttime Interval", options: ["manual": "Manual Only (via pollOWM command)", "15": "15 Minutes", "30": "30 Minutes", "60": "1 Hour", "180": "3 Hours"], description: "Polling frequency of OWM during nighttime (between sunset and sunrise)<br>Default: <b>1 Hour</b>", defaultValue: "60", required: true
 
 		// Tile Options
+        input name: "tileBaseFontSizeEm", type: "decimal", title: "Tile - Base Font size (.em)", description: "Configure base font scale multiplier in .em (Range: 0.1 - 5.0)<br>Default: <b>1.0</b>", defaultValue: 1.0, range: "0.1..5.0", required: true
         input name: "displayTileMoonPhaseSVGEnable", type: "bool", title: "Tile - SVG or PNG image use in Moon Phase Tile", description: "Choice of Moon Phase Tile image type. Enabled uses SVG, disabled uses PNG<br>Default: <b>ON</b>", defaultValue: true, required: true
         input name: "debugTileEnable", type: "bool", title: "Tile - Enable Tile Debug Info", description: "Enable to embed character count string on tiles<br>Default: <b>Off</b>", defaultValue: false, required: true
 
@@ -426,11 +403,8 @@ metadata {
 def installed() {
     logInfo "Driver Installed. Turning on initial debug logging for 30 minutes."
     device.updateSetting("logDebugEnable", [type: "bool", value: true])
-    
-    if (settings.altIconLoc == null || settings.altIconLoc.trim() == "") {
-        device.updateSetting("altIconLoc", [type: "text", value: "https://tinyurl.com/icnqz/"])
-    }
 
+    // Preserve user settings; do NOT rewrite blank inputs to TinyURL
     ["humidityUnit": "%", "pressureUnit": "inHg", "illuminanceUnit": "lx", "temperatureUnit": "°F", "windSpeedUnit": "mph", "precipUnit": "inHr", "precipAccumUnit": "\"", "visibilityUnit": "miles"].each { k, v ->
         if (settings[k] == null) device.updateSetting(k, [type: "enum", value: v])
         sendIfChanged(name: k, value: v)
@@ -447,10 +421,7 @@ def updated() {
 		state.remove("sunAltitude")
 	}
 
-    if (settings.altIconLoc == null || settings.altIconLoc.trim() == "") {
-        device.updateSetting("altIconLoc", [type: "text", value: "https://tinyurl.com/icnqz/"])
-    }
-
+    // Preserve user settings; resolve base paths dynamically on use
     state.iconBasePath = calcIconBasePath(settings.altIconLoc)
     state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
     state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc)
@@ -469,6 +440,9 @@ def updated() {
     state.usedCity = null
 
     initialize()
+    
+    // Refresh all image URL attributes and dashboard tiles immediately on preference change
+    refreshImageUrlsAndTiles()
 }
 
 def initialize() {
@@ -480,6 +454,7 @@ def initialize() {
         runIn(1800, "disableDebugLogging")
     }
 
+    state.iconBasePath = calcIconBasePath(settings.altIconLoc)
     state.moonPhaseImagePath = calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
     state.windDirectionImagePath = calcWinDirImagePath(settings.altWindDirectionImageLoc)
 
@@ -522,7 +497,7 @@ def refresh() {
 }
 
 void scheduledTextValue(List dataList) {
-    logDebug "Unpacking scheduled calcTextValue arguments safely..."
+    logDebug "Unpacking scheduled calcTextValue safely..."
     if (dataList && dataList.size() >= 9) {
         Map currentData = dataList[5] instanceof Map ? dataList[5] : [:]
         Map todayData   = dataList[6] instanceof Map ? dataList[6] : [:]
@@ -627,17 +602,45 @@ private void updateDynamicSchedules(long sunriseEpoch, long sunsetEpoch) {
     runIn(delaySeconds, "scheduledPoll", [overwrite: true])
 }
 
+private BigDecimal getValidTileBaseFontScale() {
+    if (settings.tileBaseFontSizeEm == null) return 1.0
+    try {
+        double rawVal = settings.tileBaseFontSizeEm.toDouble()
+        double clampedVal = Math.max(0.1d, Math.min(5.0d, rawVal))
+        return BigDecimal.valueOf(clampedVal).setScale(2, java.math.RoundingMode.HALF_UP)
+    } catch (Exception e) {
+        logWarn "Invalid numeric format for tileBaseFontSizeEm ('${settings.tileBaseFontSizeEm}'). Defaulting font scale to 1.0"
+        return 1.0
+    }
+}
+
+/**
+ * Capitalizes the first letter of each word in a string cleanly.
+ * Handles null/empty inputs and multi-word strings safely.
+ */
+private String capitalizeWords(String text) {
+    if (!text) return ""
+    return text.tokenize(' ').collect { word ->
+        word.length() > 1 ? word.substring(0, 1).toUpperCase() + word.substring(1) : word.toUpperCase()
+    }.join(' ')
+}
+
 void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
     String tUnit = settings.temperatureUnit ?: "°F"
     String wUnit = settings.windSpeedUnit ?: "mph"
     String cityName = state.usedCity ?: "Local Area"
     TimeZone tz = location?.timeZone ?: TimeZone.getDefault()
+    BigDecimal tileBaseFontScale = getValidTileBaseFontScale()
     
+    // The badge reports the exact character count of the tile HTML before the badge is appended.
+    // The badge itself is deliberately excluded from the reported length.
+    def tileDebugBadge = { int pureTileLen ->
+        return "<div style='position:absolute;top:.1em;right:.2em;font-size:.6em;color:#fff;background:#000a;padding:.1em .2em;border-radius:.2em;z-index:99;'>Len:${pureTileLen}</div>"
+    }
     def appendTileDebug = { String bodyHtml ->
-        if (settings.debugTileEnable != true) return bodyHtml + "</div>"
-        int actualContentLen = bodyHtml.length() + 6
-        String footerStart = "<div style='position:absolute;top:2px;right:4px;font-size:.6em;color:#fff;background:rgba(0,0,0,0.6);padding:1px 4px;border-radius:3px;z-index:99;'>Len:"
-        return bodyHtml + footerStart + "${actualContentLen}</div></div>"
+        if (settings.debugTileEnable != true) return bodyHtml
+        int pureTileLen = bodyHtml.length()
+        return bodyHtml + tileDebugBadge(pureTileLen)
     }
 
 	// SECTION 1: currentTile
@@ -661,33 +664,25 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
         wind      = device.currentValue("currentWindSpeed") ?: "--"
     }
 
+    // Capitalize display string in Groovy before inserting into HTML
+    cond = capitalizeWords(cond?.toString())
+
     currentIconUrl = device.currentValue("currentConditionAltImage")
     if (!currentIconUrl && currentData && currentData.weather && currentData.weather[0]) {
         Integer code = currentData.weather[0].id != null ? currentData.weather[0].id.toInteger() : 0
         String omiIcon = currentData.weather[0].icon ?: "01d"
-        String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
-        
-        if (settings.altIconsEnable == true) {
-            Map condDetails = lookupConditionDetails(code)
-            BigDecimal currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
-            boolean isDay = (currentSunAlt >= -0.833)
-            String iconFilename = isDay ? condDetails.altDay : condDetails.altNight
-            currentIconUrl = "${basePath}${iconFilename}"
-        } else {
-            currentIconUrl = "${basePath}${omiIcon}.png"
-        }
+        currentIconUrl = constructConditionIconUrl(code, omiIcon, "current")
     } else if (!currentIconUrl) {
         String imgName = device.currentValue("currentConditionImageName")?.toString() ?: "01d.png"
         String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
-        currentIconUrl = "${basePath}${imgName}"
+        currentIconUrl = appendFilenameToUrl(basePath, imgName)
     }
 
+    // Decoupled from altIconsEnable: display wind direction image whenever a valid image URL exists
     String windIconDisplay = "💨"
-    if (settings.altIconsEnable == true) {
-        String windIconUrl = device.currentValue("currentWindDirImageUrl") ?: ""
-        if (windIconUrl != "") {
-            windIconDisplay = "<img src='${windIconUrl}' style='height:.9em;vertical-align:middle;margin-right:.1em;'>"
-        }
+    String windIconUrl = device.currentValue("currentWindDirImageUrl") ?: ""
+    if (windIconUrl != "") {
+        windIconDisplay = "<img src='${windIconUrl}'>"
     }
 
     String sT  = (temp instanceof BigDecimal) ? temp.setScale(0, java.math.RoundingMode.HALF_UP) : temp
@@ -696,13 +691,8 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
     String sL  = (lo instanceof BigDecimal) ? lo.setScale(0, java.math.RoundingMode.HALF_UP) : lo
     String sW  = (wind instanceof BigDecimal) ? wind.setScale(0, java.math.RoundingMode.HALF_UP) : wind
 
-    String currentBodyHtml = "<div style='color:#fff;display:flex;flex-direction:column;justify-content:space-around;align-items:center;height:100%;box-sizing:border-box;overflow:hidden;padding:.1em;line-height:1;text-align:center;font-size:.7em'>" +
-        "<div style='font-size:1.07em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%'>Currently in ${cityName}</div>" +
-        "<div style='display:flex;align-items:center'><img src='${currentIconUrl}' style='height:2em;max-width:2.4em;object-fit:contain'><b style='font-size:1.74em;margin-left:.2em'>${sT}${tUnit}</b></div>" +
-        "<div style='font-size:.93em;color:#ddd;margin-top:-.2em'>(feels like ${sFL}${tUnit})</div>" +
-        "<div style='text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%'>${cond}</div>" +
-        "<div>High: ${sH}° Low: ${sL}°</div>" +
-        "<div style='white-space:nowrap'>💦${hum}% &nbsp;&nbsp; ${windIconDisplay}${sW} ${wUnit}</div>"
+    String currentBodyHtml = "<style>.z{container-type:inline-size;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-around;align-items:center;text-align:center;font-size:${tileBaseFontScale}em;line-height:1.1}.q{font-size:1.15em;font-weight:bold}.w{display:flex;align-items:center;justify-content:center;gap:.1em}.w img{width:3em;height:3em;object-fit:contain}.n{font-size:2em;font-weight:bold}.f{font-size:.85em}.h{font-size:1.05em}.b img{height:1em;vertical-align:middle}@container (min-width:20em){.w img{width:4.5em;height:4.5em}.n{font-size:3em}.f{font-size:1.1em}.r{font-size:1.8em}.h{font-size:1.65em}.b{font-size:1.5em}}</style>" +
+    "<div class='z'><div class='q'>Currently in ${cityName}</div><div class='w'><img src='${currentIconUrl}'><span class='n'>${sT}${tUnit}</span></div><div class='f'>(feels like ${sFL}${tUnit})</div><div class='r'>${cond}</div><div class='h'>High: ${sH}° Low: ${sL}°</div><div class='b'>💧 ${hum}% &nbsp;|&nbsp; ${windIconDisplay} ${sW} ${wUnit}</div></div>"
 
     sendIfChanged(name: "currentTile", value: appendTileDebug(currentBodyHtml))
 
@@ -710,21 +700,12 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
 	String day1Name = (tomData && tomData.dt) ? new Date(tomData.dt * 1000L).format("EEE", tz) : "Tom"
 	String day2Name = (tdaData && tdaData.dt) ? new Date(tdaData.dt * 1000L).format("EEE", tz) : "TDA"
 	String pUnit = (settings.precipAccumUnit == "none" || settings.precipAccumUnit == null) ? "" : settings.precipAccumUnit
-	String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
 
 	String cIcon = device.currentValue("currentConditionAltImage") ?: ""
 	if (!cIcon && currentData && currentData.weather && currentData.weather[0]) {
 		Integer code = currentData.weather[0].id != null ? currentData.weather[0].id.toInteger() : 0
 		String omiIcon = currentData.weather[0].icon ?: "01d"
-		if (settings.altIconsEnable == true) {
-			Map condDetails = lookupConditionDetails(code)
-			BigDecimal currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
-			boolean isDay = (currentSunAlt >= -0.833)
-			String iconFilename = isDay ? condDetails.altDay : condDetails.altNight
-			cIcon = "${basePath}${iconFilename}"
-		} else {
-			cIcon = "${basePath}${omiIcon}.png"
-		}
+		cIcon = constructConditionIconUrl(code, omiIcon, "current")
 	}
 
 	def extractPrecipNum = { Map src, String key ->
@@ -739,29 +720,30 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
 		if (!iconUrl && sourceMap && sourceMap.weather && sourceMap.weather[0]) {
 			Integer code = sourceMap.weather[0].id != null ? sourceMap.weather[0].id.toInteger() : 0
 			String omiIcon = sourceMap.weather[0].icon ?: "01d"
-			if (settings.altIconsEnable == true) {
-				Map condDetails = lookupConditionDetails(code)
-				BigDecimal currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
-				boolean isDay = (prefix == "today") ? (currentSunAlt >= -0.833) : true
-				String iconFilename = isDay ? condDetails.altDay : condDetails.altNight
-				iconUrl = "${basePath}${iconFilename}"
-			} else {
-				iconUrl = "${basePath}${omiIcon}.png"
-			}
+			iconUrl = constructConditionIconUrl(code, omiIcon, prefix)
 		}
- 		String desc = sourceMap.weather ? sourceMap.weather[0].description : (device.currentValue("${prefix}ConditionTypeDesc") ?: "--")
-    
-		if (desc && desc != "--") {
-			desc = desc.replace(" ", "<br>")
-		}
+		String desc = sourceMap.weather ? sourceMap.weather[0].description : (device.currentValue("${prefix}ConditionTypeDesc") ?: "--")
+		if (desc && desc != "--") desc = capitalizeWords(desc.toString()).replace(" ", "<br>")
 
 		def fHi = sourceMap.temp?.max != null ? convertKelvin(sourceMap.temp.max) : (device.currentValue("${prefix}TempMax") ?: "--")
 		def fLo = sourceMap.temp?.min != null ? convertKelvin(sourceMap.temp.min) : (device.currentValue("${prefix}TempMin") ?: "--")
 		def pop = sourceMap.pop != null ? sourceMap.pop : (device.currentValue("${prefix}POP") ?: 0)
 		
+		// API map values are raw depth values and need conversion. If the API map
+		// omits both fields (e.g. generateTiles() is called during an image-path
+		// preference refresh), use the already-converted stored display attributes.
+		boolean hasRainValue = sourceMap != null && sourceMap.containsKey("rain") && sourceMap.rain != null
+		boolean hasSnowValue = sourceMap != null && sourceMap.containsKey("snow") && sourceMap.snow != null
 		def rain = extractPrecipNum(sourceMap, "rain")
 		def snow = extractPrecipNum(sourceMap, "snow")
-		def precip = (rain > 0) ? convertPrecipDepth(rain) : convertPrecipDepth(snow)
+		def storedRain = device.currentValue("${prefix}Rain")
+		def storedSnow = device.currentValue("${prefix}Snow")
+		def precip
+		if (hasRainValue || hasSnowValue) {
+			precip = (rain > 0) ? convertPrecipDepth(rain) : convertPrecipDepth(snow)
+		} else {
+			precip = ((storedRain != null && storedRain.toString().isNumber()) ? storedRain.toBigDecimal() : 0) > 0 ? storedRain : storedSnow
+		}
 
 		String sHi = (fHi instanceof BigDecimal) ? fHi.setScale(0, java.math.RoundingMode.HALF_UP) : fHi
 		String sLo = (fLo instanceof BigDecimal) ? fLo.setScale(0, java.math.RoundingMode.HALF_UP) : fLo
@@ -775,12 +757,12 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
 	def d1 = getFcstData("tom", tomData)
 	def d2 = getFcstData("tda", tdaData)
 
-	String forecastBodyHtml = "<style>.fcTable{width:100%;height:100%;text-align:center;color:#fff;font-size:.55rem;border-collapse:collapse;line-height:1}.fcTable td{padding:1px;vertical-align:middle}.fcTable img{height:3.2em;vertical-align:middle}.fcD{font-size:.48rem}.fcT{font-size:.7rem;font-weight:bold}</style>" +
-    "<table class='fcTable'>" +
+	String forecastBodyHtml = "<style>.y{width:100%;height:98%;table-layout:fixed;text-align:center;color:#fff;font-size:.9em;border-spacing:.2em 0;line-height:1.15}.y td{padding:.05em;background:#0247}.y tr:first-child td{background:none}.y tr:nth-child(2){font-size:1.1em}.y img{height:3.2em}</style>" +
+    "<table class='y'>" +
     "<tr><td colspan='4'><b>${cityName}</b></td></tr>" +
     "<tr><td>Now</td><td>Today</td><td>${day1Name}</td><td>${day2Name}</td></tr>" +
     "<tr><td><img src='${cIcon}'></td><td><img src='${d0.icon}'></td><td><img src='${d1.icon}'></td><td><img src='${d2.icon}'></td></tr>" +
-    "<tr><td>Currently<br><span class='fcT'>${sT}°</span></td><td class='fcD'>${d0.desc}</td><td class='fcD'>${d1.desc}</td><td class='fcD'>${d2.desc}</td></tr>" +
+    "<tr><td>Currently<br><b>${sT}°</b></td><td>${d0.desc}</td><td>${d1.desc}</td><td>${d2.desc}</td></tr>" +
     "<tr><td>Hi/Lo</td><td><b>${d0.hi}°/${d0.lo}°</b></td><td><b>${d1.hi}°/${d1.lo}°</b></td><td><b>${d2.hi}°/${d2.lo}°</b></td></tr>" +
     "<tr><td>Chance of Rain</td><td>💧${d0.pop}%${d0.precip ? ' ' + d0.precip : ''}</td><td>💧${d1.pop}%${d1.precip ? ' ' + d1.precip : ''}</td><td>💧${d2.pop}%${d2.precip ? ' ' + d2.precip : ''}</td></tr>" +
     "</table>"
@@ -790,35 +772,37 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
 	// SECTION 3: currentAlertTile
     String alertActive = device.currentValue("currentAlert") ?: "No active alerts"
     String alertSender = device.currentValue("currentAlertSender") ?: "N/A"
-    String alertDescFull = device.currentValue("currentAlertDescFull") ?: "No active alerts"
+    String alertDescFull = device.currentValue("currentAlertDescFull") ?: "No active weather alerts from OpenWeatherMap or their sources"
     String lastPollTime = new Date().format("HH:mm", tz)
+    boolean hasAlert = !(alertActive in ["No active alerts", "N/A", ""])
+    String alertBodyHtml
+    String alertCss = "<style>.v{container-type:inline-size;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-around;align-items:center;text-align:center;line-height:1.1}.k,.j{font-weight:bold}.j{text-transform:uppercase}.l{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;font-size:.8em}.i{font-size:.9em;border-top:.05em solid #fff2;padding-top:.5em}@container (min-width:20em){.k{font-size:1.1em}.k,.l{width:94%}.j{font-size:1.8em}.l{font-size:1.2em;-webkit-line-clamp:8}.i{font-size:1.1em}}</style>"
 
-    String containerStart = "<div style='display:flex;flex-direction:column;justify-content:space-between;height:100%;box-sizing:border-box;overflow:hidden;padding:6px 4px;border-radius:6px;color:#fff;line-height:1.2;text-align:center'>"
-    String alertBodyHtml = ""
-
-    if (alertActive != "No active alerts" && alertActive != "N/A" && alertActive != "") {
-        String headerHtml = "<div style='font-size:.85em;color:#ff5555;padding-top:10px;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'><b>⚠️ ${alertActive}</b></div><div style='font-size:.5em;color:#ddd;padding:2px 0;text-align:left;flex-grow:1;overflow:hidden;'>"
-        String footerHtml = "</div><div style='display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.15);padding-top:4px;font-size:.6em;color:#bbb'><span>👤 ${alertSender.take(12)}</span><span>⏰ ${lastPollTime}</span></div></div>"
-        
-        int debugBadgeLen = (settings.debugTileEnable == true) ? 143 : 0
-        int overheadLen = containerStart.length() + headerHtml.length() + footerHtml.length() + debugBadgeLen
-        int maxDescLen = 1023 - overheadLen
-        
-        String truncatedDesc = alertDescFull
-        if (maxDescLen > 3 && alertDescFull.length() > maxDescLen) {
-            truncatedDesc = alertDescFull.take(maxDescLen - 3) + "..."
-        } else if (maxDescLen <= 3) {
-            truncatedDesc = alertDescFull.take(Math.max(0, maxDescLen))
+    if (hasAlert) {
+        String pre = alertCss + "<div class='v'><div class='k'>⚠️ ${cityName}</div><div class='j' style='color:#ff7777'>${alertActive}</div><div class='l'>"
+        String post = "</div><div class='i'>${alertSender != 'N/A' ? '👤 ' + alertSender.take(12) + ' &nbsp;|&nbsp; ' : ''}Updated ${lastPollTime}</div></div>"
+        // Budget against the actual badge markup, including the digit count. The
+        // badge reports body length only, so its own characters are not included.
+        int maxDescLen = Math.min(300, Math.max(0, 1024 - pre.length() - post.length()))
+        String desc = alertDescFull.take(maxDescLen)
+        if (alertDescFull.length() > desc.length() && desc.length() >= 3) desc = desc.take(desc.length() - 3) + "..."
+        alertBodyHtml = pre + desc + post
+        if (settings.debugTileEnable == true) {
+            while (alertBodyHtml.length() + tileDebugBadge(alertBodyHtml.length()).length() > 1024 && desc.length() > 0) {
+                int excess = alertBodyHtml.length() + tileDebugBadge(alertBodyHtml.length()).length() - 1024
+                int newLen = Math.max(0, desc.length() - Math.max(1, excess))
+                desc = alertDescFull.take(newLen)
+                if (alertDescFull.length() > desc.length() && desc.length() >= 3) desc = desc.take(desc.length() - 3) + "..."
+                alertBodyHtml = pre + desc + post
+            }
         }
-
-        alertBodyHtml = "${containerStart}${headerHtml}${truncatedDesc}${footerHtml}"
     } else {
-        alertBodyHtml = "${containerStart}<div style='font-size:0.85em;font-weight:bold;color:#5f5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;'>✅ ${cityName}<br>No Alerts</div><div style='font-size:0.8em;color:#aaa;padding:4px 4px;'>No active weather alerts from OpenWeatherMap or their sources</div><div style='display:flex;justify-content:center;border-top:1px solid rgba(255,255,255,0.15);padding-top:4px;font-size:.6em;color:#bbb'><span>Updated ${lastPollTime}</span></div></div>"
+        alertBodyHtml = alertCss + "<div class='v'><div class='k' style='color:#5f5'>☑️ ${cityName}</div><div class='j' style='color:#5f5'>No Active Alerts</div><div class='l'>No active weather alerts from OpenWeatherMap or their sources</div><div class='i'>Updated ${lastPollTime}</div></div>"
     }
 
     sendIfChanged(name: "currentAlertTile", value: appendTileDebug(alertBodyHtml))
 
-    // SECTION 4: currentMoonPhaseTile
+	// SECTION 4: currentMoonPhaseTile
     Map moonVals = calcMoonPhaseValue(todayData, tomData, tdaData)
     String liveSvg = calcMoonPhaseSvgImage(todayData, tomData, tdaData)
 
@@ -833,19 +817,14 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
     if (settings.displayTileMoonPhaseSVGEnable == true && moonSvg != "") {
         graphicDisplay = moonSvg
     } else if (moonPngUrl != "") {
-        graphicDisplay = "<img src='${moonPngUrl}' style='width:100%;height:100%;object-fit:contain;'>"
+        graphicDisplay = "<img src='${moonPngUrl}' style='width:100%;height:100%'>"
     } else {
         String moonEmoji = moonVals.emoji ?: (device.currentValue("todayMoonPhaseEmojiIcon") ?: "🌑")
-        graphicDisplay = "<div style='font-size:min(12vw,12vh,4.5em);line-height:1;'>${moonEmoji}</div>"
+        graphicDisplay = "<div style='font-size:3em;line-height:1'>${moonEmoji}</div>"
     }
 
-    String moonBodyHtml = "<div style='display:flex;justify-content:center;align-items:center;height:100%;width:100%;text-align:center;position:relative;overflow:hidden;'>" +
-                          graphicDisplay +
-                          "<div style='position:absolute; bottom:30%; width:92%; box-sizing:border-box; text-align:center; text-shadow:1px 1px 3px #000; line-height:1.15; word-wrap:break-word;'>" +
-                          "<div style='font-size:clamp(.6rem, 6vw, .8rem); font-weight:bold; color:#fff;'>${moonPhaseText}</div>" +
-                          "<div style='font-size:clamp(.48rem, 4.5vw, .62rem); color:#f2f2f2; margin-top:2px;'>Alt: ${moonAltText} &nbsp;|&nbsp; Az: ${moonAzText}</div>" +
-                          "</div>" +
-                          "</div>"
+    String moonBodyHtml = "<style>.m{height:100%;container-type:inline-size;display:grid;place-items:center}.g{position:relative;width:90%;aspect-ratio:1}.x{position:absolute;inset:0;display:grid;place-content:center;text-align:center;-webkit-text-stroke:.05em #000;font-weight:900}.p{font-size:1.5em}.o{font-size:.9em}@container(min-width:15em){.x{-webkit-text-stroke:.075em #000}.p{font-size:1.8em}.o{font-size:1.6em}}</style>" +
+                          "<div class='m'><div class='g'>" + graphicDisplay + "<div class='x'><div class='p'>${moonPhaseText}</div><div class='o'>Alt:${moonAltText} | Az:${moonAzText}</div></div></div></div>"
     sendIfChanged(name: "currentMoonPhaseTile", value: appendTileDebug(moonBodyHtml))
 }
 
@@ -921,7 +900,7 @@ private void parseOWMData(Map json) {
     
     logDebug "Parsing newly received OpenWeatherMap response data structure..."
     String calculatedCityAttr = state.usedCity ?: "Local Area"
-    String iconBasePath = state.iconBasePath ?: "https://tinyurl.com/icnqz/"
+    String iconBasePath = calcIconBasePath(settings.altIconLoc)
     
     // Digest minutely rainfall/precipitation payload
     calcMinutelyPrecipitation(json.minutely ?: [])
@@ -1072,20 +1051,7 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
             Map condDetails = lookupConditionDetails(code)
             sendIfChanged(name: "currentConditionTypeAltDesc", value: condDetails.desc)
 
-            String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
-            String finalIconUrl = ""
-
-            if (settings.altIconsEnable == true) {
-                BigDecimal currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
-                boolean isDay = (currentSunAlt >= -0.833)
-                String iconFilename = isDay ? condDetails.altDay : condDetails.altNight
-                finalIconUrl = "${basePath}${iconFilename}"
-                logDebug "Alternate Icons Enabled. Day: ${isDay} | File: ${iconFilename} | URL: ${finalIconUrl}"
-            } else {
-                finalIconUrl = "${basePath}${omiIcon}.png"
-                logDebug "Standard OpenWeatherMap Icon Used | URL: ${finalIconUrl}"
-            }
-            
+            String finalIconUrl = constructConditionIconUrl(code, omiIcon, "current")
             sendIfChanged(name: "currentConditionAltImage", value: finalIconUrl)
         }
         logTrace "sendOWMData Current section ended"
@@ -1131,14 +1097,7 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
 				Map condDetails = lookupConditionDetails(code)
 				sendIfChanged(name: "${prefix}ConditionTypeAltDesc", value: condDetails.desc)
 
-				String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
-				String finalIconUrl = ""
-
-				if (settings.altIconsEnable == true) {
-					finalIconUrl = "${basePath}${condDetails.altDay}"
-				} else {
-					finalIconUrl = "${basePath}${omiIcon}.png"
-				}
+				String finalIconUrl = constructConditionIconUrl(code, omiIcon, prefix)
 				sendIfChanged(name: "${prefix}ConditionAltImage", value: finalIconUrl)
 			}
 
@@ -1197,7 +1156,138 @@ private void sendOWMData(Map current, Map today, Map tom, Map tda) {
     logDebug "sendOWMData event parsing complete."
 }
 
-// -----------------CONVERTERS
+// -----------------CONVERTERS & PATH CENTRALIZATION
+
+/**
+ * Single, authoritative helper establishing whether alternate icon resolution should be active.
+ * Alternate icons are only considered active if altIconsEnable is true AND altIconLoc is non-blank.
+ */
+private boolean isAltIconsActive() {
+    return (settings.altIconsEnable == true && settings.altIconLoc != null && settings.altIconLoc.trim() != "")
+}
+
+/**
+ * Normalizes directory-style base URLs safely.
+ * Handles standard directories, query string parameters (?), and URL fragments (#).
+ * Supported formats:
+ * - Standard directory URLs: http(s)://domain.com/path/ -> returns http(s)://domain.com/path/
+ * - Base URLs without trailing slash: http(s)://domain.com/path -> appends '/'
+ * - URLs with query string or fragment: http(s)://domain.com/path?key=val -> preserves structure
+ */
+private String normalizeBaseDirectoryUrl(String rawUrl, String defaultFallback) {
+    String base = (rawUrl != null && rawUrl.trim() != "") ? rawUrl.trim() : defaultFallback
+    if (!base) return ""
+    
+    // Check if URL contains query strings (?) or fragments (#)
+    int queryOrFragIdx = base.indexOf('?')
+    if (queryOrFragIdx == -1) queryOrFragIdx = base.indexOf('#')
+    
+    if (queryOrFragIdx != -1) {
+        String mainPath = base.substring(0, queryOrFragIdx)
+        String queryOrFrag = base.substring(queryOrFragIdx)
+        if (!mainPath.endsWith("/")) mainPath += "/"
+        return mainPath + queryOrFrag
+    } else {
+        if (!base.endsWith("/")) base += "/"
+        return base
+    }
+}
+
+/**
+ * Appends a filename cleanly to a normalized base URL, correctly inserting the filename
+ * prior to any existing query string (?) or URL fragment (#).
+ */
+private String appendFilenameToUrl(String baseUrl, String filename) {
+    if (!baseUrl || baseUrl.trim() == "") return ""
+    if (!filename) return baseUrl
+    
+    int queryOrFragIdx = baseUrl.indexOf('?')
+    if (queryOrFragIdx == -1) queryOrFragIdx = baseUrl.indexOf('#')
+    
+    if (queryOrFragIdx != -1) {
+        String mainPath = baseUrl.substring(0, queryOrFragIdx)
+        String queryOrFrag = baseUrl.substring(queryOrFragIdx)
+        if (!mainPath.endsWith("/")) mainPath += "/"
+        return mainPath + filename + queryOrFrag
+    } else {
+        String normBase = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/"
+        return normBase + filename
+    }
+}
+
+/**
+ * Centralized Weather Condition Icon URL Construction Routine
+ * Enforces unified day/night logic and icon path resolution across attributes and tile renderers.
+ * Note: Forecast periods (today, tom, tda) are explicitly forced to daytime icons (isDay = true).
+ */
+private String constructConditionIconUrl(Integer code, String omiIcon, String periodPrefix = "current") {
+    String basePath = state.iconBasePath ?: calcIconBasePath(settings.altIconLoc)
+    
+    if (isAltIconsActive()) {
+        Map condDetails = lookupConditionDetails(code)
+        boolean isDay = true
+        
+        if (periodPrefix == "current") {
+            BigDecimal currentSunAlt = state.currentSunAltitude != null ? state.currentSunAltitude.toBigDecimal() : (device.currentValue("currentSunAltitude")?.toBigDecimal() ?: 0.0)
+            isDay = (currentSunAlt >= -0.833)
+        } else {
+            // Forecast columns (today, tom, tda) always display daytime icons regardless of hub local time
+            isDay = true
+        }
+        
+        String iconFilename = isDay ? condDetails.altDay : condDetails.altNight
+        return appendFilenameToUrl(basePath, iconFilename)
+    } else {
+        String iconFile = omiIcon ? "${omiIcon}.png" : "01d.png"
+        // Ensure standard OWM icons for forecast columns also default to daytime variants when specified
+        if (periodPrefix != "current" && iconFile.endsWith("n.png")) {
+            iconFile = iconFile.replace("n.png", "d.png")
+        }
+        return appendFilenameToUrl(basePath, iconFile)
+    }
+}
+
+/**
+ * Refreshes all stored image URL attributes and dashboard tiles immediately on preference changes
+ * without issuing external OWM API requests.
+ */
+private void refreshImageUrlsAndTiles() {
+    logDebug "Refreshing stored image URL attributes and dashboard tiles after preference update..."
+    
+    // 1. Refresh Current Condition Image URL
+    Integer cCode = device.currentValue("currentConditionCode")?.toInteger() ?: 800
+    String cOmi = device.currentValue("currentConditionImageName")?.toString()?.replace(".png", "") ?: "01d"
+    sendIfChanged(name: "currentConditionAltImage", value: constructConditionIconUrl(cCode, cOmi, "current"))
+
+    // 2. Refresh Daily Forecast Condition Image URLs
+    ["today", "tom", "tda"].each { prefix ->
+        Integer fCode = device.currentValue("${prefix}ConditionCode")?.toInteger() ?: 800
+        String fOmi = device.currentValue("${prefix}ConditionImageName")?.toString()?.replace(".png", "") ?: "01d"
+        sendIfChanged(name: "${prefix}ConditionAltImage", value: constructConditionIconUrl(fCode, fOmi, prefix))
+    }
+
+    // 3. Refresh Wind Direction Image URLs across ALL 4 periods (current, today, tom, tda)
+    ["current", "today", "tom", "tda"].each { prefix ->
+        def windDegVal = device.currentValue("${prefix}WindDeg")
+        String targetAttrPrefix = (prefix == "current") ? "current" : prefix
+        String imageAttr = (prefix == "current") ? "currentWindDirectionImage" : "${prefix}WindDirectionImage"
+        
+        if (windDegVal != null) {
+            Map wDir = convertWindDirectionState(windDegVal)
+            sendIfChanged(name: "${targetAttrPrefix}WindDirImageUrl", value: wDir.iconUrl)
+            sendIfChanged(name: imageAttr, value: wDir.icon)
+        } else {
+            // Guarantee stale URLs are cleared if no wind direction data is stored
+            sendIfChanged(name: "${targetAttrPrefix}WindDirImageUrl", value: "")
+            sendIfChanged(name: imageAttr, value: "💨")
+        }
+    }
+
+    // 4. Refresh Moon Phase Image URLs & Tiles
+    calcMoonPhaseValue()
+    calcMoonPhaseSvgImage()
+    generateTiles()
+}
 
 private Map convertDateTimeFormat(def epochSeconds, String formatOption) {
     if (epochSeconds == null) {
@@ -1499,11 +1589,12 @@ private Map convertWindDirectionState(degrees) {
     String finalIconUrl = ""
     String finalIconDisplay = chosenEmoji
 
-    String basePath = state.windDirectionImagePath ?: (calcWinDirImagePath(settings.altWindDirectionImageLoc) ?: "")
+    // Wind direction image path resolution (requires explicitly configured altWindDirectionImageLoc)
+    String basePath = state.windDirectionImagePath ?: calcWinDirImagePath(settings.altWindDirectionImageLoc)
 
     if (basePath != null && basePath.trim() != "") {
         String filename = "wind-${token.toLowerCase()}.png"
-        finalIconUrl = "${basePath}${filename}"
+        finalIconUrl = appendFilenameToUrl(basePath, filename)
         finalIconDisplay = "<img src='${finalIconUrl}' style='height:1em;vertical-align:middle;'>"
     }
     
@@ -1621,33 +1712,30 @@ private void calcMinutelyPrecipitation(List minutelyList) {
 }
 
 private String calcIconBasePath(String altIconLoc) {
-    String base = ""
-    
-    if (settings.altIconsEnable == true) {
-        base = (altIconLoc && altIconLoc.trim() != "") ? altIconLoc.trim() : "https://tinyurl.com/icnqz/"
+    if (isAltIconsActive()) {
+        String base = normalizeBaseDirectoryUrl(altIconLoc, "")
+        logDebug "Calculated Icon Base Path resolved to custom alternate: ${base}"
+        return base
     } else {
-        base = "https://openweathermap.org/img/wn/"
+        String base = "https://openweathermap.org/img/wn/"
+        logDebug "Calculated Icon Base Path resolved to default OWM: ${base}"
+        return base
     }
-    
-    if (!base.endsWith("/")) base += "/"
-    logDebug "Calculated Icon Base Path resolved to: ${base}"
-    return base
 }
 
 private String calcMoonPhaseImagePath(String altMPLoc) {
-    String base = altMPLoc ? altMPLoc.trim() : "https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/"
-    if (!base.endsWith("/")) base += "/"
+    String defaultPath = "https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/"
+    String base = normalizeBaseDirectoryUrl(altMPLoc, defaultPath)
     logDebug "Calculated Moon Phase Image base path resolved to: ${base}"
     return base
 }
 
 private String calcWinDirImagePath(String altWDLoc) {
-    String base = (altWDLoc && altWDLoc.trim() != "") ? altWDLoc.trim() : ""
-    
-    if (base != "" && !base.endsWith("/")) {
-        base += "/"
+    if (!altWDLoc || altWDLoc.trim() == "") {
+        logDebug "Calculated Wind Direction Image base path resolved to empty (no custom path configured)."
+        return ""
     }
-    
+    String base = normalizeBaseDirectoryUrl(altWDLoc, "")
     logDebug "Calculated Wind Direction Image base path resolved to: '${base}'"
     return base
 }
@@ -1673,10 +1761,11 @@ Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]
             double val = (rawVal.toDouble() % 1.0 + 1.0) % 1.0
 
             int index = (int) Math.floor((val * 8) + 0.5) % 8
+            // Filename conventions: default repository uses 'moon-phase-icon-X.png', custom repository uses 'mpX.png'
             String filename = isPathOverridden ? "mp${index}.png" : "moon-phase-icon-${index}.png"
             
-            String basePath = state.moonPhaseImagePath ?: "https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/"
-            String fullPath = "${basePath}${filename}"
+            String basePath = state.moonPhaseImagePath ?: calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
+            String fullPath = appendFilenameToUrl(basePath, filename)
             
             sendIfChanged(name: phase.pngAttr, value: fullPath)
 
@@ -1708,9 +1797,6 @@ Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]
 }
 
 String calcMoonPhaseSvgMask(double phase, String path) {
-    if (phase <= 0.02 || phase >= 0.98) {
-        return """<svg viewBox="0 0 256 256" style="width:100%;height:100%;display:block;"><circle cx="128" cy="128" r="127" fill="#121214"/></svg>"""
-    }
     double rx1 = 127.0, rx2 = 127.0
     int sf1 = 1, sf2 = 1
     if (phase <= 0.25) { rx1 *= (1 - 4 * phase) }
@@ -1718,13 +1804,15 @@ String calcMoonPhaseSvgMask(double phase, String path) {
     else if (phase <= 0.75) { rx2 *= (3 - 4 * phase); sf2 = 0 }
     else { rx2 *= (4 * phase - 3) }
 
-    return """<svg viewBox="0 0 256 256" style="width:100%;height:100%;display:block;"><filter id="b"><feGaussianBlur stdDeviation="6"/></filter><mask id="a"><path d="M128,1A${rx1.round(1)},127 180 0 $sf1 128,255A${rx2.round(1)},127 180 0 $sf2 128,1z" fill="#fff" filter="url(#b)"/></mask><radialGradient id="s"><stop offset="10%" stop-color="#0007"/><stop offset="90%" stop-color="#000d"/></radialGradient><image width="256" height="256" href="${path}lunar_surface.png"/><circle cx="128" cy="128" r="127" mask="url(#a)" fill="url(#s)"/></svg>"""
+    String surfaceUrl = appendFilenameToUrl(path, 'lunar_surface.png')
+
+    return """<svg viewBox="0 0 256 256"><filter id="b"><feGaussianBlur stdDeviation="6"/></filter><mask id="a"><path d="M128 1A${rx1.round(1)} 127 180 0 $sf1 128 255A${rx2.round(1)} 127 180 0 $sf2 128 1z" fill="#fff" filter="url(#b)"/></mask><image href="${surfaceUrl}"/><circle cx="128" cy="128" r="127" mask="url(#a)" fill="#000c"/></svg>"""
 }
 
 String calcMoonPhaseSvgImage(Map todayData = [:], Map tomData = [:], Map tdaData = [:]) {
     logDebug "Evaluating moon phase calculations for SVG output variables..."
     
-    String path = state.moonPhaseImagePath ?: "https://raw.githubusercontent.com/thebearmay/hubitat/main/moonPhaseRes/"
+    String path = state.moonPhaseImagePath ?: calcMoonPhaseImagePath(settings.altMoonPhaseImagePath)
     String todaySvg = ""
 
     def targets = [
@@ -2257,8 +2345,7 @@ private String getBeaufortText(def rawMsVal) {
     if (ms <= 1.5)  return "Light Air"
     if (ms <= 3.3)  return "Light Breeze"
     if (ms <= 5.4)  return "Gentle Breeze"
-    if (ms <= 7.9)  return "Moderate Breeze"
-    if (ms <= 10.7) return "Fresh Breeze"
+    if (ms <= 10.7) return "Moderate Breeze"
     if (ms <= 13.8) return "Strong Breeze"
     if (ms <= 17.1) return "Near Gale"
     if (ms <= 20.7) return "Gale"
