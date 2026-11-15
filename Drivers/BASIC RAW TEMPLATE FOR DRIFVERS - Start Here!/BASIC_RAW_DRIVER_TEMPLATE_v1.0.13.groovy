@@ -29,6 +29,7 @@
  **/
 /**
  * Changelog:
+ * v1.0.13   11/12/26    jshimota    Added standardized sendIfChanged() helper with persistent duplicate suppression, configurable log level, and custom event/log descriptions.
  * v1.0.12   09/14/26    jshimota    Added standardized markHealthCheckSuccess helper (isStateChange: false) to guarantee lastActivity refresh without event log clutter.
  * v1.0.11   09/03/26    jshimota    Standardized custom Health Check method naming (executeHealthCheck) and purged remaining internal ping/pong nomenclature to match Plug Driver architecture.
  * v1.0.10   08/31/26    jshimota    Updated Health Check interval option label from 'Once a Day' to 'Every 24 Hours'.
@@ -39,8 +40,8 @@
  * v1.0.0    08/30/26    jshimota    Initial release of standardized template.
  **/
 
-static String version() { return '1.0.12' }
-def timeStamp() { return "2026/09/14 10:40 AM" }
+static String version() { return '1.0.13' }
+def timeStamp() { return "2026/11/12" }
 
 import groovy.transform.Field
 
@@ -320,6 +321,36 @@ void clearAllSchedules() {
     logInfo "All scheduled jobs have been successfully cleared."
 }
 
+/**
+ * Standardized duplicate-suppressed event publisher.
+ * Checks both the live device attribute and a persistent last-sent value before
+ * publishing. Supports caller-selected logging level and custom event/log text.
+ **/
+private void sendIfChanged(final String attribute, final Object value, final String unit = null, final String logLevel = "info", final String customLabel = null, final String customLogMessage = null) {
+    final String valStr = value?.toString()
+    final String currentVal = device.currentValue(attribute)?.toString()
+
+    if (currentVal == valStr) {
+        logDebug "sendIfChanged(): Suppressed duplicate ${attribute} event (${valStr})"
+        return
+    }
+
+    final String lastVal = state["last_${attribute}"]?.toString()
+    if (lastVal == valStr) {
+        logDebug "sendIfChanged(): Suppressed identical state ${attribute} (${valStr})"
+        return
+    }
+
+    state["last_${attribute}"] = valStr
+
+    final String label = customLabel ?: attribute
+    final String logText = customLogMessage ?: "${label} now ${value}${unit ? ' ' + unit : ''}"
+    final String descriptionText = "${device.displayName} ${logText}"
+
+    logMessage(logLevel, logText)
+    sendEvent(name: attribute, value: value, unit: unit, isStateChange: true, descriptionText: descriptionText)
+}
+
 private void updateAttribute(final String attribute, final Object value, final String unit = null, final String type = null) {
     final String currentVal = device.currentValue(attribute)?.toString()
     if (currentVal == value?.toString()) return
@@ -329,6 +360,8 @@ private void updateAttribute(final String attribute, final Object value, final S
     sendEvent(name: attribute, value: value, unit: unit, type: type, descriptionText: descriptionText)
 }
 
+// Use updateAttribute() for ordinary updates. Use sendIfChanged() when persistent
+// last-sent-value suppression or custom event/log descriptions are useful.
 // Centralized Logging Engine
 private void logMessage(String level, String msg) {
     String lowerLevel = level?.toLowerCase() ?: "info"

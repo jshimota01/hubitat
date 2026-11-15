@@ -1,0 +1,6 @@
+# Local secrets and generated dependencies
+.env
+node_modules/
+npm-debug.log*
+*.log
+# NOTE: data/ is intentionally NOT ignored; release snapshots include it.

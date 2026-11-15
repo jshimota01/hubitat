@@ -1,0 +1,33 @@
+services:
+  alexa-manager-advanced:
+    user: "1027:100"
+    build: .
+    container_name: alexa-manager-advanced
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4100
+      LOG_LEVEL: info
+      AMA_API_KEY: ${AMA_API_KEY}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://alexa.e-wiz.com}
+      OAUTH_USERNAME: ${OAUTH_USERNAME:-}
+      OAUTH_PASSWORD: ${OAUTH_PASSWORD:-}
+      OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID:-}
+      OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET:-}
+      OAUTH_ALLOWED_REDIRECT_HOSTS: ${OAUTH_ALLOWED_REDIRECT_HOSTS:-}
+      INFLUX_ENABLED: ${INFLUX_ENABLED:-false}
+      INFLUX_URL: ${INFLUX_URL:-}
+      INFLUX_ORG: ${INFLUX_ORG:-}
+      INFLUX_BUCKET: ${INFLUX_BUCKET:-}
+      INFLUX_TOKEN: ${INFLUX_TOKEN:-}
+    ports:
+      - "192.168.1.23:4100:4100"
+    volumes:
+      - ./data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

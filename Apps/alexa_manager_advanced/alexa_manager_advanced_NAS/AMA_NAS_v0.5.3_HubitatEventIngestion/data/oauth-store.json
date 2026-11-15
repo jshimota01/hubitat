@@ -1,0 +1,144 @@
+{
+  "authorizationCodes": {
+    "a69481d8ae337d6ef301af6402530b0681351b593077540dd4c909962e47957d": {
+      "clientId": "ama-local-test",
+      "redirectUri": "https://alexa.e-wiz.com/ama-oauth-test",
+      "codeChallenge": "aST_r-QFZgSKG6FGFLpBpBZgIlTNfio_r-EFeJ3ZTU8",
+      "scope": "alexa::all",
+      "expiresAt": 1793823688325
+    }
+  },
+  "refreshTokens": {
+    "1f1d50abb27fe9be0562005b2d8929788421136494cfefc6a357349c251ed399": {
+      "clientId": "ama-local-test",
+      "scope": "alexa::all",
+      "createdAt": 1793823960903,
+      "expiresAt": 1809375960903
+    },
+    "73e0bd134851ae9d042dbda6f9f5a674d4cba27d4c30e3ab6b4f78ee10188ccb": {
+      "clientId": "ama-local-directive-test",
+      "scope": "smart_home",
+      "createdAt": 1793830230660,
+      "expiresAt": 1809382230660
+    },
+    "13cc277470d9089cea25250fe79779b4d6b14a086e43477a79edd5d7a65c2f75": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "createdAt": 1794338666639,
+      "expiresAt": 1809890666639
+    },
+    "6b79030b5992415405cbcaf346cad366f92df9fae8d29a1380ebc681bb84cfa4": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "createdAt": 1794339636801,
+      "expiresAt": 1809891636801
+    }
+  },
+  "accessTokens": {
+    "bf1d2f3d0c03c20ee1069b702a5fa86e36bcd6ff33b453890e8305515e2271e0": {
+      "clientId": "ama-local-test",
+      "scope": "alexa::all",
+      "expiresAt": 1793827560903
+    },
+    "b071e5351bde24bd0347ed89212a227959f539d1e3c206cf4cf5078d25e368e9": {
+      "clientId": "ama-local-directive-test",
+      "scope": "smart_home",
+      "expiresAt": 1793833830660
+    },
+    "291a75a1ae1d6e8d7ed218c40745c0c164cc341b9a3b86dd34e83ef49e918da2": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1793914798757
+    },
+    "f96d3ff0785d593b7e61efa2a6d095595bce86228e814928f808c85a5ce8db4c": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1793918099920
+    },
+    "b5f8b6feee75f3a66f75353218a993e2c153bf7da83f92a7034e5f8c46cf29ed": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1793930129731
+    },
+    "0a648b45dbdf4d13c4e142a8a4ca7a59096dc332265f9db0644977bd68e64345": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1793969322141
+    },
+    "b9098c1468345525115ce4693f86d7962a5bdbced4c0ed5f5a64b688ce59c592": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794004262651
+    },
+    "f1f26fccb87f1cedb884a36a29e6adedfec210441fd8f9e7cfa675aac4c796ab": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794042561348
+    },
+    "0f83e46f255f0f81302d86be80b66595387f8e649aa0029b39b31d970e3d8f6c": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794058253376
+    },
+    "a8324fdbd55d0fd538d38f5bec87638ce54843c5f1fda25984da7372f029eada": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794090661655
+    },
+    "a9145f45f52b2e83dd8d394294c6a6a692424cd19d89213272a23e0efa5afb74": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794125850475
+    },
+    "3560d083609b820cc700ea96be55d03d2a6bca493a89ad4d418dc21e27a829c4": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794151731655
+    },
+    "576aab616ee6517209ec57e4b8f9f5380089f25f4181666bda12cda67d666de3": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794177060890
+    },
+    "8371a24a839c0bc93bbfc8e7042d8446d4d94958aea6ef64eb084d47239e6663": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794224600973
+    },
+    "a7a7e4ac500d977aa9d254ab5ef539c8a4e4f4da199024d52ca6c1479c964fa3": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794254249724
+    },
+    "1c0e2dfbc22ed6ae3b2874d72e1a1b69519832d2f021284418ddb3930864a835": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794263459122
+    },
+    "1b0760b526b59028d89c6c9e0efc624e051ac55c531c1d360aca23ae82cdaf21": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794282208794
+    },
+    "1534bf5b99779245a20389b0f4ba396a1fa46f060c31d6ddaa566b6d9d6627af": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794286481420
+    },
+    "b29bc34031574bb1f1ca212c9e8cbee206333c55ee701eb47b38cc4cffa62ba5": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794304470308
+    },
+    "910ad71dc88ecbf4d6511014af1184cea28e73cf0905649e713895a355312c1f": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794342266639
+    },
+    "8a1893060e477c100d981857b6bfea795f3ee4f980671e1e2f736cee5c9595aa": {
+      "clientId": "amzn1.ask.skill.c9249a2f-ac4f-433d-b1d3-d40df9e85e5a",
+      "scope": "alexa::all",
+      "expiresAt": 1794343236801
+    }
+  }
+}

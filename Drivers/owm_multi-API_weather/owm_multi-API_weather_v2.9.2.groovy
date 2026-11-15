@@ -33,6 +33,17 @@
 	v2.9.2  10/28/26	jshimota	MoonPhase Migration Fix: Migrated the tested OWM TEST v1.0.30 SVG generation logic into production, restoring compact path syntax, lunar image markup, and solid #000c shading; retained the TEST near-new-moon special case and lunar_surface.png path handling.
 	v2.9.1  10/28/26	jshimota	Tile Reliability Fixes: Forecast precipitation now falls back to stored converted attributes when API maps omit rain/snow; debug badge length is measured from the badge-free HTML and alert description budgeting uses the actual badge length rather than a hard-coded estimate.
 	v2.9.0  10/28/26	jshimota	Tile Migration Release: Transferred the validated Alerts, Currently, Forecast, and MoonPhase tile HTML/CSS from OWM TEST v1.0.30 while preserving production weather processing and the v2.8.10 Moon Phase SVG rendering fix.
+																																																	 
+																																																		 
+																																																																												 
+																																																																																																										   
+																																																																																																																																  
+																																																																																																																																						
+																		 
+																																																																																			 
+																																																																																																												  
+																																																																																																												   
+																																																																															  
 	v2.1.0	07/15/26	jshimota	start point
 
 	[KEEP-EXACT] See possible changelog.txt for past changelog history versions v2.1.1 - v2.8.9
@@ -1797,6 +1808,9 @@ Map calcMoonPhaseValue(Map todayData = [:], Map tomData = [:], Map tdaData = [:]
 }
 
 String calcMoonPhaseSvgMask(double phase, String path) {
+										 
+																																	   
+	 
     double rx1 = 127.0, rx2 = 127.0
     int sf1 = 1, sf2 = 1
     if (phase <= 0.25) { rx1 *= (1 - 4 * phase) }

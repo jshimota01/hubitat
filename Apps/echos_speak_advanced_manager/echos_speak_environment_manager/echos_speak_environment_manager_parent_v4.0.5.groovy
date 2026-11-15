@@ -1,0 +1,1204 @@
+/**
+ * Application Name: Echos Speak Environment Manager
+ * Platform: Hubitat Elevation (C-7 / OS 2.4.4.156)
+ * Notes: Centralized environmental state matrix (Do Not Disturb, Mute, Volume, Display Brightness, Display Power, Adaptive Brightness), mode reconciliation, and command pacing for Echo Speaks devices.
+ * Category: Utility / Convenience / Environmental
+ **/
+/**
+ * Copyright 2026 James Shimota
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ **/
+/**
+ *  Purpose:
+ *  Provides central 5-Section Shared Settings Matrix state management per Hubitat Mode + Sleeping/Away.
+ *  Includes support for Adaptive Display Brightness handling, command queuing, and local SPA REST integration.
+ *
+ *  Changelog:
+ *  v4.0.5 - 2026/10/29 - Correct Managed Fleet Counting:
+ *                          - Uses the parent's authoritative Echo inventory to count managed physical devices for refresh reporting.
+ *                          - Removes the duplicate selectedDnis declaration in the compatibility fallback.
+ *                          - Reports refresh counts separately from the total discovered fleet.
+ *                          - Leaves Mode settling, matrix reconciliation, and command queue behavior unchanged.
+ *  v4.0.4 - 2026/10/29 - Fleet Refresh Result Clarity:
+ *                          - Separates total units found by fleet discovery from devices managed by this Environment Manager.
+ *                          - Returns found, managed, successful, and failed counts for clearer GUI feedback.
+ *                          - Clarifies refresh summary logging without changing Mode settling or matrix command behavior.
+ *  v4.0.3 - 2026/10/29 - Fleet Refresh Parent-App Compatibility Fix:
+ *                          - Removed invalid hasCommand() checks against the parent app object.
+ *                          - Calls the parent fleet refresh method directly and falls back to per-device refresh only if that method is unavailable.
+ *                          - Preserves Mode settling configuration, GUI status reporting, and existing command-queue behavior.
+ *  v4.0.2 - 2026/10/29 - Configurable Mode Change Settling Delay:
+ *                          - Added a configurable 0-300 second Mode Change Settling Delay in 30-second increments (default 120 seconds).
+ *                          - Uses the selected delay for timer scheduling, deadline reporting, and GUI status.
+ *                          - A zero-second setting restores immediate Mode-change reconciliation.
+ *                          - Preserved the existing resettable delay, sleeping-event deferral, manual Apply behavior, and command queue.
+ *  v4.0.1 - 2026/10/29 - Mode Settling Visibility & Fleet Refresh Feedback:
+ *                          - Added a resettable two-minute settling period after each Hubitat Mode change.
+ *                          - Defers automatic Mode/sleeping-triggered environment reconciliation while settling.
+ *                          - Exposes settling/reconciliation status for the HTML GUI, including completion details.
+ *                          - Added a lightweight mode-status endpoint for persistent GUI status updates.
+ *                          - Preserves explicit manual matrix Apply actions and existing command queue behavior.
+ *  v4.0.0 - 2026/09/30 - Single-Pass Fleet Refresh & Change-Aware Matrix Persistence:
+ *                          - Promoted version to v4.0.0.
+ *                          - Refactored refreshManagedDeviceStates() to delegate to parent.refreshManagedDeviceFleet() for single /api/devices call.
+ *                          - Updated apiSaveMatrix() to compare existing values vs normalized incoming values, persisting only on delta.
+ *                          - Standardized REST payload response and log terminology to changedCount.
+ *                          - Refactored fleet refresh terminology from "Device Refresh Commands Issued" to "Fleet Sync Execution Summary" to accurately describe single-pass bridge discovery and device state reconciliation.
+ *  v3.9.2 - 2026/09/30 - Request Guarding & Matrix Fetch Hardening:
+ *                          - Hardened `saveSectionData()` and `applySectionData()` with button-disabling guards during in-flight REST requests to prevent duplicate submissions.
+ *                          - Hardened `fetchMatrixData()` to validate HTTP/API success and matrix response payload integrity before mutating `workingMatrix` state.
+ *  v3.8.2 - 2026/09/30 - Concurrency & REST Integrity Architecture Refactor:
+ *                          - Promoted version to v3.8.2.
+ *                          - Added `singleThreaded: true` to app definition to enforce instance execution serialization.
+ *                          - Unified internal state handling onto `state` map, removing `atomicState` overhead.
+ *                          - Purged legacy `app.updateSetting()` calls from `apiSaveMatrix()`; `state.matrixSettings` is sole persistence store.
+ *                          - Corrected async refresh semantics: renamed log reason to "Fleet Sync Execution Summary" and separated refresh from matrix evaluation.
+ *                          - Strengthened command availability guards for Display Power (`setDisplayPower`).
+ *                          - Updated `apiRefreshFleet()` to return detailed operational execution counts (`requested`, `issued`, `failed`).
+ *  v3.8.1 - 2026/09/30 - Platform Evaluation & ChatGPT Feature Pertinence Review:
+ *                          - Promoted version to v3.8.1.
+ *                          - Verified pertinence of UI fallback handling, replacement macro alignment, and setting removal logic.
+ *                          - Retained full historical changelog across app and SPA files.
+ *
+ *                [KEEP] Prior change history is found in changelog_parent.txt (v0.0.0 - v3.7.9)
+ **/
+
+static String version() { return '4.0.5' }
+def timeStamp() { return "2026/09/30 12:00 PM" }
+
+definition(
+    name: "Echos Speak Environment Manager",
+    namespace: "jshimota",
+    author: "James Shimota",
+    description: "Centralized mode-based 5-section shared settings matrix editor and command queuing for physical Echo devices via standalone local SPA dashboard.",
+    category: "Utility",
+    parent: "jshimota:Echos Speak Advanced Manager",
+    iconUrl: "",
+    iconX2Url: "",
+    iconX3Url: "",
+    singleInstance: true,
+    singleThreaded: true,
+    oauth: true,
+    importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Apps/echos_speak_environment_manager/echos_speak_environment_manager.groovy"
+)
+
+preferences {
+    page(name: "mainPage")
+}
+
+mappings {
+    path('/ui.html')              { action: [GET: 'serveUI'] }
+    path('/api/state')            { action: [GET: 'apiGetState'] }
+    path('/api/mode-status')      { action: [GET: 'apiGetModeStatus'] }
+    path('/api/matrix')           { action: [GET: 'apiGetMatrix'] }
+    path('/api/matrix/save')      { action: [POST: 'apiSaveMatrix'] }
+    path('/api/matrix/apply')     { action: [POST: 'apiApplyMatrix'] }
+    path('/api/refresh')          { action: [POST: 'apiRefreshFleet'] }
+}
+
+def mainPage(Map pageParams = [:]) {
+    dynamicPage(name: "mainPage", title: "", install: true, uninstall: true) {
+        String currentVersion = version()
+        checkAndLogVersionDemarcation()
+        ensureAccessToken()
+
+        section() {
+            paragraph "<div style='background-color:#1A252F; color:#FFFFFF; padding:12px; border-radius:6px; text-align:center; margin-bottom:10px;'>" +
+                      "<h2 style='color:#FFFFFF; margin:0; font-size:20px; font-weight:600;'>Echos Speak Environment Manager</h2>" +
+                      "<span style='font-size:12px; opacity:0.8;'>Version ${currentVersion} (${timeStamp()})</span></div>"
+        }
+
+        section("<b>Interactive Control Dashboard</b>") {
+            if (state.accessToken) {
+                String dashboardUrl = "${fullLocalApiServerUrl}/ui.html?access_token=${state.accessToken}"
+                paragraph "Launch the standalone interactive matrix control dashboard:"
+                paragraph "<a href='${dashboardUrl}' target='_blank' style='background-color: #28a745; color: #ffffff !important; padding: 12px 20px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);'>&#128640; Open Environment Manager Dashboard</a>"
+            } else {
+                paragraph "<div style='background-color:#FADBD8; border-left:4px solid #C0392B; padding:10px; border-radius:4px; font-size:12px; color:#78281F;'>" +
+                          "&#9888;&#65039; <b>OAuth Token Missing:</b> OAuth is enabled in driver code, but a local access token has not yet been granted. Please click <b>Done</b> or enable OAuth in App Settings.</div>"
+            }
+        }
+
+        section("<b>Command Queue & Execution Settings</b>", hideable: true, hidden: true) {
+            input name: "queueDelayMs", type: "number", title: "Pacing Delay between queued commands (ms):", defaultValue: 350, range: "100..2000", required: true
+            input name: "modeChangeSettlingDelaySeconds", type: "enum", title: "Mode Change Settling Delay:", options: ["0":"0 seconds (None)", "30":"30 seconds", "60":"60 seconds (1 minute)", "90":"90 seconds (1 minute 30 seconds)", "120":"120 seconds (2 minutes)", "150":"150 seconds (2 minutes 30 seconds)", "180":"180 seconds (3 minutes)", "210":"210 seconds (3 minutes 30 seconds)", "240":"240 seconds (4 minutes)", "270":"270 seconds (4 minutes 30 seconds)", "300":"300 seconds (5 minutes)"], defaultValue: "120", required: true
+            input name: "forceStateReconcile", type: "bool", title: "Bypass State Check (Force send commands even if state matches)", defaultValue: false
+            paragraph "<hr style='border:0; border-top:1px solid #E0E0E0; margin:10px 0;'/>"
+            input name: "dryRunMode", type: "bool", title: "Enable Dry Run Mode (Calculate & log proposed changes without sending commands)", defaultValue: false, submitOnChange: true
+            input name: "btnReconcileNow", type: "button", title: "Reconcile Now (Trigger Matrix State Sync)", width: 6
+            input name: "btnClearQueue", type: "button", title: "Clear Command Queue", width: 6
+        }
+
+        section("<b>App Preferences & Logging Options</b>", hideable: true, hidden: true) {
+            input name: "showVersionInLabel", type: "bool", title: "Show Version in App Label?", defaultValue: true
+            paragraph "<hr style='border:0; border-top:1px solid #E0E0E0; margin:8px 0;'/>"
+            input name: "logInfoEnable", type: "bool", title: "Logging - Enable Info Logging", defaultValue: true, required: true
+            input name: "logErrorEnable", type: "bool", title: "Logging - Enable Error Logging", defaultValue: true, required: true
+            input name: "logWarnEnable", type: "bool", title: "Logging - Enable Warning Logging", defaultValue: true, required: true
+            input name: "logDebugEnable", type: "bool", title: "Logging - Enable Debug Logging", defaultValue: false, required: true
+            input name: "logTraceEnable", type: "bool", title: "Logging - Enable Trace Logging", defaultValue: false, required: true
+        }
+    }
+}
+
+private Boolean checkParentAvailable() {
+    if (!parent) {
+        logError "Echos Speak Advanced Manager parent application reference is unavailable."
+        return false
+    }
+    return true
+}
+
+private void ensureAccessToken() {
+    if (!state.accessToken) {
+        try {
+            createAccessToken()
+            logDebug "Generated new local access token for Environment Manager UI."
+        } catch (e) {
+            logError "Error generating local access token: ${e.message}"
+        }
+    }
+}
+
+Map jsonResponse(Map data) {
+    return render(status: 200, contentType: 'application/json', data: groovy.json.JsonOutput.toJson(data))
+}
+
+Map serveUI() {
+    if (!state.accessToken) {
+        return render(status: 403, contentType: 'text/plain', data: 'Access denied: Token missing.')
+    }
+    
+    try {
+        byte[] htmlBytes = null
+        List<String> targetFiles = ['environment_manager_ui.html', 'environment_manager_ui_v3.7.1.html']
+        
+        for (String fileName in targetFiles) {
+            try {
+                htmlBytes = downloadHubFile(fileName)
+                if (htmlBytes) break
+            } catch (Exception ignore) {}
+        }
+
+        if (!htmlBytes) {
+            String errorPage = "<html><body style='font-family:sans-serif; background:#12181f; color:#fff; padding:30px; text-align:center;'>" +
+                               "<h2>&#9888;&#65039; Environment Manager UI File Not Found</h2>" +
+                               "<p>Please ensure <code>environment_manager_ui.html</code> is uploaded to Hubitat Settings &rarr; File Manager.</p>" +
+                               "</body></html>"
+            return render(status: 404, contentType: 'text/html', data: errorPage)
+        }
+        
+        String html = new String(htmlBytes, 'UTF-8')
+        html = html.replace('__ACCESS_TOKEN__', state.accessToken)
+                   .replace('__API_BASE__', fullLocalApiServerUrl)
+                   
+        return render(status: 200, contentType: 'text/html', data: html)
+    } catch (Exception e) {
+        logError "Error serving UI: ${e.message}"
+        return render(status: 500, contentType: 'text/plain', data: "Error loading interface: ${e.message}")
+    }
+}
+
+private Map getMatrixSettingMap() {
+    if (state.matrixSettings == null || !(state.matrixSettings instanceof Map)) {
+        state.matrixSettings = [:]
+    }
+    return (Map) state.matrixSettings
+}
+
+private void setMatrixSetting(String key, Object val) {
+    Map ms = getMatrixSettingMap()
+    if (val == null) {
+        ms.remove(key)
+    } else {
+        ms[key] = val
+    }
+    state.matrixSettings = ms
+}
+
+private Object getMatrixSetting(String key, Object defaultVal = null) {
+    Map ms = getMatrixSettingMap()
+    if (ms.containsKey(key)) {
+        def v = ms[key]
+        if (v != null && v.toString() != "no_change") return v
+    }
+    def sVal = settings[key]
+    if (sVal != null && sVal.toString() != "no_change") return sVal
+    return defaultVal
+}
+
+Map apiGetState() {
+    if (!checkParentAvailable()) return jsonResponse([error: "Parent unavailable"])
+
+    Map currentDesired = state.desiredState ?: [:]
+    List deviceList = []
+
+    Map managedInventory = parent.getManagedEchoDeviceInventory() ?: [:]
+    int unmanagedCount = managedInventory ? managedInventory.values().count { entry ->
+        entry?.family?.toString()?.trim()?.toUpperCase() == "WHA"
+    } : 0
+
+    List<String> sortedDnis = selectedDnis.sort { dni ->
+        def dev = parent.getManagedChildDevice(dni)
+        return dev ? dev.displayName?.toLowerCase() : dni.toLowerCase()
+    }
+
+    sortedDnis.each { dni ->
+        def dev = parent.getManagedChildDevice(dni)
+        if (dev) {
+            Map profile = getDeviceProfile(dev)
+            Map normState = normalizeDeviceState(dev, profile)
+            Map dMap = currentDesired[dni] ?: [:]
+
+            Boolean isMuted = (dMap.mute == true || normState.actMute == "muted")
+            Boolean volInSync = isMuted || (dMap.volume == null || (normState.actVol != null && normState.actVol == dMap.volume))
+            Boolean muteInSync = (dMap.mute == null || (normState.actMute == null || (dMap.mute ? normState.actMute == "muted" : normState.actMute == "unmuted")))
+            Boolean dndInSync = (dMap.dnd == null || (normState.actDnd != null && (dMap.dnd ? normState.actDnd == "enabled" : normState.actDnd == "disabled")))
+            
+            Boolean dispInSync = true
+            if (profile.hasDisplayBrightness) {
+                if (dMap.adaptive == true) {
+                    dispInSync = (normState.actAdaptive == "on")
+                } else if (dMap.displayBrightness != null) {
+                    dispInSync = (normState.actAdaptive != "on" && normState.actDisp != null && normState.actDisp == dMap.displayBrightness)
+                }
+            }
+
+            Boolean dispPwrInSync = true
+            if (profile.hasDisplayPower && dMap.displayPower != null) {
+                dispPwrInSync = (normState.actDispPwr != null && (dMap.displayPower ? normState.actDispPwr == "on" : normState.actDispPwr == "off"))
+            }
+
+            Boolean fullySynced = volInSync && dispInSync && dispPwrInSync && muteInSync && dndInSync
+
+            deviceList << [
+                id: dni,
+                label: dev.displayName,
+                capabilities: [
+                    volume: true,
+                    mute: true,
+                    dnd: true,
+                    brightness: profile.hasDisplayBrightness,
+                    adaptive: profile.hasAdaptiveBrightness,
+                    power: profile.hasDisplayPower
+                ],
+                actual: [
+                    volume: normState.actVol,
+                    mute: normState.actMute,
+                    dnd: normState.actDnd,
+                    brightness: normState.actDisp,
+                    adaptive: normState.actAdaptive,
+                    power: normState.actDispPwr
+                ],
+                desired: [
+                    volume: dMap.volume,
+                    mute: dMap.mute,
+                    dnd: dMap.dnd,
+                    brightness: dMap.displayBrightness,
+                    adaptive: dMap.adaptive,
+                    power: dMap.displayPower
+                ],
+                synced: fullySynced
+            ]
+        }
+    }
+
+    List queue = state.commandQueue ?: []
+    String formattedSyncTime = state.lastSyncTimestamp ? state.lastSyncTimestamp : new Date().format("yyyy/MM/dd hh:mm:ss a", location.timeZone)
+
+    return jsonResponse([
+        activeMode: location.mode,
+        activePresence: (state.activeColumnOverride ?: location.mode),
+        activeColumn: (state.activeColumnOverride ?: location.mode),
+        modeSettleStatus: (state.modeSettleStatus instanceof Map) ? state.modeSettleStatus : [active: false, stage: "idle", mode: location.mode, message: "No Mode settling delay is active."],
+        lastSynced: formattedSyncTime,
+        queueDepth: queue.size(),
+        unmanagedCount: unmanagedCount,
+        devices: deviceList
+    ])
+}
+
+Map apiGetMatrix() {
+    List<String> selectedDnis = getSelectedDeviceDnis()
+    List<String> columns = getActiveColumns()
+
+    Map dndMap = [:]
+    Map muteMap = [:]
+    Map volMap = [:]
+    Map dispMap = [:]
+    Map adaptMap = [:]
+    Map dispPwrMap = [:]
+
+    selectedDnis.each { dni ->
+        Map dndDev = [:]
+        Map muteDev = [:]
+        Map volDev = [:]
+        Map dispDev = [:]
+        Map adaptDev = [:]
+        Map dispPwrDev = [:]
+
+        columns.each { col ->
+            String dndKey = "dnd_${dni}_${col}"
+            def rawDndSetting = getMatrixSetting(dndKey)
+            Boolean returnedDnd = (rawDndSetting == true || rawDndSetting?.toString() == "true")
+            dndDev[col] = returnedDnd
+
+            String muteKey = "mute_${dni}_${col}"
+            def rawMuteSetting = getMatrixSetting(muteKey)
+            Boolean returnedMute = (rawMuteSetting == true || rawMuteSetting?.toString() == "true" || rawMuteSetting?.toString()?.toLowerCase() == "muted")
+            muteDev[col] = returnedMute
+
+            def rawVol = getMatrixSetting("vol_${dni}_${col}")
+            volDev[col] = (rawVol != null && rawVol.toString().trim() != "" && rawVol.toString().isNumber()) ? rawVol.toInteger() : null
+
+            def rawDisp = getMatrixSetting("disp_${dni}_${col}")
+            dispDev[col] = (rawDisp != null && rawDisp.toString().trim() != "" && rawDisp.toString().isNumber()) ? rawDisp.toInteger() : 50
+
+            def rawAdapt = getMatrixSetting("adapt_${dni}_${col}")
+            adaptDev[col] = (rawAdapt == true || rawAdapt?.toString() == "true")
+
+            def rawPwr = getMatrixSetting("disppwr_${dni}_${col}")
+            dispPwrDev[col] = (rawPwr == null || rawPwr == true || rawPwr?.toString() == "true")
+        }
+
+        dndMap[dni] = dndDev
+        muteMap[dni] = muteDev
+        volMap[dni] = volDev
+        dispMap[dni] = dispDev
+        adaptMap[dni] = adaptDev
+        dispPwrMap[dni] = dispPwrDev
+    }
+
+    return jsonResponse([
+        modes: columns,
+        matrices: [
+            dnd: dndMap,
+            mute: muteMap,
+            volume: volMap,
+            brightness: dispMap,
+            adaptive: adaptMap,
+            power: dispPwrMap
+        ]
+    ])
+}
+
+Map apiSaveMatrix() {
+    Map body = (request?.JSON instanceof Map) ? (Map) request.JSON : [:]
+    Map matrices = body.matrices as Map
+    if (!matrices) {
+        return jsonResponse([success: false, error: "Invalid payload."])
+    }
+
+    int changedCount = 0
+
+    if (matrices.dnd instanceof Map) {
+        matrices.dnd.each { dni, cols ->
+            if (cols instanceof Map) {
+                cols.each { col, val ->
+                    if (val != null && val.toString() != "no_change") {
+                        String key = "dnd_${dni}_${col}"
+                        Boolean reqVal = (val == true || val.toString() == "true")
+                        Boolean existingVal = (getMatrixSetting(key) == true || getMatrixSetting(key)?.toString() == "true")
+                        if (existingVal != reqVal) {
+                            setMatrixSetting(key, reqVal)
+                            changedCount++
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (matrices.mute instanceof Map) {
+        matrices.mute.each { dni, cols ->
+            if (cols instanceof Map) {
+                cols.each { col, val ->
+                    if (val != null && val.toString() != "no_change") {
+                        String key = "mute_${dni}_${col}"
+                        Boolean reqVal = (val == true || val.toString() == "true" || val.toString().toLowerCase() == "muted")
+                        Boolean existingVal = (getMatrixSetting(key) == true || getMatrixSetting(key)?.toString() == "true" || getMatrixSetting(key)?.toString()?.toLowerCase() == "muted")
+                        if (existingVal != reqVal) {
+                            setMatrixSetting(key, reqVal)
+                            changedCount++
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (matrices.volume instanceof Map) {
+        matrices.volume.each { dni, cols ->
+            if (cols instanceof Map) {
+                cols.each { col, val ->
+                    String key = "vol_${dni}_${col}"
+                    if (val != null && val.toString().trim() != "" && val.toString() != "no_change") {
+                        if (val.toString().isNumber()) {
+                            Integer reqVal = val.toInteger()
+                            def rawExisting = getMatrixSetting(key)
+                            Integer existingVal = (rawExisting != null && rawExisting.toString().isNumber()) ? rawExisting.toInteger() : null
+                            if (existingVal != reqVal) {
+                                setMatrixSetting(key, reqVal)
+                                changedCount++
+                            }
+                        }
+                    } else if (val == null) {
+                        if (getMatrixSetting(key) != null) {
+                            setMatrixSetting(key, null)
+                            changedCount++
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (matrices.brightness instanceof Map) {
+        matrices.brightness.each { dni, cols ->
+            if (cols instanceof Map) {
+                cols.each { col, val ->
+                    if (val != null && val.toString().trim() != "" && val.toString() != "no_change" && val.toString().isNumber()) {
+                        String key = "disp_${dni}_${col}"
+                        Integer reqVal = val.toInteger()
+                        def rawExisting = getMatrixSetting(key)
+                        Integer existingVal = (rawExisting != null && rawExisting.toString().isNumber()) ? rawExisting.toInteger() : null
+                        if (existingVal != reqVal) {
+                            setMatrixSetting(key, reqVal)
+                            changedCount++
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (matrices.adaptive instanceof Map) {
+        matrices.adaptive.each { dni, cols ->
+            if (cols instanceof Map) {
+                cols.each { col, val ->
+                    if (val != null && val.toString() != "no_change") {
+                        String key = "adapt_${dni}_${col}"
+                        Boolean reqVal = (val == true || val.toString() == "true")
+                        Boolean existingVal = (getMatrixSetting(key) == true || getMatrixSetting(key)?.toString() == "true")
+                        if (existingVal != reqVal) {
+                            setMatrixSetting(key, reqVal)
+                            changedCount++
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (matrices.power instanceof Map) {
+        matrices.power.each { dni, cols ->
+            if (cols instanceof Map) {
+                cols.each { col, val ->
+                    if (val != null && val.toString() != "no_change") {
+                        String key = "disppwr_${dni}_${col}"
+                        Boolean reqVal = (val == true || val.toString() == "true" || val.toString() == "on")
+                        Boolean existingVal = (getMatrixSetting(key) == null || getMatrixSetting(key) == true || getMatrixSetting(key)?.toString() == "true" || getMatrixSetting(key)?.toString() == "on")
+                        if (existingVal != reqVal) {
+                            setMatrixSetting(key, reqVal)
+                            changedCount++
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    logInfo "Saved matrix settings via REST API (${changedCount} value(s) changed)."
+    return jsonResponse([success: true, changedCount: changedCount])
+}
+
+Map apiApplyMatrix() {
+    Map body = (request?.JSON instanceof Map) ? (Map) request.JSON : [:]
+    String sectionTitle = body.sectionTitle ? body.sectionTitle.toString().trim() : "Environment"
+    Map submittedMatrices = body.matrices instanceof Map ? (Map) body.matrices : [:]
+
+    if (submittedMatrices) {
+        apiSaveMatrix()
+    }
+    
+    evaluateCurrentModeState("REST API Matrix Apply Triggered", sectionTitle, submittedMatrices)
+    List queue = state.commandQueue ?: []
+    
+    return jsonResponse([success: true, queuedCommands: queue.size()])
+}
+
+Map apiRefreshFleet() {
+    logDebug "Executing fleet device refresh via REST API call..."
+    Map metrics = refreshManagedDeviceStates()
+    return jsonResponse([
+        success: metrics.success == false ? false : true,
+        found: metrics.found,
+        managed: metrics.managed,
+        succeeded: metrics.succeeded,
+        failed: metrics.failed,
+        requested: metrics.requested,
+        issued: metrics.issued
+    ])
+}
+
+private List<String> getActiveColumns() {
+    List<String> hubModes = location.modes ? location.modes.collect { it.name } : ["Day", "Evening", "Night"]
+    List<String> cols = []
+    
+    hubModes.each { m -> if (!cols.contains(m)) cols.add(m) }
+    if (!cols.contains("Sleeping")) cols.add("Sleeping")
+    if (!cols.contains("Away")) cols.add("Away")
+    
+    return cols
+}
+
+private List<String> getSelectedDeviceDnis() {
+    if (!checkParentAvailable()) return []
+    Map physMap = parent.getManagedPhysicalEchoDevices() ?: [:]
+    if (!physMap) return []
+    return physMap.keySet().collect { it.toString() }
+}
+
+/*
+ * Resolve managed physical Echo devices from the authoritative fleet inventory.
+ * The refresh summary must not rely solely on getManagedPhysicalEchoDevices(),
+ * which can be empty while the parent inventory is available and populated.
+ */
+private List<String> getManagedPhysicalDnisFromInventory() {
+    if (!checkParentAvailable()) return []
+    Map inventory = parent.getManagedEchoDeviceInventory() ?: [:]
+    if (!inventory) return []
+    return inventory.findAll { dni, entry ->
+        String family = entry?.family?.toString()?.trim()?.toUpperCase()
+        family != "WHA" && family != "GROUP"
+    }.keySet().collect { it.toString() }
+}
+
+private Map getDeviceProfile(def dev) {
+    if (!dev) return [hasDisplayBrightness: false, hasAdaptiveBrightness: false, hasDisplayPower: false]
+    Map caps = dev.hasCommand("getCapabilitiesMap") ? dev.getCapabilitiesMap() : (dev.getState()?.capabilitiesMap ?: [:])
+    
+    Boolean hasBrightness = (caps.displayBrightness == true)
+    Boolean hasAdaptive   = (caps.adaptiveBrightness == true)
+    Boolean hasPower      = (caps.display == true)
+    
+    return [hasDisplayBrightness: hasBrightness, hasAdaptiveBrightness: hasAdaptive, hasDisplayPower: hasPower]
+}
+
+private Map normalizeDeviceState(def dev, Map profile = [:]) {
+    if (!dev) return [actVol: null, actDisp: null, actAdaptive: null, actDispPwr: null, actMute: null, actDnd: null]
+    
+    def rawVol = dev.currentValue("volume")
+    Integer actVol = (rawVol != null && rawVol.toString().isNumber()) ? rawVol.toInteger() : null
+
+    Integer actDisp = null
+    String actAdaptive = "off"
+
+    if (profile.hasDisplayBrightness) {
+        def rawDispB = dev.currentValue("displayBrightness")
+        def rawLevel = dev.currentValue("level")
+        def selDisp = (rawDispB != null) ? rawDispB : rawLevel
+        if (selDisp != null && selDisp.toString().isNumber()) {
+            actDisp = selDisp.toInteger()
+        }
+
+        def rawAdapt = dev.currentValue("adaptiveBrightness") ?: dev.currentValue("adaptiveDisplay") ?: dev.currentValue("autobrightness")
+        if (rawAdapt != null) {
+            String aStr = rawAdapt.toString().toLowerCase()
+            if (aStr in ["on", "true", "enabled"]) actAdaptive = "on"
+        }
+    }
+
+    String actDispPwr = null
+    if (profile.hasDisplayPower) {
+        def rawPwr = dev.currentValue("displayPower")
+        if (rawPwr != null) {
+            String pStr = rawPwr.toString().toLowerCase()
+            if (pStr in ["on", "true"]) actDispPwr = "on"
+            else if (pStr in ["off", "false"]) actDispPwr = "off"
+        }
+    }
+
+    def rawMute = dev.currentValue("mute")
+    String actMute = "unmuted"
+    if (rawMute != null) {
+        String mStr = rawMute.toString().toLowerCase()
+        if (mStr in ["muted", "true", "on"]) actMute = "muted"
+        else if (mStr in ["unmuted", "false", "off"]) actMute = "unmuted"
+    }
+
+    def rawDnd = dev.currentValue("doNotDisturb")
+    String actDnd = null
+    if (rawDnd != null) {
+        String dStr = rawDnd.toString().toLowerCase()
+        if (dStr in ["enabled", "true", "on"]) actDnd = "enabled"
+        else if (dStr in ["disabled", "false", "off"]) actDnd = "disabled"
+    }
+
+    return [
+        actVol: actVol,
+        actDisp: actDisp,
+        actAdaptive: actAdaptive,
+        actDispPwr: actDispPwr,
+        actMute: actMute,
+        actDnd: actDnd
+    ]
+}
+
+void appButtonHandler(String btn) {
+    if (!btn) return
+    logTrace "appButtonHandler() triggered -> Button: [${btn}]"
+
+    if (btn == "btnReconcileNow") {
+        logInfo "Manual 'Reconcile Now' requested."
+        evaluateCurrentModeState("Manual GUI Reconcile", "Environment")
+    } else if (btn == "btnClearQueue") {
+        logWarn "Manual 'Clear Queue' requested. Purging pending commands."
+        state.commandQueue = []
+    }
+}
+
+private Map refreshManagedDeviceStates() {
+    if (!checkParentAvailable()) {
+        return [success: false, found: 0, managed: 0, succeeded: 0, requested: 0, issued: 0, failed: 0]
+    }
+
+    // Discover total fleet size and the Environment Manager's physical-device scope.
+    Map inventory = [:]
+    try {
+        inventory = parent.getManagedEchoDeviceInventory() ?: [:]
+    } catch (Exception e) {
+        logError "Unable to read parent Echo inventory: ${e.message}"
+        return [success: false, found: 0, managed: 0, succeeded: 0, requested: 0, issued: 0, failed: 0]
+    }
+
+    int foundCount = inventory.size()
+    List<String> managedDnis = getManagedPhysicalDnisFromInventory()
+    int managedCount = managedDnis.size()
+
+    Map fleetResult = [:]
+    boolean refreshCallSucceeded = false
+    try {
+        // This parent-app method performs the fleet refresh; it is not a device command.
+        fleetResult = parent.refreshManagedDeviceFleet() ?: [:]
+        refreshCallSucceeded = true
+    } catch (MissingMethodException ignored) {
+        // Compatibility fallback for parent apps without a fleet refresh method.
+        int issuedCount = 0
+        int failedCount = 0
+        managedDnis.each { dni ->
+            try {
+                def dev = parent.getManagedChildDevice(dni)
+                if (dev) {
+                    if (dev.hasCommand("refresh")) {
+                        dev.refresh()
+                        issuedCount++
+                    } else if (dev.hasCommand("poll")) {
+                        dev.poll()
+                        issuedCount++
+                    } else {
+                        failedCount++
+                    }
+                } else {
+                    failedCount++
+                }
+            } catch (Exception e) {
+                failedCount++
+                logDebug "Fallback refresh failed for ${dni}: ${e.message}"
+            }
+        }
+        fleetResult = [requested: foundCount, issued: issuedCount, failed: failedCount]
+        refreshCallSucceeded = (failedCount == 0)
+    } catch (Exception e) {
+        logError "Parent fleet refresh failed: ${e.message}"
+        fleetResult = [requested: foundCount, issued: 0, failed: managedCount]
+        refreshCallSucceeded = false
+    }
+
+    // Preserve existing desired-state cleanup, scoped to managed physical devices.
+    Map currentDesired = state.desiredState ?: [:]
+    Map cleanedDesired = [:]
+    managedDnis.each { dni ->
+        if (currentDesired.containsKey(dni)) {
+            def dev = parent.getManagedChildDevice(dni)
+            if (dev) {
+                Map profile = getDeviceProfile(dev)
+                Map entry = currentDesired[dni] instanceof Map ? new LinkedHashMap(currentDesired[dni]) : [:]
+                if (!profile.hasDisplayBrightness) entry.remove("displayBrightness")
+                if (!profile.hasDisplayPower) entry.remove("displayPower")
+                cleanedDesired[dni] = entry
+            }
+        }
+    }
+    state.desiredState = cleanedDesired
+
+    int issuedCount = (fleetResult.issued != null) ? (fleetResult.issued as Integer) : 0
+    int reportedFailures = (fleetResult.failed != null) ? (fleetResult.failed as Integer) : 0
+    int failedCount = Math.min(managedCount, Math.max(0, reportedFailures))
+
+    // Count managed refreshes as successful only if the refresh call completed and
+    // the parent reported no failures. The parent API does not provide per-device results.
+    int succeededCount = (refreshCallSucceeded && failedCount == 0) ? managedCount : Math.max(0, managedCount - failedCount)
+
+    logInfo "Fleet Refresh Summary -> Units Found: ${foundCount} | Managed: ${managedCount} | Managed Refreshes Successful: ${succeededCount} | Failed: ${failedCount}"
+    return [
+        success: refreshCallSucceeded,
+        found: foundCount,
+        managed: managedCount,
+        succeeded: succeededCount,
+        requested: foundCount,
+        issued: issuedCount,
+        failed: failedCount
+    ]
+}
+
+private void checkAndLogVersionDemarcation() {
+    String currentVer = version()
+    if (state.appVersion != currentVer) {
+        logInfo "=================== APP VERSION UPDATE: v${currentVer} (${timeStamp()}) ==================="
+        state.appVersion = currentVer
+    }
+}
+
+private void updateAppLabel() {
+    Boolean showVersion = getSettingBool("showVersionInLabel", true)
+    String baseLabel = "Echos Speak Environment Manager"
+    if (showVersion) baseLabel += " v${version()}"
+
+    if (app.label != baseLabel) {
+        app.updateLabel(baseLabel)
+    }
+}
+
+void installed() {
+    checkAndLogVersionDemarcation()
+    logInfo "Installing app v${version()} (${timeStamp()})..."
+    ensureAccessToken()
+    state.commandQueue = []
+    state.desiredState = [:]
+    state.reconciliationEpoch = 0
+    initialize(true)
+}
+
+void updated() {
+    checkAndLogVersionDemarcation()
+    logInfo "Updating app configuration..."
+    ensureAccessToken()
+    unsubscribe()
+    unschedule()
+    initialize(false)
+    updateAppLabel()
+}
+
+void uninstalled() {
+    logInfo "Uninstalling app..."
+    unsubscribe()
+}
+
+private void initialize(Boolean isInstall = false) {
+    checkAndLogVersionDemarcation()
+    updateAppLabel()
+    ensureAccessToken()
+
+    subscribe(location, "mode", modeChangeHandler)
+    subscribe(location, "sleeping", sleepingChangeHandler)
+    logDebug "Subscribed to Location Mode and Sleeping status events."
+
+    if (isInstall) {
+        app.updateSetting("logDebugEnable", [type: "bool", value: true])
+        logInfo "Debug logging enabled for 30 minutes."
+        runIn(1800, "disableDebugLogging")
+    } else if (getSettingBool("logDebugEnable", false)) {
+        unschedule("disableDebugLogging")
+        runIn(1800, "disableDebugLogging", [overwrite: false])
+    }
+
+    evaluateCurrentModeState("App Initialized", "Environment")
+}
+
+void modeChangeHandler(evt) {
+    String newMode = (evt?.value ?: location.mode ?: "Unknown").toString()
+    logInfo "Location mode change event detected -> ${newMode}"
+    state.remove("activeColumnOverride")
+
+    Integer delaySeconds = getModeChangeSettlingDelaySeconds()
+    long nowMs = now()
+    if (delaySeconds <= 0) {
+        unschedule("completeModeSettling")
+        unschedule("applySettledEnvironment")
+        Map settle = [active: true, stage: "applying", mode: newMode, startedAt: nowMs, deadline: nowMs,
+                      delaySeconds: 0, message: "No settling delay configured. Starting immediate environment reconciliation for ${newMode}."]
+        state.modeSettleStatus = settle
+        try {
+            evaluateCurrentModeState("Mode Changed to [${newMode}]", "Environment")
+            List queued = state.commandQueue ?: []
+            settle.active = false
+            settle.stage = "completed"
+            settle.finishedAt = now()
+            settle.queuedCommands = queued.size()
+            settle.message = "Immediate environment reconciliation evaluated for ${state.activeColumnOverride ?: location.mode}. ${queued.size()} command(s) queued for processing."
+            state.modeSettleStatus = settle
+        } catch (Exception e) {
+            settle.active = false
+            settle.stage = "error"
+            settle.finishedAt = now()
+            settle.message = "Immediate environment reconciliation failed: ${e.message}"
+            state.modeSettleStatus = settle
+            logError settle.message
+        }
+        return
+    }
+
+    state.modeSettleStatus = [
+        active: true,
+        stage: "waiting",
+        mode: newMode,
+        startedAt: nowMs,
+        deadline: nowMs + (delaySeconds * 1000L),
+        delaySeconds: delaySeconds,
+        message: "Mode changed to ${newMode}. Environment update is waiting for the configured ${delaySeconds}-second settling period."
+    ]
+    // Reset the settling period on every Mode event. No environment reconciliation is performed here.
+    runIn(delaySeconds, "completeModeSettling", [overwrite: true])
+    logInfo "Environment reconciliation deferred for ${delaySeconds} seconds after Mode change to [${newMode}]."
+}
+
+Integer getModeChangeSettlingDelaySeconds() {
+    try {
+        return Math.max(0, Math.min(300, (settings.modeChangeSettlingDelaySeconds == null ? 120 : settings.modeChangeSettlingDelaySeconds.toString().toInteger())))
+    } catch (Exception ignored) {
+        return 120
+    }
+}
+
+void completeModeSettling() {
+    Map settle = (state.modeSettleStatus instanceof Map) ? (Map) state.modeSettleStatus : [:]
+    if (settle.active != true) return
+
+    // Use the current Mode and current override/sleep state, not the value captured by an old event.
+    String currentMode = (location.mode ?: "Unknown").toString()
+    settle.stage = "applying"
+    settle.mode = currentMode
+    Integer delaySeconds = (settle.delaySeconds instanceof Number) ? settle.delaySeconds.toInteger() : getModeChangeSettlingDelaySeconds()
+    settle.message = "${delaySeconds}-second settling period complete. Starting environment reconciliation for ${currentMode}."
+    settle.completedAt = now()
+    state.modeSettleStatus = settle
+
+    // Give the UI a moment to display the transition before beginning reconciliation.
+    runIn(1, "applySettledEnvironment", [overwrite: true])
+}
+
+void applySettledEnvironment() {
+    Map settle = (state.modeSettleStatus instanceof Map) ? (Map) state.modeSettleStatus : [:]
+    // A newer Mode event resets the stage to waiting; never let an older callback apply it early.
+    if (settle.active != true || settle.stage != "applying") return
+
+    try {
+        evaluateCurrentModeState("Two-minute Mode settling period complete", "Environment")
+        List queued = state.commandQueue ?: []
+        settle = (state.modeSettleStatus instanceof Map) ? (Map) state.modeSettleStatus : settle
+        settle.active = false
+        settle.stage = "completed"
+        settle.finishedAt = now()
+        settle.queuedCommands = queued.size()
+        settle.message = "Environment reconciliation evaluated for ${state.activeColumnOverride ?: location.mode}. ${queued.size()} command(s) queued for processing."
+        state.modeSettleStatus = settle
+        logInfo settle.message
+    } catch (Exception e) {
+        settle.active = false
+        settle.stage = "error"
+        settle.finishedAt = now()
+        settle.message = "Environment reconciliation failed after the settling period: ${e.message}"
+        state.modeSettleStatus = settle
+        logError settle.message
+    }
+}
+
+Map apiGetModeStatus() {
+    Map settle = (state.modeSettleStatus instanceof Map) ? (Map) state.modeSettleStatus : [:]
+    return jsonResponse([
+        active: settle.active == true,
+        stage: settle.stage ?: "idle",
+        mode: settle.mode ?: location.mode ?: "Unknown",
+        startedAt: settle.startedAt,
+        deadline: settle.deadline,
+        completedAt: settle.completedAt,
+        finishedAt: settle.finishedAt,
+        queuedCommands: settle.queuedCommands,
+        delaySeconds: (settle.delaySeconds instanceof Number) ? settle.delaySeconds : getModeChangeSettlingDelaySeconds(),
+        message: settle.message ?: "No Mode settling delay is active."
+    ])
+}
+
+void sleepingChangeHandler(evt) {
+    logInfo "Location sleeping event detected -> ${evt.value}"
+    if (evt.value == "sleeping" || evt.value == "true" || evt.value == true) {
+        // Keep the final sleeping state, but do not apply it during a Mode settling window.
+        state.activeColumnOverride = "Sleeping"
+        if (state.modeSettleStatus?.active == true) {
+            logInfo "Sleeping event recorded during Mode settling; environment update remains deferred."
+            return
+        }
+        setActiveColumn("Sleeping", "Location Sleeping Event")
+    } else {
+        state.remove("activeColumnOverride")
+        if (state.modeSettleStatus?.active == true) {
+            logInfo "Sleeping-end event recorded during Mode settling; environment update remains deferred."
+            return
+        }
+        evaluateCurrentModeState("Location Sleeping Ended", "Environment")
+    }
+}
+
+public void setActiveColumn(String columnName, String reason = "External Command") {
+    if (!columnName) return
+    logInfo "External Active Column Override requested: [${columnName}] | Reason: ${reason}"
+    state.activeColumnOverride = columnName
+    if (state.modeSettleStatus?.active == true) {
+        logInfo "Active column override recorded during Mode settling; environment update remains deferred."
+        return
+    }
+    evaluateMatrixForColumn(columnName, reason, "Environment")
+}
+
+private void evaluateCurrentModeState(String triggerReason, String sectionTitle = "Environment", Map submittedMatrices = null) {
+    String activeCol = state.activeColumnOverride ?: location.mode
+    evaluateMatrixForColumn(activeCol, triggerReason, sectionTitle, submittedMatrices)
+}
+
+public void evaluateMatrixForColumn(String columnName, String sourceReason, String sectionTitle = "Environment", Map submittedMatrices = null) {
+    if (!columnName || !checkParentAvailable()) return
+    logDebug "Evaluating ${sectionTitle} Matrix for Mode [${columnName}]..."
+
+    state.lastSyncTimestamp = new Date().format("yyyy/MM/dd hh:mm:ss a", location.timeZone)
+    long newEpoch = (state.reconciliationEpoch ?: 0L) + 1L
+    state.reconciliationEpoch = newEpoch
+    state.commandQueue = []
+
+    Map currentDesired = [:]
+    Boolean forceDispatch = getSettingBool("forceStateReconcile", false)
+    List<String> selectedDnis = getSelectedDeviceDnis()
+
+    selectedDnis.each { dni ->
+        def dev = parent.getManagedChildDevice(dni)
+        if (!dev) return
+
+        Map profile = getDeviceProfile(dev)
+        Map normState = normalizeDeviceState(dev, profile)
+        Map dMap = [:]
+
+        def resolveTarget = { String sectionKey, String settingPrefix, Object defaultVal = null ->
+            if (submittedMatrices && submittedMatrices.containsKey(sectionKey)) {
+                Map secMap = submittedMatrices[sectionKey] instanceof Map ? (Map) submittedMatrices[sectionKey] : [:]
+                Map devMap = secMap[dni] instanceof Map ? (Map) secMap[dni] : [:]
+                if (devMap.containsKey(columnName)) {
+                    def sumVal = devMap[columnName]
+                    if (sumVal != null && sumVal.toString() != "no_change") {
+                        return sumVal
+                    }
+                }
+            }
+            return getMatrixSetting("${settingPrefix}_${dni}_${columnName}", defaultVal)
+        }
+
+        def rawVol = resolveTarget("volume", "vol")
+        def rawDisp = resolveTarget("brightness", "disp")
+        def rawAdapt = resolveTarget("adaptive", "adapt")
+        def rawMute = resolveTarget("mute", "mute")
+        def rawDnd = resolveTarget("dnd", "dnd")
+        def rawPwr = resolveTarget("power", "disppwr")
+
+        def targetVol = (rawVol != null && rawVol.toString().trim() != "" && rawVol.toString() != "no_change" && rawVol.toString().isNumber()) ? rawVol.toInteger() : null
+        def targetDisp = (rawDisp != null && rawDisp.toString().trim() != "" && rawDisp.toString() != "no_change" && rawDisp.toString().isNumber()) ? rawDisp.toInteger() : 50
+        Boolean targetAdaptBool = (rawAdapt == true || rawAdapt?.toString() == "true")
+        Boolean targetMuteBool  = (rawMute == true || rawMute?.toString() == "true" || rawMute?.toString()?.toLowerCase() == "muted")
+        Boolean targetDndBool   = (rawDnd == true || rawDnd?.toString() == "true")
+        Boolean targetDispPwr   = (rawPwr == null || rawPwr == true || rawPwr?.toString() == "true" || rawPwr?.toString() == "on")
+
+        if (targetVol != null) {
+            dMap.volume = targetVol
+        }
+        
+        if (profile.hasDisplayBrightness) {
+            dMap.adaptive = targetAdaptBool
+            dMap.displayBrightness = targetDisp
+        }
+        
+        if (profile.hasDisplayPower) {
+            dMap.displayPower = targetDispPwr
+        }
+
+        dMap.mute = targetMuteBool
+        dMap.dnd  = targetDndBool
+        dMap.activeColName = columnName
+
+        currentDesired[dni] = dMap
+
+        if (targetVol != null && (forceDispatch || normState.actVol != targetVol)) {
+            queueCommand(dni, "setVolume", targetVol, columnName, newEpoch)
+        }
+
+        if (profile.hasDisplayBrightness) {
+            if (targetAdaptBool) {
+                if (forceDispatch || normState.actAdaptive != "on") {
+                    String adaptiveCmd = dev.hasCommand("setAdaptiveBrightnessOn") ? "setAdaptiveBrightnessOn" : (dev.hasCommand("setAdaptiveDisplayOn") ? "setAdaptiveDisplayOn" : null)
+                    if (adaptiveCmd) queueCommand(dni, adaptiveCmd, null, columnName, newEpoch)
+                }
+            } else {
+                if (profile.hasAdaptiveBrightness && (forceDispatch || normState.actAdaptive == "on")) {
+                    String adaptiveOffCmd = dev.hasCommand("setAdaptiveBrightnessOff") ? "setAdaptiveBrightnessOff" : (dev.hasCommand("setAdaptiveDisplayOff") ? "setAdaptiveDisplayOff" : null)
+                    if (adaptiveOffCmd) queueCommand(dni, adaptiveOffCmd, null, columnName, newEpoch)
+                }
+                
+                if (forceDispatch || normState.actDisp != dMap.displayBrightness) {
+                    queueCommand(dni, "setDisplayBrightness", dMap.displayBrightness, columnName, newEpoch)
+                }
+            }
+        }
+
+        if (profile.hasDisplayPower) {
+            Boolean isPwrOn = (normState.actDispPwr == "on")
+            if (forceDispatch || isPwrOn != targetDispPwr) {
+                String cmd = null
+                Object param = null
+                if (targetDispPwr) {
+                    if (dev.hasCommand("setDisplayPowerOn")) cmd = "setDisplayPowerOn"
+                    else if (dev.hasCommand("setDisplayPower")) { cmd = "setDisplayPower"; param = "on" }
+                } else {
+                    if (dev.hasCommand("setDisplayPowerOff")) cmd = "setDisplayPowerOff"
+                    else if (dev.hasCommand("setDisplayPower")) { cmd = "setDisplayPower"; param = "off" }
+                }
+                
+                if (cmd) {
+                    queueCommand(dni, cmd, param, columnName, newEpoch)
+                } else {
+                    logWarn "Device [${dev.displayName}] supports display power capability, but no matching command interface was found."
+                }
+            }
+        }
+        
+        Boolean isCurrentlyMuted = (normState.actMute == "muted")
+        if (forceDispatch || isCurrentlyMuted != targetMuteBool) {
+            String muteCmd = targetMuteBool ? "mute" : "unmute"
+            queueCommand(dni, muteCmd, null, columnName, newEpoch)
+        }
+        
+        Boolean isDndActive = (normState.actDnd == "enabled")
+        if (forceDispatch || isDndActive != targetDndBool) {
+            String cmd = targetDndBool ? "setDoNotDisturbOn" : "setDoNotDisturbOff"
+            queueCommand(dni, cmd, null, columnName, newEpoch)
+        }
+    }
+
+    state.desiredState = currentDesired
+    processQueue()
+    logDebug "Finished evaluating ${sectionTitle} Matrix for Mode [${columnName}]."
+}
+
+private void queueCommand(String dni, String command, Object param, String reason, long epoch) {
+    if (getSettingBool("dryRunMode", false)) {
+        logInfo "[DRY RUN ACTIVE] Command calculated & suppressed -> Device DNI: ${dni} | Cmd: ${command} | Arg: ${param} | Reason: ${reason}"
+        return
+    }
+
+    List queue = state.commandQueue ?: []
+    queue.removeAll { it.dni == dni && it.command == command }
+
+    queue.add([
+        dni: dni, 
+        command: command, 
+        param: param, 
+        reason: reason,
+        epoch: epoch,
+        queuedAt: now()
+    ])
+    state.commandQueue = queue
+    logDebug "Queued command [${command}] for device DNI [${dni}]. Epoch: ${epoch} | Queue Depth: ${queue.size()}"
+}
+
+void processQueue() {
+    List queue = state.commandQueue ?: []
+    if (!queue || queue.size() == 0) {
+        logDebug "Command queue empty. Reconciliation complete."
+        return
+    }
+
+    Map item = queue.remove(0)
+    state.commandQueue = queue
+
+    long activeEpoch = (state.reconciliationEpoch ?: 0L) as long
+    long itemEpoch = (item.epoch ?: 0L) as long
+
+    if (itemEpoch != activeEpoch) {
+        logWarn "Discarding obsolete command [${item.command}] for device DNI [${item.dni}]. Item Epoch: ${itemEpoch} | Active Epoch: ${activeEpoch}"
+        if (state.commandQueue.size() > 0) {
+            processQueue()
+        }
+        return
+    }
+
+    def dev = checkParentAvailable() ? parent.getManagedChildDevice(item.dni) : null
+
+    if (dev) {
+        try {
+            logDebug "Executing Queued Command -> Device: ${dev.displayName} | Cmd: ${item.command}(${item.param != null ? item.param : ''}) | Source: ${item.reason}"
+            if (item.param != null) {
+                dev."${item.command}"(item.param)
+            } else {
+                dev."${item.command}"()
+            }
+        } catch (Exception e) {
+            logError "Failed to execute command ${item.command} on device ${dev.displayName}: ${e.message}"
+        }
+    } else {
+        logWarn "Target device DNI ${item.dni} no longer found in registry."
+    }
+
+    if (state.commandQueue.size() > 0) {
+        Integer delay = settings["queueDelayMs"] ? settings["queueDelayMs"].toInteger() : 350
+        runInMillis(delay, "processQueue", [overwrite: true])
+    }
+}
+
+void disableDebugLogging() {
+    if (getSettingBool("logDebugEnable", false)) {
+        logWarn "30 minutes have elapsed. Automatically disabling debug logging."
+        app.updateSetting("logDebugEnable", [type: "bool", value: false])
+    }
+}
+
+private void logMessage(String level, String msg) {
+    String lowerLevel = level?.toLowerCase() ?: "info"
+    String appLabel = app.label ?: app.name ?: "App"
+
+    String settingKey = "log${lowerLevel.capitalize()}Enable"
+    Boolean defaultEnabled = (lowerLevel in ["info", "warn", "error"])
+
+    if (getSettingBool(settingKey, defaultEnabled)) {
+        log."${lowerLevel}" "${appLabel}: ${msg}"
+    }
+}
+
+private void logInfo(String msg)  { logMessage("info", msg) }
+private void logDebug(String msg) { logMessage("debug", msg) }
+private void logTrace(String msg) { logMessage("trace", msg) }
+private void logWarn(String msg)  { logMessage("warn", msg) }
+private void logError(String msg) { logMessage("error", msg) }
+
+private Boolean getSettingBool(String key, Boolean defaultVal = false) {
+    def val = settings[key]
+    if (val == null || val.toString() == "no_change") return defaultVal
+    if (val instanceof Boolean) return val
+    return val.toString().toBoolean()
+}

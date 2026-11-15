@@ -1,0 +1,22 @@
+services:
+  alexa-manager-advanced:
+    build: .
+    container_name: alexa-manager-advanced
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4100
+      LOG_LEVEL: info
+      AMA_API_KEY: ${AMA_API_KEY}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://alexa.e-wiz.com}
+    ports:
+      - "192.168.1.12:4100:4100"
+    volumes:
+      - ./data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

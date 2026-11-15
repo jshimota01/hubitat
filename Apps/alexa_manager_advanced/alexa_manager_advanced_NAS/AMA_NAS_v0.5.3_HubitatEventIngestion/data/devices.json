@@ -1,0 +1,34 @@
+{
+  "devices": [
+    {
+      "endpointId": "ama-test-switch",
+      "friendlyName": "AMA Test Switch",
+      "description": "Temporary simulated switch for Alexa protocol testing",
+      "manufacturerName": "Alexa Manager Advanced",
+      "modelName": "Test Device",
+      "displayCategories": [
+        "SWITCH"
+      ],
+      "enabled": true,
+      "powerState": "OFF",
+      "backend": "local-simulation",
+      "updatedAt": "2026-11-04T20:28:06.964Z"
+    },
+    {
+      "endpointId": "hubitat-558",
+      "friendlyName": "Bathroom Fan",
+      "description": "Hubitat switch integrated through Alexa Manager Advanced",
+      "manufacturerName": "Hubitat",
+      "modelName": "Kasa Plug Switch",
+      "displayCategories": [
+        "SWITCH"
+      ],
+      "enabled": true,
+      "powerState": "ON",
+      "backend": "hubitat",
+      "hubitatDeviceId": "558",
+      "commandUrl": "http://192.168.1.36/apps/api/1017/command?access_token=4bd5f10c-39e0-4cd2-8678-bb9e847587ab",
+      "updatedAt": "2026-11-10T19:46:12.863Z"
+    }
+  ]
+}

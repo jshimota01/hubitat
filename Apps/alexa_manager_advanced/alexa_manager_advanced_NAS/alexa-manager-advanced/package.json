@@ -1,0 +1,20 @@
+{
+  "name": "alexa-manager-advanced",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Independent NAS-side Alexa Smart Home service with local Hubitat integration",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/config.js && node --check src/logger.js && node --check src/oauth-store.js && node --check src/device-store.js && node --check src/alexa.js && node --check src/hubitat-client.js && node --check src/routes/api.js && node --check src/routes/oauth.js && node --check test/alexa.test.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "4.21.2",
+    "helmet": "8.1.0"
+  }
+}

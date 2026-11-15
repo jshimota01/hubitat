@@ -26,6 +26,24 @@
  * Uses local REST API endpoints to serve a standalone HTML/JS Single Page Application (SPA) dashboard and matrix editor.
  *
  * Changelog:
+ * v4.0.6 - 2026/10/29 - Dashboard Density and Folder Tabs:
+ *                         - Further reduces dashboard metric-card height and text size.
+ *                         - Places the unmanaged fleet count inline with the physical-device count.
+ *                         - Reduces fleet table row height to help all 10 managed devices fit on screen.
+ *                         - Styles navigation controls as folder tabs with a clear active state.
+ * v4.0.5 - 2026/10/29 - Compact Dashboard Status Layout:
+ *                         - Places navigation tabs above the status messages.
+ *                         - Makes Mode and fleet status messages compact, with prominent white headings and existing status colors/left borders.
+ *                         - Reduces metric-card height while retaining the same dashboard information and behavior.
+ * v4.0.4 - 2026/10/29 - Clearer Fleet Refresh Results:
+ *                         - Reports units found separately from Environment Manager managed devices.
+ *                         - Uses concise success/failure wording and avoids implying all discovered units are managed.
+ * v4.0.2 - 2026/10/29 - Configurable Mode Change Settling Delay:
+ *                         - Displays the configured settling duration rather than hard-coding two minutes.
+ *                         - Shows the actual selected duration in the persistent Mode status banner.
+ * v4.0.1 - 2026/10/29 - Mode Settling Visibility & Fleet Refresh Feedback:
+ *                         - Added persistent Mode settling status banner and live countdown across GUI tabs.
+ *                         - Wired Fleet Status refresh to the fleet refresh endpoint with visible feedback.
  * v4.0.0 - 2026/09/30 - Version update to 4.0.0.
  * v3.9.2 - 2026/09/30 - Request Guarding & Matrix Fetch Hardening:
  *                         - Promoted version to v3.9.2.
@@ -92,26 +110,39 @@
 
         .nav-tabs {
             display: flex;
-            gap: 8px;
+            align-items: flex-end;
+            gap: 3px;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             overflow-x: auto;
+            padding: 0 5px;
         }
 
         .tab-btn {
-            background: none;
-            border: none;
+            position: relative;
+            background: #1a2530;
+            border: 1px solid #304252;
+            border-bottom: 0;
+            border-radius: 7px 7px 0 0;
             color: var(--text-muted);
-            padding: 10px 16px;
-            font-size: 0.95rem;
+            padding: 7px 13px 8px;
+            margin-top: 4px;
+            font-size: 0.88rem;
             cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s ease;
+            transition: background 0.15s ease, color 0.15s ease;
             white-space: nowrap;
         }
 
-        .tab-btn:hover { color: var(--text-color); }
-        .tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); font-weight: bold; }
+        .tab-btn:hover { color: #fff; background: #243443; }
+        .tab-btn.active {
+            color: #fff;
+            background: var(--card-bg);
+            border-color: var(--accent-color);
+            box-shadow: inset 0 3px 0 var(--accent-color);
+            font-weight: 800;
+            margin-bottom: -1px;
+            padding-bottom: 9px;
+        }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -119,20 +150,21 @@
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
         .metric-card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 7px;
+            padding: 7px 10px;
         }
 
-        .metric-title { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
-        .metric-value { font-size: 1.8rem; font-weight: bold; margin-top: 5px; color: #fff; }
-        .metric-subtext { font-size: 0.85rem; font-weight: bold; margin-top: 4px; color: var(--bright-red); }
+        .metric-title { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .metric-value { font-size: 1.25rem; font-weight: bold; margin-top: 2px; color: #fff; line-height: 1.15; }
+        .metric-subtext { font-size: 0.7rem; font-weight: bold; margin: 0; color: var(--bright-red); white-space: nowrap; }
+        .metric-count-row { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 0.65em; row-gap: 0; }
 
         .section-header-container {
             display: flex;
@@ -166,7 +198,7 @@
         }
 
         th, td {
-            padding: 12px 14px;
+            padding: 10px 12px;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
             border-right: 1px solid var(--border-color);
@@ -270,6 +302,50 @@
             font-weight: bold;
         }
 
+        .mode-settle-banner {
+            display: none;
+            align-items: baseline;
+            flex-wrap: wrap;
+            column-gap: 0.7em;
+            row-gap: 2px;
+            margin: 0 0 7px 0;
+            padding: 7px 12px;
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text-color);
+            line-height: 1.3;
+        }
+        .mode-settle-banner.visible { display: flex; }
+        .mode-settle-banner.waiting { border-left-color: var(--warning-color); background: #30291b; }
+        .mode-settle-banner.applying { border-left-color: var(--bright-blue); background: #172b38; }
+        .mode-settle-banner.completed { border-left-color: var(--success-color); background: #183026; }
+        .mode-settle-banner.error { border-left-color: var(--danger-color); background: #351f22; }
+        .mode-settle-title { font-weight: 800; color: #fff; margin: 0; white-space: nowrap; }
+        .mode-settle-detail { color: var(--text-muted); font-size: 0.9rem; }
+        .mode-settle-countdown { font-variant-numeric: tabular-nums; font-weight: 800; color: #fff; }
+        .fleet-refresh-status {
+            display: none;
+            align-items: baseline;
+            flex-wrap: wrap;
+            column-gap: 0.7em;
+            row-gap: 2px;
+            margin: 0 0 7px 0;
+            padding: 7px 12px;
+            border-radius: 6px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--accent-color);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.3;
+        }
+        .fleet-refresh-status.visible { display: flex; }
+        .fleet-refresh-status.success { border-left-color: var(--success-color); color: #d5f5e3; }
+        .fleet-refresh-status.error { border-left-color: var(--danger-color); color: #fadbd8; }
+        .fleet-refresh-status strong { color: #fff; font-size: 0.98rem; font-weight: 800; }
+
         .action-bar {
             position: fixed;
             bottom: 0;
@@ -313,8 +389,8 @@
     <div class="header-bar">
         <h1 class="header-title">Echos Speak Environment Manager</h1>
         <div>
-            <span class="mode-badge-label">Active Column:</span>
-            <span id="active-column" class="mode-badge">Loading...</span>
+            <span class="mode-badge-label">Active Mode:</span>
+            <span id="active-mode" class="mode-badge">Loading...</span>
         </div>
     </div>
 
@@ -327,13 +403,22 @@
         <button class="tab-btn" onclick="switchTab('power', event)">5. Display Power</button>
     </div>
 
+    <div id="mode-settle-banner" class="mode-settle-banner" role="status" aria-live="polite">
+        <div id="mode-settle-title" class="mode-settle-title">Checking Mode status…</div>
+        <div id="mode-settle-detail" class="mode-settle-detail"></div>
+    </div>
+
+    <div id="fleet-refresh-status" class="fleet-refresh-status" role="status" aria-live="polite"></div>
+
     <!-- TAB 1: DASHBOARD -->
     <div id="tab-dashboard" class="tab-content active">
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-title">Managed Fleet</div>
-                <div id="metric-total" class="metric-value">0 Physical Devices</div>
-                <div id="metric-unmanaged" class="metric-subtext">0 Unmanaged (WHA/Groups)</div>
+                <div class="metric-count-row">
+                    <span id="metric-total" class="metric-value">0 Physical Devices</span>
+                    <span id="metric-unmanaged" class="metric-subtext">0 Unmanaged (WHA/Groups)</span>
+                </div>
             </div>
             <div class="metric-card">
                 <div class="metric-title">Fleet Sync Status</div>
@@ -387,6 +472,9 @@
         let appState = {};
         let workingMatrix = {};
         let activeTabId = 'dashboard';
+        let modeStatusPollTimer = null;
+        let modeCountdownTimer = null;
+        let lastModeStatus = {};
 
         const TAB_TITLES = {
             'dashboard': 'Dashboard',
@@ -422,12 +510,112 @@
             }
             
             const currentMode = appState.activeColumn || appState.activeMode || appState.activePresence || 'Unknown';
-            document.getElementById('active-column').innerText = currentMode;
+            document.getElementById('active-mode').innerText = currentMode;
             
             const lastSynced = appState.lastSynced || new Date().toLocaleTimeString();
             document.getElementById('last-synced-val').innerText = lastSynced;
 
             renderDashboard();
+            if (appState.modeSettleStatus) updateModeSettleBanner(appState.modeSettleStatus);
+        }
+
+        function formatCountdown(ms) {
+            const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateModeSettleBanner(status) {
+            if (!status || typeof status !== 'object') return;
+            lastModeStatus = status;
+            const banner = document.getElementById('mode-settle-banner');
+            const title = document.getElementById('mode-settle-title');
+            const detail = document.getElementById('mode-settle-detail');
+            if (!banner || !title || !detail) return;
+
+            const stage = status.stage || 'idle';
+            banner.className = `mode-settle-banner ${stage}`;
+            if (stage === 'waiting' && status.active) {
+                banner.classList.add('visible');
+                const remaining = (Number(status.deadline) || Date.now()) - Date.now();
+                title.textContent = `⏳ MODE CHANGED TO ${status.mode || 'Unknown'} — ENVIRONMENT UPDATE DELAYED`;
+                const configuredSeconds = Number(status.delaySeconds) || 0;
+                detail.innerHTML = `Waiting for the configured ${configuredSeconds}-second settling period to finish. Update begins in <span class="mode-settle-countdown">${formatCountdown(remaining)}</span>.`;
+            } else if (stage === 'applying') {
+                banner.classList.add('visible');
+                title.textContent = `🔄 SETTLING PERIOD COMPLETE — UPDATING ENVIRONMENT`;
+                detail.textContent = status.message || `Evaluating environment settings for ${status.mode || 'the current Mode'}…`;
+            } else if (stage === 'completed') {
+                banner.classList.add('visible');
+                title.textContent = `✓ ENVIRONMENT UPDATE EVALUATED`;
+                const when = status.finishedAt ? new Date(Number(status.finishedAt)).toLocaleTimeString() : 'just now';
+                detail.textContent = `${status.message || 'Environment reconciliation completed.'} Finished ${when}.`;
+            } else if (stage === 'error') {
+                banner.classList.add('visible');
+                title.textContent = `⚠ ENVIRONMENT UPDATE FAILED`;
+                detail.textContent = status.message || 'The environment reconciliation reported an error.';
+            } else {
+                banner.classList.remove('visible');
+                title.textContent = '';
+                detail.textContent = '';
+            }
+        }
+
+        async function pollModeSettleStatus() {
+            const status = await apiCall('/api/mode-status');
+            if (status && status.success !== false && !status.error) updateModeSettleBanner(status);
+        }
+
+        function startModeStatusPolling() {
+            if (modeStatusPollTimer) clearInterval(modeStatusPollTimer);
+            if (modeCountdownTimer) clearInterval(modeCountdownTimer);
+            modeStatusPollTimer = setInterval(pollModeSettleStatus, 2000);
+            modeCountdownTimer = setInterval(() => {
+                if (lastModeStatus && lastModeStatus.active && lastModeStatus.stage === 'waiting') {
+                    updateModeSettleBanner(lastModeStatus);
+                }
+            }, 250);
+        }
+
+        async function refreshFleetStatus(button) {
+            const originalLabel = button ? button.textContent : '🔄 Refresh Fleet Status';
+            const statusBox = document.getElementById('fleet-refresh-status');
+            if (button) {
+                button.disabled = true;
+                button.textContent = '⏳ Refreshing Fleet…';
+            }
+            if (statusBox) {
+                statusBox.className = 'fleet-refresh-status visible';
+                statusBox.textContent = 'Requesting a fleet refresh from the Environment Manager…';
+            }
+            try {
+                const result = await apiCall('/api/refresh', 'POST', {});
+                if (!result || result.success !== true) {
+                    const message = (result && result.error) ? result.error : 'The refresh endpoint did not confirm success.';
+                    if (statusBox) {
+                        statusBox.className = 'fleet-refresh-status visible error';
+                        statusBox.innerHTML = `<strong>⚠ FLEET REFRESH FAILED</strong><span>${message}</span>`;
+                    }
+                    return;
+                }
+                const finished = new Date().toLocaleTimeString();
+                if (statusBox) {
+                    statusBox.className = 'fleet-refresh-status visible success';
+                    statusBox.innerHTML = `<strong>✓ FLEET REFRESH COMPLETE</strong><span>${finished} · ${result.found ?? result.requested ?? 0} units found · ${result.managed ?? 0} managed · ${result.succeeded ?? 0} refreshes successful · ${result.failed ?? 0} failed. This checks device status; it does not apply the environment matrix.</span>`;
+                }
+                await fetchLiveData();
+            } catch (err) {
+                if (statusBox) {
+                    statusBox.className = 'fleet-refresh-status visible error';
+                    statusBox.innerHTML = `<strong>⚠ FLEET REFRESH FAILED</strong><span>${err.message || String(err)}</span>`;
+                }
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = originalLabel;
+                }
+            }
         }
 
         async function fetchMatrixData() {
@@ -657,11 +845,11 @@
         function renderActionBar(tabId) {
             const container = document.getElementById('dynamic-action-bar');
             if (tabId === 'dashboard') {
-                container.innerHTML = `<button class="btn btn-secondary" onclick="fetchLiveData()">🔄 Refresh Fleet Status</button>`;
+                container.innerHTML = `<button class="btn btn-secondary" onclick="refreshFleetStatus(this)">🔄 Refresh Fleet Status</button>`;
             } else {
                 const title = TAB_TITLES[tabId] || 'Section';
                 container.innerHTML = `
-                    <button class="btn btn-secondary" onclick="fetchLiveData()">🔄 Refresh Fleet Status</button>
+                    <button class="btn btn-secondary" onclick="refreshFleetStatus(this)">🔄 Refresh Fleet Status</button>
                     <button id="btn-save-${tabId}" class="btn btn-primary" onclick="saveSectionData('${tabId}')">💾 Save ${title}</button>
                     <button id="btn-apply-${tabId}" class="btn btn-success" onclick="applySectionData('${tabId}')">⚡ Save ${title} & Apply Now</button>
                 `;
@@ -739,6 +927,7 @@
             renderActionBar('dashboard');
             await fetchLiveData();
             await fetchMatrixData();
+            startModeStatusPolling();
         })();
     </script>
 </body>

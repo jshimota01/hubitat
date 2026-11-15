@@ -1019,7 +1019,7 @@ void generateTiles(Map currentData = [:], Map todayData = [:], Map tomData = [:]
     }
 
     String moonBodyHtml = "<style>.m{height:100%;container-type:inline-size;display:grid;place-items:center}.g{position:relative;width:90%;aspect-ratio:1}.x{position:absolute;inset:0;display:grid;place-content:center;text-align:center;-webkit-text-stroke:.025em #000;font-weight:900}.p{font-size:1.5em}.a{font-size:.825em}@container(min-width:15em){.x{-webkit-text-stroke:.075em #000}.p{font-size:1.8em}.a{font-size:1.6em}}</style>" +
-                          "<div class='m'><div class='g'>" + graphicDisplay + "<div class='x'><div class='p'>${moonPhaseText}</div><div class='a'>Alt:${moonAltText} | Az:${moonAzText}</div></div></div></div>"
+                          "<div class='m'><div class='g'>" + graphicDisplay + "<div class='x'><div class='p'>${moonPhaseText}</div><div class='a'>Alt:${moonAltText}|Az:${moonAzText}</div></div></div></div>"
     sendIfChanged(name: "currentMoonPhaseTile", value: appendTileDebug(moonBodyHtml))
 
     // Update virtualTile custom HTML renderer
