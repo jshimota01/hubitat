@@ -70,7 +70,7 @@ metadata {
         name: "Third Reality Night Light (Custom)", 
         namespace: "jshimota", 
         author: "James Shimota", 
-        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_night_light/third_reality_night_light.groovy"
+        importUrl: "https://raw.githubusercontent.com/jshimota01/hubitat/main/Drivers/third_reality_multifunction_night_light_custom/third_reality_multifunction_night_light_custom.groovy"
     ) {
         capability "Actuator"
         capability "ColorControl"
